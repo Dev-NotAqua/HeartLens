@@ -480,9 +480,10 @@
                         <!-- Layout-mode frame and name tag sit outside the scaler so they are never clipped. -->
                         <Rectangle Name="Frame" IsVisible="False" Margin="-4" RadiusX="12" RadiusY="12" Stroke="{StaticResource Accent}"
                                    StrokeThickness="1.5" StrokeDashArray="4,3" IsHitTestVisible="False" />
-                        <Border Name="Tag" IsVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-4,-26,0,0"
-                                Background="{StaticResource Accent}" CornerRadius="5" Padding="7,2" IsHitTestVisible="False">
-                            <TextBlock Text="{TemplateBinding Title}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
+                        <Border Name="Tag" IsVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-4,-26,0,0" Height="18"
+                                Background="{StaticResource Accent}" CornerRadius="5" Padding="7,0" IsHitTestVisible="False">
+                            <TextBlock Text="{TemplateBinding Title}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}"
+                                       VerticalAlignment="Center" />
                         </Border>
                     </Panel>
                 </ControlTemplate>

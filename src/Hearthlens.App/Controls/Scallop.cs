@@ -67,7 +67,7 @@ public sealed class Scallop : FrameworkElement
                 }
                 else
                 {
-                    ctx.LineTo(point, false, true);
+                    ctx.LineTo(point, true, true);
                 }
             }
         }

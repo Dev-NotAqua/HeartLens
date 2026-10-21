@@ -510,11 +510,11 @@
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Track" Property="Background" Value="{StaticResource Accent}" />
-                            <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource Accent}" />
+                            <Setter TargetName="Track" Property="BorderThickness" Value="0" />
                             <Setter TargetName="Knob" Property="Fill" Value="{StaticResource OnAccent}" />
                             <Setter TargetName="Thumb" Property="Width" Value="20" />
                             <Setter TargetName="Thumb" Property="Height" Value="20" />
-                            <Setter TargetName="Thumb" Property="Margin" Value="2,0" />
+                            <Setter TargetName="Thumb" Property="Margin" Value="4,0" />
                             <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
                             <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
                         </Trigger>

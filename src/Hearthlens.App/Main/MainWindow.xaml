@@ -193,8 +193,8 @@
                     </StackPanel>
 
                     <!-- ===== Home ===== -->
-                    <ScrollViewer x:Name="PageOverview" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="40,0,40,120">
-                        <StackPanel>
+                    <ScrollViewer x:Name="PageOverview" Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="40,0,40,120">
                             <TextBlock Text="Home" Style="{StaticResource Display}" />
                             <StackPanel Style="{StaticResource PageSubtitle}">
                                 <Grid Width="26" Height="26">
@@ -280,8 +280,8 @@
                     </ScrollViewer>
 
                     <!-- ===== Battlegrounds ===== -->
-                    <ScrollViewer x:Name="PageBattlegrounds" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="40,0,40,120" Visibility="Collapsed">
-                        <StackPanel>
+                    <ScrollViewer x:Name="PageBattlegrounds" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel Margin="40,0,40,120">
                             <Grid>
                                 <StackPanel>
                                     <TextBlock Text="Battlegrounds" Style="{StaticResource Display}" />
@@ -626,8 +626,8 @@
                     </ScrollViewer>
 
                     <!-- ===== Constructed ===== -->
-                    <ScrollViewer x:Name="PageConstructed" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="40,0,40,120" Visibility="Collapsed">
-                        <StackPanel>
+                    <ScrollViewer x:Name="PageConstructed" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel Margin="40,0,40,120">
                             <TextBlock Text="Constructed" Style="{StaticResource Display}" />
                             <StackPanel Style="{StaticResource PageSubtitle}">
                                 <Grid Width="26" Height="26">
@@ -785,8 +785,8 @@
                     </Grid>
 
                     <!-- ===== Settings ===== -->
-                    <ScrollViewer x:Name="PageSettings" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="40,0,40,120" Visibility="Collapsed">
-                        <StackPanel MaxWidth="780" HorizontalAlignment="Left" ToggleButton.Checked="OnSettingChanged" ToggleButton.Unchecked="OnSettingChanged">
+                    <ScrollViewer x:Name="PageSettings" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                        <StackPanel Margin="40,0,40,120" MaxWidth="780" HorizontalAlignment="Left" ToggleButton.Checked="OnSettingChanged" ToggleButton.Unchecked="OnSettingChanged">
                             <TextBlock Text="Settings" Style="{StaticResource Display}" />
                             <StackPanel Style="{StaticResource PageSubtitle}">
                                 <Grid Width="26" Height="26">
