@@ -13,10 +13,17 @@ public sealed class BattlegroundsAdvisor
 
     public BattlegroundsMeta? Meta { get; set; }
 
-    /// <summary>Composition the player locked in from the UI; null lets the advisor choose.</summary>
+    /// <summary>
+    /// Who sets the target comp. <see cref="CompMode.Manual"/>: only <see cref="PinnedCompId"/>, never the advisor, so
+    /// without a choice there is no target and the tavern and Discover scores get no comp bonus.
+    /// <see cref="CompMode.Auto"/>: the advisor picks one, and <see cref="PinnedCompId"/> overrides it.
+    /// </summary>
+    public CompMode CompMode { get; set; } = CompMode.Manual;
+
+    /// <summary>Composition the player chose from the UI; null leaves no target (Manual) or lets the advisor choose (Auto).</summary>
     public string? PinnedCompId { get; set; }
 
-    // The comp the advisor chose last time, so the suggestion does not flip on every small change.
+    // The comp the advisor chose last time (Auto), so the suggestion does not flip on every small change.
     private string? _autoTargetId;
     private string? _autoTargetHero;
     private int _autoTargetTurn;
@@ -205,28 +212,37 @@ public sealed class BattlegroundsAdvisor
             return Array.Empty<CompAdvice>();
         }
 
+        // The player's choice comes first. In Manual mode it is the only possible target: a comp this lobby cannot
+        // play (or no choice at all) leaves no target, and the choice itself is kept for later games.
         var target = ranked.FirstOrDefault(x => x.Comp.Id == PinnedCompId);
-        if (target.Comp is null)
+        if (CompMode == CompMode.Manual)
         {
-            target = ranked.Where(x => x.Weight >= 2 && x.Comp.Cards.Count > 0).OrderByDescending(x => x.Weight).ThenBy(x => x.Score).FirstOrDefault();
+            _autoTargetId = null;
         }
-
-        if (target.Comp is null)
+        else
         {
-            target = ranked.FirstOrDefault(x => x.Comp.Cards.Count > 0);
-        }
+            if (target.Comp is null)
+            {
+                target = ranked.Where(x => x.Weight >= 2 && x.Comp.Cards.Count > 0).OrderByDescending(x => x.Weight).ThenBy(x => x.Score).FirstOrDefault();
+            }
 
-        // Stay on the previous suggestion unless the new one is ahead by at least one core card.
-        var previous = ranked.FirstOrDefault(x => x.Comp.Id == _autoTargetId);
-        if (PinnedCompId is null && previous.Comp is not null && target.Comp is not null && previous.Comp.Id != target.Comp.Id
-            && target.Weight - previous.Weight < 2)
-        {
-            target = previous;
-        }
+            if (target.Comp is null)
+            {
+                target = ranked.FirstOrDefault(x => x.Comp.Cards.Count > 0);
+            }
 
-        if (PinnedCompId is null)
-        {
-            _autoTargetId = target.Comp?.Id;
+            // Stay on the previous suggestion unless the new one is ahead by at least one core card.
+            var previous = ranked.FirstOrDefault(x => x.Comp.Id == _autoTargetId);
+            if (PinnedCompId is null && previous.Comp is not null && target.Comp is not null && previous.Comp.Id != target.Comp.Id
+                && target.Weight - previous.Weight < 2)
+            {
+                target = previous;
+            }
+
+            if (PinnedCompId is null)
+            {
+                _autoTargetId = target.Comp?.Id;
+            }
         }
 
         var shown = ranked.Take(5).ToList();
@@ -253,7 +269,7 @@ public sealed class BattlegroundsAdvisor
                 target.Comp is not null && x.Comp.Id == target.Comp.Id,
                 x.Comp.Id == PinnedCompId)
             {
-                Why = WhyComp(x.Comp, x.OwnedCore, x.Comp.Id == PinnedCompId, lobbyKnown, owned, baseHero),
+                Why = WhyComp(x.Comp, x.OwnedCore, x.Comp.Id == PinnedCompId, CompMode, lobbyKnown, owned, baseHero),
                 LookFor = x.Comp.Cards
                     .Where(card => card.Status == "CORE" && !owned.ContainsKey(card.CardId))
                     .Select(card => (Name: cards.NameOf(card.CardId), Tier: cards.Get(card.CardId)?.TechLevel ?? 0))
@@ -266,11 +282,13 @@ public sealed class BattlegroundsAdvisor
             .ToList();
     }
 
-    private static string WhyComp(MetaComp comp, int ownedCore, bool pinned, bool lobbyKnown, Dictionary<string, int> owned, string baseHero)
+    private static string WhyComp(MetaComp comp, int ownedCore, bool pinned, CompMode mode, bool lobbyKnown, Dictionary<string, int> owned, string baseHero)
     {
         if (pinned)
         {
-            return "Locked by you: the advisor will not switch away from it";
+            return mode == CompMode.Manual
+                ? "Your choice: tavern and Discover hints count its cards"
+                : "Locked by you: the advisor will not switch away from it";
         }
 
         var core = comp.Cards.Count(card => card.Status == "CORE");

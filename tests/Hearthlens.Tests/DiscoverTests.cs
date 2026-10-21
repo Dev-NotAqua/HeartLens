@@ -1,4 +1,5 @@
 using System.Net;
+using Hearthlens.Core;
 using Hearthlens.Core.Battlegrounds;
 using Hearthlens.Core.Cards;
 using Hearthlens.Core.Power;
@@ -72,7 +73,7 @@ public sealed class DiscoverTests(ITestOutputHelper output)
 
         Assert.NotNull(discover);
         var target = gift ?? discover!;
-        var advice = new BattlegroundsAdvisor { Meta = meta }.Enrich(target, 7000, cards);
+        var advice = new BattlegroundsAdvisor { Meta = meta, CompMode = CompMode.Auto }.Enrich(target, 7000, cards);
         foreach (var pick in advice.DiscoverAdvice.OrderBy(p => p.Slot))
         {
             var option = target.DiscoverOptions[pick.Slot];
@@ -114,7 +115,7 @@ public sealed class DiscoverTests(ITestOutputHelper output)
             cards = CardDb.Parse("itIT", stream);
         }
 
-        var advisor = new BattlegroundsAdvisor { Meta = meta };
+        var advisor = new BattlegroundsAdvisor { Meta = meta, CompMode = CompMode.Auto };
         int picks = 0, trinkets = 0, discovers = 0, ranked = 0, options = 0, withData = 0;
         var missed = new List<string>();
         var kinds = new SortedDictionary<string, int>(StringComparer.Ordinal);

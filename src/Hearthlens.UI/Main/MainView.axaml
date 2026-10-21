@@ -83,6 +83,16 @@
         <Style Selector="Border.placeBar.first">
             <Setter Property="Background" Value="{StaticResource TierS}" />
         </Style>
+        <!-- Settings rows with a segmented choice: label and a muted line left, segments right; dimmed while disabled. -->
+        <Style Selector="Grid.choiceRow:disabled">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+        <Style Selector="Grid.choiceRow Border.choice">
+            <Setter Property="Grid.Column" Value="1" />
+            <Setter Property="Grid.Row" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
 
         <!-- Narrow windows and phones: icon-only navigation and tighter pages. -->
         <Style Selector="m|MainView.compact RadioButton.nav /template/ ContentPresenter#Presenter">
@@ -93,6 +103,17 @@
         </Style>
         <Style Selector="m|MainView.compact ScrollViewer.page">
             <Setter Property="Padding" Value="16,0,16,120" />
+        </Style>
+        <!-- Narrow: the segments drop under the explanation instead of squeezing the label. -->
+        <Style Selector="m|MainView.compact Grid.choiceRow Border.choice">
+            <Setter Property="Grid.Column" Value="0" />
+            <Setter Property="Grid.Row" Value="1" />
+            <Setter Property="Grid.ColumnSpan" Value="2" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Margin" Value="0,8,0,0" />
+        </Style>
+        <Style Selector="m|MainView.compact Grid.choiceRow RadioButton.segment /template/ Border#Bd">
+            <Setter Property="Padding" Value="9,5" />
         </Style>
     </UserControl.Styles>
 
@@ -623,8 +644,68 @@
                                 <TextBlock Text="Battlegrounds" Classes="label" Margin="0,4,0,10" />
                                 <CheckBox Classes="switch" Content="Top bar: turn, tavern tiers, lobby tribes, rating" IsChecked="{Binding ShowBattlegroundsBar}" Margin="0,0,0,14"
                                           ToolTip.Tip="Click a tier number in game to see that tier's minions in your lobby." />
-                                <CheckBox Classes="switch" Content="Best picks: heroes, trinkets, tavern, every Discover and the game plan" IsChecked="{Binding ShowHeroPick}" Margin="0,0,0,14"
-                                          ToolTip.Tip="Badges over the cards you can choose, ranked with community data and your board." />
+                                <!-- Pick suggestions: badges over heroes, trinkets, tavern minions and every Discover. The muted line explains the
+                                     selected option (same texts as the Windows app). Each radio's Tag is applied in MainView.axaml.cs. -->
+                                <Grid Classes="choiceRow" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,14">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Pick suggestions" FontSize="13.5" />
+                                        <Panel Margin="0,2,0,0">
+                                            <TextBlock Classes="caption" FontSize="12" TextWrapping="Wrap" Text="Badges mark the best hero, trinket, buy and Discover option."
+                                                       IsVisible="{Binding #PickHintsHighlightOption.IsChecked}" />
+                                            <TextBlock Classes="caption" FontSize="12" TextWrapping="Wrap" Text="The same stats on every option, with nothing marked as the best."
+                                                       IsVisible="{Binding #PickHintsStatsOnlyOption.IsChecked}" />
+                                            <TextBlock Classes="caption" FontSize="12" TextWrapping="Wrap" Text="No badges over the choices and no game plan panel."
+                                                       IsVisible="{Binding #PickHintsOffOption.IsChecked}" />
+                                        </Panel>
+                                    </StackPanel>
+                                    <Border Classes="segmentBar choice">
+                                        <WrapPanel>
+                                            <RadioButton Name="PickHintsHighlightOption" Classes="segment" Content="Mark the best" GroupName="PickHints"
+                                                         IsChecked="{Binding PickHintsHighlight, Mode=OneWay}" Tag="PickHints.Highlight" />
+                                            <RadioButton Name="PickHintsStatsOnlyOption" Classes="segment" Content="Stats only" GroupName="PickHints"
+                                                         IsChecked="{Binding PickHintsStatsOnly, Mode=OneWay}" Tag="PickHints.StatsOnly" />
+                                            <RadioButton Name="PickHintsOffOption" Classes="segment" Content="Off" GroupName="PickHints"
+                                                         IsChecked="{Binding PickHintsOff, Mode=OneWay}" Tag="PickHints.Off" />
+                                        </WrapPanel>
+                                    </Border>
+                                </Grid>
+                                <!-- Game plan comp: who sets the comp the plan, tavern and Discover hints are built around. Pick suggestions Off
+                                     hides the game plan, so this choice has no effect then. -->
+                                <Grid Classes="choiceRow" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,14"
+                                      IsEnabled="{Binding !#PickHintsOffOption.IsChecked}">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Game plan comp" FontSize="13.5" />
+                                        <Panel Margin="0,2,0,0">
+                                            <TextBlock Classes="caption" FontSize="12" TextWrapping="Wrap" Text="You choose the comp in the game plan panel. It is kept for the next games."
+                                                       IsVisible="{Binding #CompModeManualOption.IsChecked}" />
+                                            <TextBlock Classes="caption" FontSize="12" TextWrapping="Wrap" Text="Hearthlens picks a comp for each lobby. A lock overrides it for that game.">
+                                                <TextBlock.IsVisible>
+                                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                        <Binding Path="#CompModeAutoOption.IsChecked" />
+                                                        <Binding Path="!#PickHintsStatsOnlyOption.IsChecked" />
+                                                    </MultiBinding>
+                                                </TextBlock.IsVisible>
+                                            </TextBlock>
+                                            <!-- Stats only never shows the comp Hearthlens picks: only a lock puts one on screen -->
+                                            <TextBlock Classes="caption" FontSize="12" TextWrapping="Wrap" Text="Stats only keeps the automatic comp hidden. Lock one to plan around it.">
+                                                <TextBlock.IsVisible>
+                                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                        <Binding Path="#CompModeAutoOption.IsChecked" />
+                                                        <Binding Path="#PickHintsStatsOnlyOption.IsChecked" />
+                                                    </MultiBinding>
+                                                </TextBlock.IsVisible>
+                                            </TextBlock>
+                                        </Panel>
+                                    </StackPanel>
+                                    <Border Classes="segmentBar choice">
+                                        <WrapPanel>
+                                            <RadioButton Name="CompModeManualOption" Classes="segment" Content="I choose" GroupName="CompMode"
+                                                         IsChecked="{Binding CompModeManual, Mode=OneWay}" Tag="CompMode.Manual" />
+                                            <RadioButton Name="CompModeAutoOption" Classes="segment" Content="Automatic" GroupName="CompMode"
+                                                         IsChecked="{Binding CompModeAuto, Mode=OneWay}" Tag="CompMode.Auto" />
+                                        </WrapPanel>
+                                    </Border>
+                                </Grid>
                                 <CheckBox Classes="switch" Content="Opponent boards when you hover the leaderboard" IsChecked="{Binding ShowOpponentBoards}" Margin="0,0,0,14"
                                           ToolTip.Tip="The last board you saw for that player in combat." />
                                 <CheckBox Classes="switch" Content="Lobby list: health, tier and last fight" IsChecked="{Binding ShowLobbyPanel}" Margin="0,0,0,14" />

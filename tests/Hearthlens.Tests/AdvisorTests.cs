@@ -1,4 +1,5 @@
 using System.Net;
+using Hearthlens.Core;
 using Hearthlens.Core.Battlegrounds;
 using Hearthlens.Core.Cards;
 using Hearthlens.Core.Power;
@@ -39,7 +40,7 @@ public sealed class AdvisorTests(ITestOutputHelper output)
             cards = CardDb.Parse("itIT", stream);
         }
 
-        var advisor = new BattlegroundsAdvisor { Meta = meta };
+        var advisor = new BattlegroundsAdvisor { Meta = meta, CompMode = CompMode.Auto };
         var parser = new PowerParser(DateOnly.FromDateTime(File.GetLastWriteTime(log)));
         var tracker = new BattlegroundsTracker { Cards = cards };
         parser.AddListener(tracker);

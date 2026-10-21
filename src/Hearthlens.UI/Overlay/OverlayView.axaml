@@ -154,14 +154,15 @@
 
         <!-- Tavern: buy hint pinned above one shop minion: reasons, plus how players who bought it placed -->
         <DataTemplate x:Key="ShopBadgeTemplate" x:DataType="o:ShopBadge">
-            <Border Classes="shopBadge" Classes.best="{Binding Best}" Width="126" MinHeight="26" CornerRadius="6" Padding="8,3" BorderThickness="1"
+            <Border Classes="shopBadge" Classes.best="{Binding Best}" Classes.dataOnly="{Binding !Label.Length}" Width="126" MinHeight="26" CornerRadius="6" Padding="8,3" BorderThickness="1"
                     HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="{Binding Left, Converter={StaticResource LeftMargin}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Name="Buy" Text="BUY" FontSize="11" FontWeight="Bold" Margin="0,0,5,0" IsVisible="{Binding Best}" />
-                        <TextBlock Name="Lbl" Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="100" />
+                        <TextBlock Name="Buy" Text="BUY" FontSize="11" FontWeight="Bold" Margin="0,0,5,0" />
+                        <TextBlock Name="Lbl" Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="100"
+                                   IsVisible="{Binding Label, Converter={StaticResource Truthy}}" />
                     </StackPanel>
-                    <TextBlock Name="Data" Text="{Binding Placement}" FontSize="9.5" HorizontalAlignment="Center"
+                    <TextBlock Name="Data" Text="{Binding Placement}" HorizontalAlignment="Center"
                                IsVisible="{Binding Placement, Converter={StaticResource Truthy}}" />
                 </StackPanel>
             </Border>
@@ -173,12 +174,23 @@
                 <Border Classes="overlayCard pickCard" Background="{StaticResource OverlayPanelSolid}" HorizontalAlignment="Center"
                         MinWidth="150" MaxWidth="236" Padding="9,7,12,7" Margin="0,9,0,0">
                     <Grid ColumnDefinitions="Auto,*">
-                        <Panel Width="32" Height="32" VerticalAlignment="Center">
-                            <c:Scallop Name="Cookie" Fill="{StaticResource Surface4}" Lobes="8" Depth="0.1" />
-                            <TextBlock Name="RankText" FontFamily="{DynamicResource DisplayFont}" FontSize="14" FontWeight="Bold"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"><Run Text="#" FontSize="10" /><Run Text="{Binding Rank, Mode=OneWay}" /></TextBlock>
+                        <Panel VerticalAlignment="Center">
+                            <!-- "Mark the best": rank among the options (Rank is 0 otherwise) -->
+                            <Panel Width="32" Height="32" Margin="0,0,9,0" IsVisible="{Binding Rank, Converter={StaticResource Truthy}}">
+                                <c:Scallop Name="Cookie" Lobes="8" Depth="0.1" />
+                                <TextBlock Name="RankText" FontFamily="{DynamicResource DisplayFont}" FontSize="14" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"><Run Text="#" FontSize="10" /><Run Text="{Binding Rank, Mode=OneWay}" /></TextBlock>
+                            </Panel>
+                            <!-- Otherwise no ranking: the option's tavern tier, drawn like the top bar's tier chips -->
+                            <Panel IsVisible="{Binding Rank, Converter={StaticResource Truthy}, ConverterParameter=!}">
+                                <Border Width="28" Height="28" CornerRadius="14" Margin="0,0,9,0" Background="{StaticResource Surface3}"
+                                        IsVisible="{Binding Tier, Converter={StaticResource Truthy}}" ToolTip.Tip="Tavern tier">
+                                    <TextBlock Text="{Binding Tier}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource Text}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                            </Panel>
                         </Panel>
-                        <StackPanel Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Placement}" Classes="number" FontSize="16" />
                                 <TextBlock Text="{Binding PlacementNote}" FontSize="10.5" Foreground="{StaticResource Muted}" Margin="5,0,0,2" VerticalAlignment="Bottom" />
@@ -224,14 +236,17 @@
 
         <DataTemplate x:Key="AlternativeTemplate" x:DataType="o:CompRow">
             <Button Classes="bare alternative" Click="OnAlternativeClick" Focusable="False" Margin="0,0,0,3" HorizontalAlignment="Stretch"
-                    ToolTip.Tip="Switch your plan to this comp and lock it there">
+                    ToolTip.Tip="{Binding $parent[ItemsControl].((o:OverlayViewModel)DataContext).CompRowTooltip, FallbackValue=''}">
                 <Border Name="Bd" CornerRadius="6" Padding="10,6">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel>
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <!-- "I choose": an empty radio mark on every comp; the chosen one sits above with a filled mark -->
+                        <TextBlock Name="Choose" Text="&#xF043D;" Classes="icon" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"
+                                   IsVisible="{Binding $parent[ItemsControl].((o:OverlayViewModel)DataContext).CompManual, FallbackValue=False}" />
+                        <StackPanel Grid.Column="1">
                             <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
                             <TextBlock FontSize="10.5" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis"><Run Text="{Binding Tribes, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding OwnedCore, Mode=OneWay}" /><Run Text="/" /><Run Text="{Binding CoreCount, Mode=OneWay}" /><Run Text=" core owned" /></TextBlock>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
                             <TextBlock Text="{Binding Placement}" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />
                             <TextBlock Text="{Binding Power}" FontSize="10" FontWeight="SemiBold" Foreground="{Binding Power, Converter={StaticResource KeyBrush}}" HorizontalAlignment="Right" />
                         </StackPanel>
@@ -355,53 +370,70 @@
             <Setter Property="Foreground" Value="{StaticResource Text}" />
         </Style>
 
-        <!-- Pick badges: hero, trinket, discover -->
+        <!-- Pick badges: hero, trinket, discover. Only "Mark the best" (Grid#Surface.marking) singles one out:
+             BEST PICK tag, gold edge, gold rank cookie, other options dimmed. "Stats only" draws every option alike. -->
         <Style Selector="Panel.pick Border.bestTag">
             <Setter Property="IsVisible" Value="False" />
         </Style>
-        <Style Selector="Panel.pick.best Border.bestTag">
+        <Style Selector="Grid.marking Panel.pick.best Border.bestTag">
             <Setter Property="IsVisible" Value="True" />
         </Style>
-        <Style Selector="Panel.pick.best Border.pickCard">
+        <Style Selector="Grid.marking Panel.pick.best Border.pickCard">
             <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
             <Setter Property="BorderThickness" Value="1.5" />
         </Style>
         <Style Selector="Panel.pick.noData Border.pickCard">
             <Setter Property="Opacity" Value="0.7" />
         </Style>
-        <Style Selector="Panel.discover Border.pickCard">
+        <Style Selector="Grid.marking Panel.discover Border.pickCard">
             <Setter Property="Opacity" Value="0.85" />
         </Style>
-        <Style Selector="Panel.discover.best Border.pickCard">
+        <Style Selector="Grid.marking Panel.discover.best Border.pickCard">
             <Setter Property="Opacity" Value="1" />
         </Style>
         <Style Selector="Panel.discover TextBlock#RankText">
             <Setter Property="Foreground" Value="{StaticResource Text}" />
         </Style>
-        <Style Selector="Panel.discover.best c|Scallop#Cookie">
+        <!-- Fill set by style (not on the element) so the best option's gold fill below can apply -->
+        <Style Selector="Panel.discover c|Scallop#Cookie">
+            <Setter Property="Fill" Value="{StaticResource Surface4}" />
+        </Style>
+        <Style Selector="Grid.marking Panel.discover.best c|Scallop#Cookie">
             <Setter Property="Fill" Value="{StaticResource Accent}" />
         </Style>
-        <Style Selector="Panel.discover.best TextBlock#RankText">
+        <Style Selector="Grid.marking Panel.discover.best TextBlock#RankText">
             <Setter Property="Foreground" Value="{StaticResource OnAccent}" />
         </Style>
 
-        <!-- Shop badges -->
+        <!-- Shop badges: neutral; gold with BUY only for the best buy in "Mark the best" -->
         <Style Selector="Border.shopBadge">
             <Setter Property="Background" Value="{StaticResource OverlayPanelSolid}" />
             <Setter Property="BorderBrush" Value="{StaticResource OverlayBorder}" />
+        </Style>
+        <Style Selector="Border.shopBadge TextBlock#Buy">
+            <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="Border.shopBadge TextBlock#Lbl">
             <Setter Property="Foreground" Value="{StaticResource Text}" />
         </Style>
         <Style Selector="Border.shopBadge TextBlock#Data">
+            <Setter Property="FontSize" Value="9.5" />
             <Setter Property="Foreground" Value="{StaticResource Muted}" />
         </Style>
-        <Style Selector="Border.shopBadge.best">
+        <!-- A badge with no tags (stats only) shows its placement at a readable size -->
+        <Style Selector="Border.shopBadge.dataOnly TextBlock#Data">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+        </Style>
+        <Style Selector="Grid.marking Border.shopBadge.best">
             <Setter Property="Background" Value="{StaticResource Accent}" />
             <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
         </Style>
-        <Style Selector="Border.shopBadge.best TextBlock">
+        <Style Selector="Grid.marking Border.shopBadge.best TextBlock">
             <Setter Property="Foreground" Value="{StaticResource OnAccent}" />
+        </Style>
+        <Style Selector="Grid.marking Border.shopBadge.best TextBlock#Buy">
+            <Setter Property="IsVisible" Value="True" />
         </Style>
 
         <!-- Comp cards and alternatives -->
@@ -416,6 +448,12 @@
         </Style>
         <Style Selector="Button.alternative:pointerover Border#Bd">
             <Setter Property="Background" Value="{StaticResource SecondaryContainer}" />
+        </Style>
+        <Style Selector="Button.alternative TextBlock#Choose">
+            <Setter Property="Foreground" Value="{StaticResource Faint}" />
+        </Style>
+        <Style Selector="Button.alternative:pointerover TextBlock#Choose">
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
         </Style>
         <Style Selector="Button.lock Border#Bd">
             <Setter Property="Background" Value="{StaticResource Surface3}" />
@@ -508,7 +546,7 @@
 
     <Panel Name="Root">
         <LayoutTransformControl Name="SurfaceHost" HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="False">
-            <Grid Name="Surface" Width="1920" Height="1080">
+            <Grid Name="Surface" Width="1920" Height="1080" Classes.marking="{Binding ShowBestBadges}">
 
                 <!-- ============ Constructed: your deck (right) ============ -->
                 <o:MovablePanel Id="deck" Title="Your deck" Shown="{Binding ShowConstructed}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,64,12,0">
@@ -711,7 +749,7 @@
                         <DockPanel>
                             <Grid DockPanel.Dock="Top" Margin="12,9,6,0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Background="Transparent"
-                                            ToolTip.Tip="Hearthlens suggests a comp from Firestone data: the strongest one for this lobby's tribes, or the one you have already started. The tavern badges then show what to buy for it.">
+                                            ToolTip.Tip="{Binding PlanTooltip}">
                                     <TextBlock Text="&#xF08C9;" Classes="icon" FontSize="13" Foreground="{StaticResource Accent}" Margin="0,0,6,0" />
                                     <TextBlock Text="Game plan" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource Muted}" VerticalAlignment="Center" />
                                     <TextBlock Text="&#xF02FD;" Classes="icon" FontSize="11" Foreground="{StaticResource Faint}" Margin="5,0,0,0" />
@@ -728,26 +766,31 @@
                                 </StackPanel>
                             </Grid>
 
-                            <!-- Target comp: what to aim for, why, and what to look for next -->
+                            <!-- No comp yet: how to get one ("I choose": pick one below; Automatic: lock one) -->
+                            <TextBlock DockPanel.Dock="Top" Text="{Binding PlanHint}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="12,6,12,8"
+                                       IsVisible="{Binding PlanHint, Converter={StaticResource Truthy}}" />
+
+                            <!-- Target comp: the one you chose or locked ("AIM FOR" is the advisor's pick, only with "Mark the best") -->
                             <StackPanel DockPanel.Dock="Top" Margin="12,6,12,8" IsVisible="{Binding Target, Converter={StaticResource Truthy}}">
-                                <TextBlock Text="AIM FOR" Classes="sectionLabel" Margin="0,0,0,2" />
+                                <TextBlock Text="{Binding TargetLabel}" Classes="sectionLabel" Margin="0,0,0,2" />
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBlock Text="{Binding Target.Name, FallbackValue=''}" FontFamily="{DynamicResource DisplayFont}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap" />
                                     <Button Grid.Column="1" Classes="bare lock" Classes.pinned="{Binding Target.IsPinned, FallbackValue=False}"
                                             Command="{Binding Pin}" CommandParameter="{Binding Target.Id, FallbackValue=''}" Focusable="False" VerticalAlignment="Top" Margin="6,0,0,0"
-                                            ToolTip.Tip="Lock keeps this comp as your plan, even if you pick up cards for another one. Click again to unlock and let Hearthlens choose.">
+                                            ToolTip.Tip="{Binding PinTooltip}">
                                         <Border Name="Bd" CornerRadius="6" Padding="7,2" BorderBrush="{StaticResource Outline}" BorderThickness="1">
                                             <StackPanel Orientation="Horizontal">
                                                 <Panel>
-                                                    <TextBlock Text="&#xF0FC7;" Classes="icon" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center"
-                                                               IsVisible="{Binding !Target.IsPinned, FallbackValue=True}" />
-                                                    <TextBlock Text="&#xF033E;" Classes="icon" FontSize="12" VerticalAlignment="Center"
-                                                               IsVisible="{Binding Target.IsPinned, FallbackValue=False}" />
+                                                    <!-- "I choose": filled radio mark, the counterpart of the empty marks in the comp list -->
+                                                    <TextBlock Text="&#xF043E;" Classes="icon" FontSize="12" VerticalAlignment="Center" IsVisible="{Binding CompManual}" />
+                                                    <Panel IsVisible="{Binding !CompManual}">
+                                                        <TextBlock Text="&#xF0FC7;" Classes="icon" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center"
+                                                                   IsVisible="{Binding !Target.IsPinned, FallbackValue=True}" />
+                                                        <TextBlock Text="&#xF033E;" Classes="icon" FontSize="12" VerticalAlignment="Center"
+                                                                   IsVisible="{Binding Target.IsPinned, FallbackValue=False}" />
+                                                    </Panel>
                                                 </Panel>
-                                                <TextBlock Text="Lock" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0" VerticalAlignment="Center"
-                                                           IsVisible="{Binding !Target.IsPinned, FallbackValue=True}" />
-                                                <TextBlock Text="Locked" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0" VerticalAlignment="Center"
-                                                           IsVisible="{Binding Target.IsPinned, FallbackValue=False}" />
+                                                <TextBlock Text="{Binding PinText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Border>
                                     </Button>
@@ -815,8 +858,11 @@
                                         <c:Ornament Text="How to play" Size="10.5" Margin="0,4,0,6" IsVisible="{Binding CompTip, Converter={StaticResource Truthy}}" />
                                         <TextBlock Text="{Binding CompTip}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8"
                                                    MaxHeight="120" TextTrimming="WordEllipsis" IsVisible="{Binding CompTip, Converter={StaticResource Truthy}}" />
+                                    </StackPanel>
 
-                                        <c:Ornament Text="Other comps  ·  click to switch" Size="10.5" Margin="0,4,0,6" IsVisible="{Binding Alternatives, Converter={StaticResource Truthy}}" />
+                                    <!-- Comps to choose from: shown even while collapsed when there is no target, so there is always something to click -->
+                                    <StackPanel IsVisible="{Binding ShowCompList}">
+                                        <c:Ornament Text="{Binding CompListTitle}" Size="10.5" Margin="0,4,0,6" />
                                         <ItemsControl ItemsSource="{Binding Alternatives}" ItemTemplate="{StaticResource AlternativeTemplate}" />
                                     </StackPanel>
                                 </StackPanel>

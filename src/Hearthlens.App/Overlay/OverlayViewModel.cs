@@ -41,7 +41,73 @@ public sealed class OverlayViewModel : Observable
     public bool ShowOdds { get => _showOdds; private set => Set(ref _showOdds, value); }
 
     /// <summary>True hides the plan's secondary details (commit timing, tips, alternatives).</summary>
-    public bool CompCollapsed { get => _compCollapsed; set => Set(ref _compCollapsed, value); }
+    public bool CompCollapsed
+    {
+        get => _compCollapsed;
+        set
+        {
+            if (Set(ref _compCollapsed, value))
+            {
+                ShowCompList = Alternatives.Count > 0 && (Target is null || !value);
+            }
+        }
+    }
+
+    // ---- pick suggestions (Settings: "Pick suggestions" and "Game plan comp") -------------------
+    private PickHints _pickHints = PickHints.StatsOnly;
+    private CompMode _compMode = CompMode.Manual;
+    private string? _chosenCompId;
+    private CompAdvice? _planTarget;
+    private string _targetLabel = string.Empty;
+    private string _pinText = string.Empty;
+    private string _pinTooltip = string.Empty;
+    private string _planTooltip = string.Empty;
+    private string _compListTitle = string.Empty;
+    private string _compRowTooltip = string.Empty;
+    private string _planHint = string.Empty;
+    private bool _showCompList;
+
+    /// <summary>
+    /// "Mark the best": BEST PICK / BUY badges, gold styling, Discover ranks and the comp the advisor picks are shown.
+    /// Otherwise every Recommended / Best flag on the badge items is false and <see cref="DiscoverBadge.Rank"/> is 0.
+    /// </summary>
+    public bool ShowBestBadges => _pickHints == PickHints.Highlight;
+
+    /// <summary>"Stats only": the same numbers on every option and nothing singled out.</summary>
+    public bool StatsOnly => _pickHints == PickHints.StatsOnly;
+
+    /// <summary>Pick suggestions are not "Off": the hero, trinket, tavern, Discover and game-plan panels may show.</summary>
+    public bool ShowPickPanels => _pickHints != PickHints.Off;
+
+    /// <summary>Game plan comp is "I choose": the advisor never picks a comp; the player's choice is kept across games.</summary>
+    public bool CompManual => _compMode == CompMode.Manual;
+
+    /// <summary>Caption above <see cref="Target"/>: "YOUR COMP" (I choose) or "AIM FOR" (Automatic).</summary>
+    public string TargetLabel { get => _targetLabel; private set => Set(ref _targetLabel, value); }
+
+    /// <summary>Text on the button of <see cref="Target"/>: "Chosen" (I choose, a click clears it), "Lock" / "Locked" (Automatic).</summary>
+    public string PinText { get => _pinText; private set => Set(ref _pinText, value); }
+
+    /// <summary>Tooltip of the button of <see cref="Target"/>.</summary>
+    public string PinTooltip { get => _pinTooltip; private set => Set(ref _pinTooltip, value); }
+
+    /// <summary>Tooltip of the "Game plan" header: how the comp is set in the current mode.</summary>
+    public string PlanTooltip { get => _planTooltip; private set => Set(ref _planTooltip, value); }
+
+    /// <summary>Header of the comp list (<see cref="Alternatives"/>), e.g. "Comps for this lobby · click to choose".</summary>
+    public string CompListTitle { get => _compListTitle; private set => Set(ref _compListTitle, value); }
+
+    /// <summary>Tooltip of each comp in <see cref="Alternatives"/>.</summary>
+    public string CompRowTooltip { get => _compRowTooltip; private set => Set(ref _compRowTooltip, value); }
+
+    /// <summary>Muted one-line hint in the plan panel, e.g. "Pick a comp below to plan around it." Empty when there is nothing to say.</summary>
+    public string PlanHint { get => _planHint; private set => Set(ref _planHint, value); }
+
+    /// <summary>
+    /// The comp list is visible: there are comps, and either the plan is expanded or there is no <see cref="Target"/>
+    /// (then the list is how the player chooses, so it shows even while the plan is collapsed).
+    /// </summary>
+    public bool ShowCompList { get => _showCompList; private set => Set(ref _showCompList, value); }
 
     // ---- constructed ----------------------------------------------------------------------
     private string _deckName = string.Empty;
@@ -210,7 +276,7 @@ public sealed class OverlayViewModel : Observable
         Pin = new RelayCommand(p =>
         {
             var id = p as string;
-            // Clicking the pinned comp again releases it back to automatic choice.
+            // Clicking the chosen (or locked) comp again clears it: no target in "I choose", automatic choice otherwise.
             var pinned = Target is { IsPinned: true } t && t.Id == id;
             PinRequested?.Invoke(pinned ? null : id);
         });
@@ -255,8 +321,9 @@ public sealed class OverlayViewModel : Observable
         var bg = enabled ? snapshot.Battlegrounds : null;
         _bg = bg;
         ShowBattlegrounds = bg is not null && settings.ShowBattlegroundsBar;
-        ShowHeroPick = bg is { IsHeroSelection: true } && settings.ShowHeroPick && bg.HeroOptions.Count > 0;
-        var playing = bg is { IsHeroSelection: false, HeroCardId: not null } && settings.ShowHeroPick;
+        ApplyPickSettings(settings);
+        ShowHeroPick = bg is { IsHeroSelection: true } && ShowPickPanels && bg.HeroOptions.Count > 0;
+        var playing = bg is { IsHeroSelection: false, HeroCardId: not null } && ShowPickPanels;
         ShowComp = playing && (bg!.Comps.Count > 0 || bg.Trinkets.Count > 0 || bg.DarkGiftAdvice.Length > 0 || bg.Pairs.Count > 0);
         ShowTrinkets = playing && bg!.TrinketOptions.Count > 0;
         ShowDiscover = playing && bg!.DiscoverAdvice.Count > 0;
@@ -279,6 +346,26 @@ public sealed class OverlayViewModel : Observable
         if (bg is null)
         {
             Lobby = null;
+        }
+    }
+
+    private void ApplyPickSettings(AppSettings settings)
+    {
+        var hints = _pickHints != settings.PickHints;
+        var comp = _compMode != settings.CompMode;
+        _pickHints = settings.PickHints;
+        _compMode = settings.CompMode;
+        _chosenCompId = settings.ChosenCompId;
+        if (hints)
+        {
+            Raise(nameof(ShowBestBadges));
+            Raise(nameof(StatsOnly));
+            Raise(nameof(ShowPickPanels));
+        }
+
+        if (comp)
+        {
+            Raise(nameof(CompManual));
         }
     }
 
@@ -356,9 +443,12 @@ public sealed class OverlayViewModel : Observable
         }
         RebuildTiers();
 
+        // Only "Mark the best" singles an option out; "Stats only" keeps the advisor's numbers but every flag false.
+        var highlight = ShowBestBadges;
+
         // Lobby-adjusted numbers only mean something once the tribes are known.
         var lobbyKnown = view.Races.Count >= 4;
-        Replace(nameof(HeroPicks), view.HeroOptions, h => $"{lobbyKnown}{h.CardId}{h.Meta?.AdjustedPosition:0.000}{h.Recommended}{string.Join(',', h.TopComps ?? [])}", () => HeroPicks = view.HeroOptions
+        Replace(nameof(HeroPicks), view.HeroOptions, h => $"{lobbyKnown}{h.CardId}{h.Meta?.AdjustedPosition:0.000}{highlight && h.Recommended}{string.Join(',', h.TopComps ?? [])}", () => HeroPicks = view.HeroOptions
             .Select(h =>
             {
                 var adjusted = h.Meta is not null && lobbyKnown;
@@ -374,56 +464,68 @@ public sealed class OverlayViewModel : Observable
                     h.Meta is null ? string.Empty : $"{h.Meta.PickRate.ToString("P0", CultureInfo.CurrentCulture)} pick",
                     h.Stats is { Games: > 0 } s ? $"You: {s.AveragePlace:0.0} avg in {s.Games}" : string.Empty,
                     string.Join(" · ", (h.TopComps ?? Array.Empty<string>()).Take(2)),
-                    h.Recommended,
+                    highlight && h.Recommended,
                     h.Meta is not null);
             })
             .ToList());
 
-        Replace(nameof(TrinketPicks), view.TrinketOptions, t => $"{t.CardId}{t.Meta?.AveragePlacement:0.000}{t.Recommended}", () => TrinketPicks = view.TrinketOptions
+        Replace(nameof(TrinketPicks), view.TrinketOptions, t => $"{t.CardId}{t.Meta?.AveragePlacement:0.000}{highlight && t.Recommended}", () => TrinketPicks = view.TrinketOptions
             .Select(t => new TrinketBadge(
                 t.CardId,
                 t.Name,
                 t.Meta?.Tier ?? "–",
                 t.Meta is null ? "—" : t.Meta.AveragePlacement.ToString("0.00", CultureInfo.CurrentCulture),
                 t.Meta is null ? "no data" : $"{t.Meta.PickRate.ToString("P0", CultureInfo.CurrentCulture)} pick",
-                t.Recommended,
+                highlight && t.Recommended,
                 t.Meta is not null))
             .ToList());
 
         Replace(nameof(OwnedTrinkets), view.Trinkets, t => t, () => OwnedTrinkets = view.Trinkets.Select(_cards.NameOf).ToList());
-        DarkGift = view.DarkGiftAdvice;
-        Freeze = view.FreezeAdvice;
+        // "Stats only" names no card to buy or keep: the Dark Gift line only says the button is ready.
+        DarkGift = highlight || view.DarkGiftAdvice.Length == 0
+            ? view.DarkGiftAdvice
+            : $"Dark Gift ready  ·  {(view.DarkGiftCost > 0 ? view.DarkGiftCost : 3)} gold";
+        Freeze = highlight ? view.FreezeAdvice : string.Empty;
         Replace(nameof(Pairs), view.Pairs, p => p, () => Pairs = view.Pairs.ToList());
 
+        // The plan shows the player's choice (or lock), and the advisor's own pick only with "Mark the best".
+        var target = view.Comps.FirstOrDefault(c => c.IsTarget && (highlight || c.IsPinned));
+        _planTarget = target;
+        // Badge tags such as "Core" refer to the advisor's target comp: keep them only while that comp is on screen.
+        var compTags = target is not null;
+        var mode = $"{_pickHints}{_compMode}{_chosenCompId}";
+
         // One slot per option in screen order, so each badge lands above its own card.
-        Replace(nameof(DiscoverBadges), view.DiscoverAdvice, d => $"{d.Slot}{d.Score}{d.Best}{d.Reason}{d.Placement:0.000}", () =>
+        Replace(nameof(DiscoverBadges), view.DiscoverAdvice, d => $"{mode}{compTags}{d.Slot}{d.Score}{d.Best}{d.Reason}{d.Placement:0.000}{d.TechLevel}", () =>
         {
             var gifts = view.DiscoverOptions;
             var ranked = view.DiscoverAdvice.OrderByDescending(d => d.Score).Select(d => d.Slot).ToList();
             DiscoverBadges = view.DiscoverAdvice
                 .OrderBy(d => d.Slot)
                 .Select(d => new DiscoverBadge(
-                    ranked.IndexOf(d.Slot) + 1,
-                    ShortReason(d.Reason),
+                    highlight ? ranked.IndexOf(d.Slot) + 1 : 0,
+                    ShortReason(d.Reason, compTags, highlight),
                     d.Slot < gifts.Count ? gifts[d.Slot].DarkGift ?? string.Empty : string.Empty,
                     d.Placement is { } p ? p.ToString("0.00", CultureInfo.CurrentCulture) : "—",
                     d.Placement is null ? "no data yet" : "avg place",
-                    d.Best,
-                    d.Placement is not null))
+                    highlight && d.Best,
+                    d.Placement is not null,
+                    d.TechLevel))
                 .ToList();
         });
         var source = view.DiscoverSource ?? "Discover";
         DiscoverTitle = view.DiscoverAdvice.Count == 0
             ? string.Empty
-            : view.DiscoverAdvice.Any(d => d.Best)
-                ? $"{source}  ·  best pick marked"
-                : $"{source}  ·  close call, no clear best";
+            : !highlight
+                ? view.DiscoverSource is { } offeredBy ? $"Discover  ·  {offeredBy}" : "Discover  ·  community stats"
+                : view.DiscoverAdvice.Any(d => d.Best)
+                    ? $"{source}  ·  best pick marked"
+                    : $"{source}  ·  close call, no clear best";
 
         MetaSource = view.MetaSource ?? string.Empty;
         Bracket = view.MetaSource?.Split(" · ").ElementAtOrDefault(1) ?? string.Empty;
 
-        var target = view.Comps.FirstOrDefault(c => c.IsTarget);
-        Replace(nameof(Target), view.Comps, c => $"{c.Id}{c.IsTarget}{c.IsPinned}{c.OwnedCore}{c.Why}{string.Join(',', c.LookFor)}{string.Concat(c.Cards.Select(x => x.Owned ? '1' : '0'))}", () =>
+        Replace(nameof(Target), view.Comps, c => $"{mode}{c.Id}{c.IsTarget}{c.IsPinned}{c.OwnedCore}{c.Why}{string.Join(',', c.LookFor)}{string.Concat(c.Cards.Select(x => x.Owned ? '1' : '0'))}", () =>
         {
             Target = target is null ? null : Row(target);
             TargetCards = target?.Cards
@@ -431,27 +533,58 @@ public sealed class OverlayViewModel : Observable
                 .ToList() ?? (IReadOnlyList<CompCardTile>)Array.Empty<CompCardTile>();
             CommitHint = target?.WhenToCommit ?? string.Empty;
             CompTip = target?.Tip ?? string.Empty;
-            Alternatives = view.Comps.Where(c => !c.IsTarget).Select(Row).ToList();
+            Alternatives = view.Comps.Where(c => c.Id != target?.Id).Select(c => Row(c) with { IsTarget = false }).ToList();
             if (SelectedTier > 0)
             {
                 RebuildBrowser();
             }
         });
+        UpdatePlanText(view);
 
         var shopSize = view.Shop.Count;
-        Replace(nameof(ShopBadges), view.ShopAdvice, s => $"{shopSize}{s.Slot}{s.Score}{s.Best}{s.Reason}{s.Placement:0.000}", () => ShopBadges = view.ShopAdvice
-            .Where(s => s.Best || s.Score >= StrongPick)
-            .Select(s => new ShopBadge(
-                ShopRowCenter + ((s.Slot - ((shopSize - 1) / 2.0)) * ShopMinionPitch) - (ShopBadgeWidth / 2),
-                ShortReason(s.Reason),
-                s.Best,
-                s.Placement is { } p ? $"{p.ToString("0.00", CultureInfo.CurrentCulture)} avg place" : string.Empty))
+        Replace(nameof(ShopBadges), view.ShopAdvice, s => $"{mode}{compTags}{shopSize}{s.Slot}{s.Score}{s.Best}{s.Reason}{s.Placement:0.000}", () => ShopBadges = view.ShopAdvice
+            .Select(s => (Pick: s, Label: ShortReason(s.Reason, compTags, highlight)))
+            // "Mark the best" badges the best buy and other strong ones; "Stats only" shows what is known about every minion.
+            .Where(x => highlight ? x.Pick.Best || x.Pick.Score >= StrongPick : x.Label.Length > 0 || x.Pick.Placement is not null)
+            .Select(x => new ShopBadge(
+                ShopRowCenter + ((x.Pick.Slot - ((shopSize - 1) / 2.0)) * ShopMinionPitch) - (ShopBadgeWidth / 2),
+                x.Label,
+                highlight && x.Pick.Best,
+                x.Pick.Placement is { } p ? $"{p.ToString("0.00", CultureInfo.CurrentCulture)} avg place" : string.Empty))
             .ToList());
 
         if (SelectedTier > 0 && _fingerprints.GetValueOrDefault("BrowserRaces") != string.Join(',', view.Races))
         {
             RebuildBrowser();
         }
+    }
+
+    /// <summary>Wording of the plan panel for the current comp mode, target and list.</summary>
+    private void UpdatePlanText(BattlegroundsView view)
+    {
+        var manual = CompManual;
+        TargetLabel = manual ? "YOUR COMP" : "AIM FOR";
+        PinText = manual ? "Chosen" : Target is { IsPinned: true } ? "Locked" : "Lock";
+        PinTooltip = manual
+            ? "Your choice, kept for the next games. Click to clear it: then no comp is targeted until you choose one."
+            : "Lock keeps this comp as your plan for this game, even if you pick up cards for another one. Click again to unlock and let Hearthlens choose.";
+        PlanTooltip = manual
+            ? "Comps from Firestone data that fit this lobby's tribes, with how players who played them placed. Click one to make it your plan: the tavern and Discover hints then count its cards. Your choice is kept for the next games."
+            : ShowBestBadges
+                ? "Hearthlens suggests a comp from Firestone data: the strongest one for this lobby's tribes, or the one you have already started. The tavern badges then show what to buy for it."
+                : "Comps from Firestone data that fit this lobby's tribes. Click one to lock your plan on it for this game.";
+        CompRowTooltip = manual ? "Make this comp your plan (kept for the next games)" : "Switch your plan to this comp and lock it there";
+        CompListTitle = Target is not null
+            ? manual ? "Other comps  ·  click to choose" : "Other comps  ·  click to switch"
+            : manual ? "Comps for this lobby  ·  click to choose" : "Comps for this lobby  ·  click to lock one";
+        PlanHint = Target is not null || view.Comps.Count == 0
+            ? string.Empty
+            : !manual
+                ? "Click a comp below to lock your plan on it."
+                : _chosenCompId is not null
+                    ? "Your chosen comp is not available in this lobby. Choose another below, or keep it for the next game."
+                    : "Choose a comp below to plan around it. Tavern and Discover hints then count its cards.";
+        ShowCompList = Alternatives.Count > 0 && (Target is null || !CompCollapsed);
     }
 
     private void UpdateLobbyAndSession(BattlegroundsView view, LiveSnapshot snapshot)
@@ -509,13 +642,17 @@ public sealed class OverlayViewModel : Observable
     private const int StrongPick = 40;
 
     private static readonly string[] ReasonTags = ["Triple", "Pair", "Core", "Add-on", "Cycle", "Fits tribe", "Board synergy"];
+    private static readonly string[] CompReasonTags = ["Core", "Add-on", "Cycle", "Fits tribe"];
 
-    /// <summary>Badge text from the advisor's reason: its tags only, without the comp name.</summary>
-    private static string ShortReason(string reason)
+    /// <summary>
+    /// Badge text from the advisor's reason: its tags only, without the comp name. <paramref name="compTags"/> false drops
+    /// the tags about the target comp; <paramref name="bestStats"/> false drops the "Best stats" fallback.
+    /// </summary>
+    private static string ShortReason(string reason, bool compTags, bool bestStats)
     {
         var parts = reason.Split(" · ");
-        var tags = parts.Where(p => ReasonTags.Contains(p)).Take(2).ToList();
-        if (tags.Count == 0 && parts.Contains("Best stats available"))
+        var tags = parts.Where(p => ReasonTags.Contains(p) && (compTags || !CompReasonTags.Contains(p))).Take(2).ToList();
+        if (tags.Count == 0 && bestStats && parts.Contains("Best stats available"))
         {
             tags.Add("Best stats");
         }
@@ -561,8 +698,7 @@ public sealed class OverlayViewModel : Observable
 
         _fingerprints["BrowserRaces"] = string.Join(',', bg.Races);
         var lobby = bg.Races.ToHashSet(StringComparer.Ordinal);
-        var target = bg.Comps.FirstOrDefault(c => c.IsTarget);
-        var inComp = target?.Cards.ToDictionary(c => c.CardId, c => c.Status) ?? new Dictionary<string, string>();
+        var inComp = _planTarget?.Cards.ToDictionary(c => c.CardId, c => c.Status) ?? new Dictionary<string, string>();
 
         var minions = _cards.BattlegroundsMinions
             .Where(c => c.TechLevel == SelectedTier && (bg.IsDuos || !c.IsBattlegroundsDuosExclusive))

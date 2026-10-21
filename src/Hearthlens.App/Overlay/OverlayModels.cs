@@ -30,9 +30,10 @@ public sealed record TrinketBadge(string CardId, string Name, string Tier, strin
 
 /// <summary>
 /// One Discover option slot, above its card: rank among the options, community average placement around this
-/// turn, the advisor's reasons and the Dark Gift it carries.
+/// turn, the advisor's reasons and the Dark Gift it carries. <see cref="Rank"/> is 0 when pick suggestions are not
+/// "Mark the best" (no ranking is shown then); <see cref="Tier"/> is the option's tavern tier (0 when it has none).
 /// </summary>
-public sealed record DiscoverBadge(int Rank, string Label, string Gift, string Placement, string PlacementNote, bool Best, bool HasData);
+public sealed record DiscoverBadge(int Rank, string Label, string Gift, string Placement, string PlacementNote, bool Best, bool HasData, int Tier = 0);
 
 /// <summary>Buy hint drawn above one tavern minion; <see cref="Left"/> is in overlay units inside the shop row.</summary>
 public sealed record ShopBadge(double Left, string Label, bool Best, string Placement);

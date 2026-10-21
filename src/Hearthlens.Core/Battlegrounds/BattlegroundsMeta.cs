@@ -64,7 +64,8 @@ public sealed class BattlegroundsMeta
         ["pirate"] = "PIRATE", ["elemental"] = "ELEMENTAL", ["undead"] = "UNDEAD", ["naga"] = "NAGA",
     };
 
-    private BattlegroundsMeta(
+    /// <summary>Built by <see cref="LoadAsync"/>; internal so tests can build small offline data sets.</summary>
+    internal BattlegroundsMeta(
         IReadOnlyDictionary<int, IReadOnlyDictionary<string, MetaHero>> heroes,
         IReadOnlyList<(int Percentile, int Mmr)> percentiles,
         IReadOnlyList<MetaComp> comps,

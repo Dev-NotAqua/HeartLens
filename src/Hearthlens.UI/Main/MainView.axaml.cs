@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Avalonia.Interactivity;
+using Hearthlens.Core;
 using Hearthlens.UI.Infrastructure;
 
 namespace Hearthlens.UI.Main;
@@ -68,6 +69,37 @@ public partial class MainView : UserControl
         foreach (var slider in this.GetLogicalDescendantsOfType<Slider>())
         {
             slider.ValueChanged += (_, _) => SettingsChanged?.Invoke();
+        }
+
+        // Segmented choices on the settings page ("Pick suggestions", "Game plan comp"): each radio's Tag names the value
+        // it selects, e.g. "PickHints.StatsOnly". The value is applied here, before SettingsChanged, rather than through a
+        // two-way binding: Avalonia writes a binding back only after IsCheckedChanged, and a radio group stops writing
+        // back once it has unchecked an option. Only the newly checked option reports, so one click applies once.
+        foreach (var radio in PageSettings.GetLogicalDescendantsOfType<RadioButton>())
+        {
+            radio.IsCheckedChanged += (_, _) =>
+            {
+                if (radio.IsChecked == true && _viewModel is not null && ApplyChoice(_viewModel.Settings, radio.Tag as string))
+                {
+                    SettingsChanged?.Invoke();
+                }
+            };
+        }
+    }
+
+    /// <summary>Applies a settings radio's Tag ("PickHints.Off", "CompMode.Auto"); false when nothing changed.</summary>
+    private static bool ApplyChoice(AppSettings settings, string? choice)
+    {
+        switch (choice?.Split('.'))
+        {
+            case ["PickHints", var name] when Enum.TryParse<PickHints>(name, out var hints) && settings.PickHints != hints:
+                settings.PickHints = hints;
+                return true;
+            case ["CompMode", var name] when Enum.TryParse<CompMode>(name, out var mode) && settings.CompMode != mode:
+                settings.CompMode = mode;
+                return true;
+            default:
+                return false;
         }
     }
 

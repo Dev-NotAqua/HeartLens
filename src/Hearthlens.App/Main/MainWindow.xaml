@@ -804,8 +804,90 @@
                                     <TextBlock Text="Battlegrounds" Style="{StaticResource Label}" Margin="0,4,0,10" />
                                     <CheckBox Style="{StaticResource Switch}" Content="Top bar: turn, tavern tiers, lobby tribes, rating" IsChecked="{Binding ShowBattlegroundsBar}" Margin="0,0,0,14"
                                               ToolTip="Click a tier number in game to see that tier's minions in your lobby." />
-                                    <CheckBox Style="{StaticResource Switch}" Content="Best picks: heroes, trinkets, tavern, every Discover and the game plan" IsChecked="{Binding ShowHeroPick}" Margin="0,0,0,14"
-                                              ToolTip="Badges over the cards you can choose, ranked with community data and your board." />
+                                    <!-- Pick suggestions: badges over heroes, trinkets, tavern minions and every Discover -->
+                                    <Grid Margin="0,0,0,14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="Pick suggestions" FontSize="13.5" />
+                                            <TextBlock FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                                        <Setter Property="Text" Value="The same stats on every option, with nothing marked as the best." />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsChecked, ElementName=PickHintsHighlightOption}" Value="True">
+                                                                <Setter Property="Text" Value="Badges mark the best hero, trinket, buy and Discover option." />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsChecked, ElementName=PickHintsOffOption}" Value="True">
+                                                                <Setter Property="Text" Value="No badges over the choices and no game plan panel." />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Style="{StaticResource SegmentBar}" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <RadioButton x:Name="PickHintsHighlightOption" Style="{StaticResource Segment}" Content="Mark the best" GroupName="PickHints"
+                                                             IsChecked="{Binding PickHintsHighlight}" />
+                                                <RadioButton x:Name="PickHintsStatsOnlyOption" Style="{StaticResource Segment}" Content="Stats only" GroupName="PickHints"
+                                                             IsChecked="{Binding PickHintsStatsOnly}" />
+                                                <RadioButton x:Name="PickHintsOffOption" Style="{StaticResource Segment}" Content="Off" GroupName="PickHints"
+                                                             IsChecked="{Binding PickHintsOff}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                    <!-- Game plan comp: who sets the comp the plan, tavern and Discover hints are built around -->
+                                    <Grid Margin="0,0,0,14">
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
+                                                <Style.Triggers>
+                                                    <!-- Pick suggestions Off hides the game plan, so this choice has no effect then -->
+                                                    <DataTrigger Binding="{Binding IsChecked, ElementName=PickHintsOffOption}" Value="True">
+                                                        <Setter Property="Opacity" Value="0.5" />
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="Game plan comp" FontSize="13.5" />
+                                            <TextBlock FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                                        <Setter Property="Text" Value="You choose the comp in the game plan panel. It is kept for the next games." />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsChecked, ElementName=CompModeAutoOption}" Value="True">
+                                                                <Setter Property="Text" Value="Hearthlens picks a comp for each lobby. A lock overrides it for that game." />
+                                                            </DataTrigger>
+                                                            <!-- Stats only never shows the comp Hearthlens picks: only a lock puts one on screen -->
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsChecked, ElementName=CompModeAutoOption}" Value="True" />
+                                                                    <Condition Binding="{Binding IsChecked, ElementName=PickHintsStatsOnlyOption}" Value="True" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Text" Value="Stats only keeps the automatic comp hidden. Lock one to plan around it." />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Style="{StaticResource SegmentBar}" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <RadioButton x:Name="CompModeManualOption" Style="{StaticResource Segment}" Content="I choose" GroupName="CompMode"
+                                                             IsChecked="{Binding CompModeManual}" />
+                                                <RadioButton x:Name="CompModeAutoOption" Style="{StaticResource Segment}" Content="Automatic" GroupName="CompMode"
+                                                             IsChecked="{Binding CompModeAuto}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
                                     <CheckBox Style="{StaticResource Switch}" Content="Opponent boards when you hover the leaderboard" IsChecked="{Binding ShowOpponentBoards}" Margin="0,0,0,14"
                                               ToolTip="The last board you saw for that player in combat." />
                                     <CheckBox Style="{StaticResource Switch}" Content="Lobby list: health, tier and last fight" IsChecked="{Binding ShowLobbyPanel}" Margin="0,0,0,14" />

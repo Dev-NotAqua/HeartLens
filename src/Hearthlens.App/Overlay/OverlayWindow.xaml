@@ -212,11 +212,16 @@
                 </Border>
             </Grid>
             <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Recommended}" Value="True">
+                <!-- Only "Mark the best" (Settings > Pick suggestions) singles one option out -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Recommended}" Value="True" />
+                        <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
                     <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}" />
                     <Setter TargetName="Card" Property="BorderThickness" Value="1.5" />
                     <Setter TargetName="Best" Property="Visibility" Value="Visible" />
-                </DataTrigger>
+                </MultiDataTrigger>
                 <DataTrigger Binding="{Binding HasMeta}" Value="False">
                     <Setter TargetName="Card" Property="Opacity" Value="0.7" />
                 </DataTrigger>
@@ -256,18 +261,24 @@
                 </Border>
             </Grid>
             <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Recommended}" Value="True">
+                <!-- Only "Mark the best" (Settings > Pick suggestions) singles one option out -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Recommended}" Value="True" />
+                        <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
                     <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}" />
                     <Setter TargetName="Card" Property="BorderThickness" Value="1.5" />
                     <Setter TargetName="Best" Property="Visibility" Value="Visible" />
-                </DataTrigger>
+                </MultiDataTrigger>
                 <DataTrigger Binding="{Binding HasMeta}" Value="False">
                     <Setter TargetName="Card" Property="Opacity" Value="0.7" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
-        <!-- Tavern: buy hint pinned above one shop minion: reasons, plus how players who bought it placed -->
+        <!-- Tavern: hint pinned above a shop minion: its tags, plus how players who bought it placed.
+             "Mark the best" turns the best buy gold with BUY; "Stats only" keeps every badge neutral. -->
         <DataTemplate x:Key="ShopBadgeTemplate" DataType="{x:Type o:ShopBadge}">
             <Border x:Name="Bd" Width="126" MinHeight="26" CornerRadius="6" Padding="8,3" Background="{StaticResource OverlayPanelSolid}"
                     BorderBrush="{StaticResource OverlayBorder}" BorderThickness="1" VerticalAlignment="Bottom">
@@ -275,21 +286,30 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <TextBlock x:Name="Buy" Text="BUY" FontSize="11" FontWeight="Bold" Margin="0,0,5,0" Visibility="Collapsed" />
                         <TextBlock x:Name="Lbl" Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Text}"
-                                   TextTrimming="CharacterEllipsis" MaxWidth="100" />
+                                   TextTrimming="CharacterEllipsis" MaxWidth="100" Visibility="{Binding Label, Converter={StaticResource Vis}}" />
                     </StackPanel>
                     <TextBlock x:Name="Data" Text="{Binding Placement}" FontSize="9.5" Foreground="{StaticResource Muted}" HorizontalAlignment="Center"
                                Visibility="{Binding Placement, Converter={StaticResource Vis}}" />
                 </StackPanel>
             </Border>
             <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Best}" Value="True">
+                <!-- A badge with no tags (stats only) shows its placement at a readable size -->
+                <DataTrigger Binding="{Binding Label}" Value="">
+                    <Setter TargetName="Data" Property="FontSize" Value="10.5" />
+                    <Setter TargetName="Data" Property="Foreground" Value="{StaticResource Text}" />
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Best}" Value="True" />
+                        <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
                     <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent}" />
                     <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}" />
                     <Setter TargetName="Buy" Property="Visibility" Value="Visible" />
                     <Setter TargetName="Buy" Property="Foreground" Value="{StaticResource OnAccent}" />
                     <Setter TargetName="Lbl" Property="Foreground" Value="{StaticResource OnAccent}" />
                     <Setter TargetName="Data" Property="Foreground" Value="{StaticResource OnAccent}" />
-                </DataTrigger>
+                </MultiDataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
@@ -303,14 +323,21 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Grid Width="32" Height="32" VerticalAlignment="Center">
+                        <!-- Rank among the options: "Mark the best" only -->
+                        <Grid x:Name="RankCookie" Width="32" Height="32" VerticalAlignment="Center" Visibility="Collapsed">
                             <c:Scallop x:Name="Cookie" Fill="{StaticResource Surface4}" Lobes="8" Depth="0.1" />
                             <TextBlock x:Name="RankText" FontFamily="{StaticResource DisplayFont}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Text}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <Run Text="#" FontSize="10" /><Run Text="{Binding Rank, Mode=OneWay}" />
                             </TextBlock>
                         </Grid>
-                        <StackPanel Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center">
+                        <!-- Otherwise the option's tavern tier, when it has one: nothing is ranked -->
+                        <Border x:Name="TierChip" Width="28" Height="28" CornerRadius="14" Background="{StaticResource Surface3}" VerticalAlignment="Center"
+                                ToolTip="Tavern tier" Visibility="{Binding Tier, Converter={StaticResource Vis}}">
+                            <TextBlock Text="{Binding Tier}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource Text}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel x:Name="Info" Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Placement}" Style="{StaticResource Number}" FontSize="16" />
                                 <TextBlock Text="{Binding PlacementNote}" FontSize="10.5" Foreground="{StaticResource Muted}" Margin="5,0,0,2" VerticalAlignment="Bottom" />
@@ -331,14 +358,41 @@
                 </Border>
             </Grid>
             <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Best}" Value="True">
+                <!-- "Mark the best": ranked options, the others dimmed a little next to the best one -->
+                <DataTrigger Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                    <Setter TargetName="RankCookie" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="TierChip" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <!-- "Stats only": every option at full strength, only the ones without data dimmed -->
+                <DataTrigger Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                    <Setter TargetName="Card" Property="Opacity" Value="1" />
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="False" />
+                        <Condition Binding="{Binding HasData}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="Card" Property="Opacity" Value="0.7" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="False" />
+                        <Condition Binding="{Binding Tier}" Value="0" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="Info" Property="Margin" Value="0" />
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Best}" Value="True" />
+                        <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
                     <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}" />
                     <Setter TargetName="Card" Property="BorderThickness" Value="1.5" />
                     <Setter TargetName="Card" Property="Opacity" Value="1" />
                     <Setter TargetName="Cookie" Property="Fill" Value="{StaticResource Accent}" />
                     <Setter TargetName="RankText" Property="Foreground" Value="{StaticResource OnAccent}" />
                     <Setter TargetName="Best" Property="Visibility" Value="Visible" />
-                </DataTrigger>
+                </MultiDataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
@@ -375,24 +429,31 @@
             </DataTemplate.Triggers>
         </DataTemplate>
 
+        <!-- Comp list row: a click chooses (I choose) or locks (Automatic) this comp; the advisor never highlights one here -->
         <DataTemplate x:Key="AlternativeTemplate" DataType="{x:Type o:CompRow}">
             <Button Command="{Binding DataContext.Pin, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Id}"
-                    Cursor="Hand" Focusable="False" Margin="0,0,0,3" ToolTip="Switch your plan to this comp and lock it there">
+                    Cursor="Hand" Focusable="False" Margin="0,0,0,3" Foreground="{StaticResource Text}"
+                    ToolTip="{Binding DataContext.CompRowTooltip, RelativeSource={RelativeSource AncestorType=Window}}">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" CornerRadius="6" Padding="10,6" Background="{StaticResource Row}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <StackPanel>
+                                <!-- "I choose": an empty radio mark on every comp; the chosen one sits above with a filled mark -->
+                                <TextBlock x:Name="Choose" Text="&#xF043D;" Style="{StaticResource Icon}" FontSize="14" Foreground="{StaticResource Faint}" Margin="0,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding DataContext.CompManual, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Vis}}" />
+                                <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
                                     <TextBlock FontSize="10.5" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis">
                                         <Run Text="{Binding Tribes, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding OwnedCore, Mode=OneWay}" /><Run Text="/" /><Run Text="{Binding CoreCount, Mode=OneWay}" /><Run Text=" core owned" />
                                     </TextBlock>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
                                     <TextBlock Text="{Binding Placement}" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />
                                     <TextBlock Text="{Binding Power}" FontSize="10" FontWeight="SemiBold" Foreground="{Binding Power, Converter={StaticResource KeyBrush}}" HorizontalAlignment="Right" />
                                 </StackPanel>
@@ -401,6 +462,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{StaticResource SecondaryContainer}" />
+                                <Setter TargetName="Choose" Property="Foreground" Value="{StaticResource Accent}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -766,8 +828,7 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Background="Transparent">
                                 <StackPanel.ToolTip>
                                     <ToolTip>
-                                        <TextBlock MaxWidth="260" TextWrapping="Wrap"
-                                                   Text="Hearthlens suggests a comp from Firestone data: the strongest one for this lobby's tribes, or the one you have already started. The tavern badges then show what to buy for it." />
+                                        <TextBlock MaxWidth="260" TextWrapping="Wrap" Text="{Binding PlanTooltip}" />
                                     </ToolTip>
                                 </StackPanel.ToolTip>
                                 <TextBlock Text="&#xF08C9;" Style="{StaticResource Icon}" FontSize="13" Foreground="{StaticResource Accent}" Margin="0,0,6,0" />
@@ -792,9 +853,9 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Target comp: what to aim for, why, and what to look for next -->
+                        <!-- Target comp: the one the player chose (I choose) or the advisor's / locked one (Automatic), why, and what to look for next -->
                         <StackPanel DockPanel.Dock="Top" Margin="12,6,12,8" Visibility="{Binding Target, Converter={StaticResource Vis}}">
-                            <TextBlock Text="AIM FOR" Style="{StaticResource SectionLabel}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding TargetLabel}" Style="{StaticResource SectionLabel}" Margin="0,0,0,2" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -805,8 +866,7 @@
                                         Margin="6,0,0,0">
                                     <Button.ToolTip>
                                         <ToolTip>
-                                            <TextBlock MaxWidth="250" TextWrapping="Wrap"
-                                                       Text="Lock keeps this comp as your plan, even if you pick up cards for another one. Click again to unlock and let Hearthlens choose." />
+                                            <TextBlock MaxWidth="250" TextWrapping="Wrap" Text="{Binding PinTooltip}" />
                                         </ToolTip>
                                     </Button.ToolTip>
                                     <Button.Template>
@@ -814,7 +874,7 @@
                                             <Border x:Name="Bd" CornerRadius="6" Padding="7,2" Background="{StaticResource Surface3}" BorderBrush="{StaticResource Outline}" BorderThickness="1">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock x:Name="Glyph" Text="&#xF0FC7;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center" />
-                                                    <TextBlock x:Name="Txt" Text="Lock" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0" Foreground="{StaticResource Text}" VerticalAlignment="Center" />
+                                                    <TextBlock x:Name="Txt" Text="{Binding PinText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0" Foreground="{StaticResource Text}" VerticalAlignment="Center" />
                                                 </StackPanel>
                                             </Border>
                                             <ControlTemplate.Triggers>
@@ -826,8 +886,11 @@
                                                     <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource GoldTrim}" />
                                                     <Setter TargetName="Glyph" Property="Text" Value="&#xF033E;" />
                                                     <Setter TargetName="Glyph" Property="Foreground" Value="{StaticResource OnAccentContainer}" />
-                                                    <Setter TargetName="Txt" Property="Text" Value="Locked" />
                                                     <Setter TargetName="Txt" Property="Foreground" Value="{StaticResource OnAccentContainer}" />
+                                                </DataTrigger>
+                                                <!-- I choose: the player's own pick reads "Chosen" with a filled radio mark, not a lock -->
+                                                <DataTrigger Binding="{Binding CompManual}" Value="True">
+                                                    <Setter TargetName="Glyph" Property="Text" Value="&#xF043E;" />
                                                 </DataTrigger>
                                                 <!-- Hovering a locked button still answers: the gold trim brightens -->
                                                 <MultiDataTrigger>
@@ -876,6 +939,10 @@
                             </Border>
                         </StackPanel>
 
+                        <!-- No comp targeted: how to choose one (or why the chosen one is missing from this lobby) -->
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding PlanHint}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="12,6,12,8"
+                                   Visibility="{Binding PlanHint, Converter={StaticResource Vis}}" />
+
                         <!-- Dark Gift (Rinvenimento Oscuro) timing -->
                         <Border DockPanel.Dock="Top" Margin="12,0,12,8" Padding="9,6" CornerRadius="6" Background="{StaticResource AccentSoft}"
                                 BorderBrush="{StaticResource AccentLine}" BorderThickness="1" Visibility="{Binding DarkGift, Converter={StaticResource Vis}}">
@@ -918,8 +985,11 @@
                                     <c:Ornament Text="How to play" Size="10.5" Margin="0,4,0,6" Visibility="{Binding CompTip, Converter={StaticResource Vis}}" />
                                     <TextBlock Text="{Binding CompTip}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8"
                                                MaxHeight="120" TextTrimming="WordEllipsis" Visibility="{Binding CompTip, Converter={StaticResource Vis}}" />
+                                </StackPanel>
 
-                                    <c:Ornament Text="Other comps  ·  click to switch" Size="10.5" Margin="0,4,0,6" Visibility="{Binding Alternatives, Converter={StaticResource Vis}}" />
+                                <!-- Comps to choose from: shown while expanded, and always while no comp is targeted (it is how the player picks one) -->
+                                <StackPanel Visibility="{Binding ShowCompList, Converter={StaticResource Vis}}">
+                                    <c:Ornament Text="{Binding CompListTitle}" Size="10.5" Margin="0,4,0,6" />
                                     <ItemsControl ItemsSource="{Binding Alternatives}" ItemTemplate="{StaticResource AlternativeTemplate}" />
                                 </StackPanel>
                             </StackPanel>

@@ -89,10 +89,32 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         _dirty = true;
     }
 
-    /// <summary>Locks the comp advisor onto one archetype; null returns to automatic choice.</summary>
+    /// <summary>
+    /// The comp the player chose; null clears it. In <see cref="CompMode.Manual"/> it is the only possible target and
+    /// stays across games (the host also stores it in the settings); in <see cref="CompMode.Auto"/> it locks the
+    /// advisor onto that comp until the next game, and null returns to automatic choice.
+    /// </summary>
     public void PinComp(string? compId)
     {
         Advisor.PinnedCompId = compId;
+        _dirty = true;
+    }
+
+    /// <summary>
+    /// Applies the "Game plan comp" setting; call at start-up and whenever settings change. Manual: the stored
+    /// <paramref name="chosenCompId"/> becomes the choice. Switching to Auto drops the manual choice so the advisor
+    /// picks again (the stored id is kept in the settings for a switch back).
+    /// </summary>
+    public void SetCompMode(CompMode mode, string? chosenCompId)
+    {
+        var pinned = mode == CompMode.Manual ? chosenCompId : Advisor.CompMode == CompMode.Auto ? Advisor.PinnedCompId : null;
+        if (Advisor.CompMode == mode && Advisor.PinnedCompId == pinned)
+        {
+            return;
+        }
+
+        Advisor.CompMode = mode;
+        Advisor.PinnedCompId = pinned;
         _dirty = true;
     }
 
@@ -191,7 +213,12 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         _recorded = false;
         _ranksRead = false;
         _racesRead = false;
-        Advisor.PinnedCompId = null;
+        if (Advisor.CompMode == CompMode.Auto)
+        {
+            // A lock lasts one game in Auto mode; a manual choice is kept until the player changes it.
+            Advisor.PinnedCompId = null;
+        }
+
         _gameDeck = _queuedDeck;
         _constructed.Deck = null;
         _ratingAtGameStart = _catchingUp ? null : _rating;

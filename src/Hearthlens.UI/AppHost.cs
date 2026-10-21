@@ -51,7 +51,8 @@ public sealed class AppHost : IDisposable
         Session = new GameSession(History, Memory);
         Main = new MainViewModel(History, Settings);
         Overlay = new OverlayViewModel();
-        Overlay.PinRequested += id => Session.PinComp(id);
+        Session.SetCompMode(Settings.CompMode, Settings.ChosenCompId);
+        Overlay.PinRequested += OnPinRequested;
 
         _historyDebounce = Debouncer(TimeSpan.FromMilliseconds(600), () => _ = Main.RefreshAsync());
         _settingsDebounce = Debouncer(TimeSpan.FromMilliseconds(400), Settings.Save);
@@ -211,8 +212,22 @@ public sealed class AppHost : IDisposable
     {
         _settingsDebounce.Stop();
         _settingsDebounce.Start();
+        Session.SetCompMode(Settings.CompMode, Settings.ChosenCompId);
         RefreshOverlay();
         ApplyAutostart?.Invoke(Settings.StartWithWindows);
+    }
+
+    /// <summary>The player chose (or cleared) a comp in the overlay. With "I choose" the choice is saved and kept across games.</summary>
+    private void OnPinRequested(string? compId)
+    {
+        Session.PinComp(compId);
+        if (Settings.CompMode == CompMode.Manual && Settings.ChosenCompId != compId)
+        {
+            // Saved only: the overlay follows on the session's next snapshot, which already carries the new target.
+            Settings.ChosenCompId = compId;
+            _settingsDebounce.Stop();
+            _settingsDebounce.Start();
+        }
     }
 
     public void RefreshOverlay() => Overlay.Update(_last, Cards, Settings, _deckStats, _matchupStats);

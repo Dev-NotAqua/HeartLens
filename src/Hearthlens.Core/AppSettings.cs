@@ -1,10 +1,34 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Hearthlens.Core;
 
+/// <summary>How the overlay presents pick suggestions: heroes, trinkets, tavern minions, Discover choices and the game plan.</summary>
+public enum PickHints
+{
+    /// <summary>Marks the single best option (BEST PICK and BUY badges, gold styling, Discover ranks, the "AIM FOR" comp).</summary>
+    Highlight,
+
+    /// <summary>The same stats on every option and nothing singled out: the player decides.</summary>
+    StatsOnly,
+
+    /// <summary>No hero, trinket, tavern or Discover badges and no game plan.</summary>
+    Off,
+}
+
+/// <summary>Who sets the game-plan comp that the tavern and Discover scores count cards for.</summary>
+public enum CompMode
+{
+    /// <summary>The player chooses a comp (kept across games); the advisor never picks one by itself.</summary>
+    Manual,
+
+    /// <summary>The advisor picks the comp; a comp the player locks overrides it until the next game.</summary>
+    Auto,
+}
+
 public sealed class AppSettings
 {
-    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
 
     /// <summary>"auto" follows the installed client language.</summary>
     public string Locale { get; set; } = "auto";
@@ -27,7 +51,44 @@ public sealed class AppSettings
 
     public bool ShowOpponentBoards { get; set; } = true;
 
-    public bool ShowHeroPick { get; set; } = true;
+    /// <summary>How pick suggestions are shown. Settings files written before it held <see cref="ShowHeroPick"/> instead.</summary>
+    public PickHints PickHints { get; set; } = PickHints.StatsOnly;
+
+    /// <summary>
+    /// Legacy on/off switch for every pick hint, only read from older settings files: <see cref="Migrate"/> turns false
+    /// into <see cref="PickHints.Off"/> (true becomes the default) and clears it, so it is never written again.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ShowHeroPick { get; set; }
+
+    /// <summary>Who sets the game-plan comp.</summary>
+    public CompMode CompMode { get; set; } = CompMode.Manual;
+
+    /// <summary>Comp id (Firestone) the player chose in <see cref="CompMode.Manual"/>, kept across games; null when none.</summary>
+    public string? ChosenCompId { get; set; }
+
+    // One bool per option of the two choices above, for the settings page's segmented radio buttons. Setting false is
+    // ignored: the radio group unchecks the old option after the new one is checked.
+
+    /// <summary>Pick suggestions: "Mark the best".</summary>
+    [JsonIgnore]
+    public bool PickHintsHighlight { get => PickHints == PickHints.Highlight; set => SetIf(value, () => PickHints = PickHints.Highlight); }
+
+    /// <summary>Pick suggestions: "Stats only".</summary>
+    [JsonIgnore]
+    public bool PickHintsStatsOnly { get => PickHints == PickHints.StatsOnly; set => SetIf(value, () => PickHints = PickHints.StatsOnly); }
+
+    /// <summary>Pick suggestions: "Off".</summary>
+    [JsonIgnore]
+    public bool PickHintsOff { get => PickHints == PickHints.Off; set => SetIf(value, () => PickHints = PickHints.Off); }
+
+    /// <summary>Game plan comp: "I choose".</summary>
+    [JsonIgnore]
+    public bool CompModeManual { get => CompMode == CompMode.Manual; set => SetIf(value, () => CompMode = CompMode.Manual); }
+
+    /// <summary>Game plan comp: "Automatic".</summary>
+    [JsonIgnore]
+    public bool CompModeAuto { get => CompMode == CompMode.Auto; set => SetIf(value, () => CompMode = CompMode.Auto); }
 
     public bool ShowGameToasts { get; set; } = true;
 
@@ -77,9 +138,7 @@ public sealed class AppSettings
         {
             if (File.Exists(AppPaths.Settings))
             {
-                var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(AppPaths.Settings), Json) ?? new AppSettings();
-                settings.Migrate();
-                return settings;
+                return FromJson(File.ReadAllText(AppPaths.Settings));
             }
         }
         catch (Exception ex) when (ex is JsonException or IOException)
@@ -92,8 +151,37 @@ public sealed class AppSettings
         return fresh;
     }
 
+    /// <summary>Reads settings saved by this or an older version and brings them up to date.</summary>
+    public static AppSettings FromJson(string json)
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>(json, Json) ?? new AppSettings();
+        settings.Migrate();
+        return settings;
+    }
+
+    public string ToJson() => JsonSerializer.Serialize(this, Json);
+
+    private static void SetIf(bool value, Action apply)
+    {
+        if (value)
+        {
+            apply();
+        }
+    }
+
     private void Migrate()
     {
+        // One switch used to turn every pick hint on or off: off stays off, on becomes the "stats only" default.
+        if (ShowHeroPick is { } showPicks)
+        {
+            if (!showPicks)
+            {
+                PickHints = PickHints.Off;
+            }
+
+            ShowHeroPick = null;
+        }
+
         // Version 1 measured X from the window edge, which misses the leaderboard on wide screens.
         if (LeaderboardGeometryVersion < CurrentLeaderboardGeometry)
         {
@@ -109,7 +197,7 @@ public sealed class AppSettings
         try
         {
             var temp = AppPaths.Settings + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(this, Json));
+            File.WriteAllText(temp, ToJson());
             File.Move(temp, AppPaths.Settings, overwrite: true);
         }
         catch (IOException ex)

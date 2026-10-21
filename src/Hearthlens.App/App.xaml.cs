@@ -100,7 +100,8 @@ public partial class App : Application
 
         _mainViewModel = new MainViewModel(_history, _settings);
         _overlayViewModel = new OverlayViewModel();
-        _overlayViewModel.PinRequested += id => _session.PinComp(id);
+        _session.SetCompMode(_settings.CompMode, _settings.ChosenCompId);
+        _overlayViewModel.PinRequested += OnPinRequested;
 
         _main = new MainWindow(_mainViewModel);
         _main.SettingsChanged += OnSettingsChanged;
@@ -348,8 +349,22 @@ public partial class App : Application
             _trayOverlayItem.Checked = _settings.OverlayEnabled;
         }
 
+        _session.SetCompMode(_settings.CompMode, _settings.ChosenCompId);
         _overlayViewModel.Update(_last, _cards, _settings, _deckStats, _matchupStats);
         Autostart.Apply(_settings.StartWithWindows);
+    }
+
+    /// <summary>The player chose (or cleared) a comp in the overlay. With "I choose" the choice is saved and kept across games.</summary>
+    private void OnPinRequested(string? compId)
+    {
+        _session.PinComp(compId);
+        if (_settings.CompMode == CompMode.Manual && _settings.ChosenCompId != compId)
+        {
+            // Saved only: the overlay follows on the session's next snapshot, which already carries the new target.
+            _settings.ChosenCompId = compId;
+            _settingsDebounce.Stop();
+            _settingsDebounce.Start();
+        }
     }
 
     // ---- shell: tray + hotkey ----------------------------------------------------------------
