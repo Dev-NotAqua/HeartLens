@@ -5,8 +5,8 @@ using System.Windows.Media;
 namespace Hearthlens.App.Controls;
 
 /// <summary>
-/// Section heading in the Material 3 Expressive style: an optional icon inside a cookie shape, a bold
-/// title and a wavy rule that fills the rest of the width.
+/// Section heading: an optional gold icon inside a bronze-edged cookie shape, a bold title and a gold
+/// rule (diamond plus fading hairline) that fills the rest of the width.
 /// </summary>
 public sealed class Ornament : FrameworkElement
 {
@@ -75,16 +75,20 @@ public sealed class Ornament : FrameworkElement
         var text = Format();
         var w = ActualWidth;
         var mid = ActualHeight / 2;
-        var wave = TryFindResource("Outline") as Brush ?? Brushes.DimGray;
-        var amplitude = Math.Max(1.6, Size * 0.17);
-        var wavelength = Math.Max(8, Size * 0.85);
+        var trim = TryFindResource("GoldTrim") as Brush ?? Brushes.DarkGoldenrod;
+        var gold = TryFindResource("Accent") as Brush ?? Brushes.Goldenrod;
 
         if (Centered)
         {
             var left = (w - text.Width) / 2;
             dc.DrawText(text, new Point(left, mid - (text.Height / 2)));
-            Wave.Draw(dc, wave, 0, left - 10, mid, amplitude, wavelength, 1.4);
-            Wave.Draw(dc, wave, left + text.Width + 10, w, mid, amplitude, wavelength, 1.4);
+
+            // Mirror the left rule so both diamonds sit next to the title and the lines fade outwards.
+            var leftEnd = left - 10;
+            dc.PushTransform(new ScaleTransform(-1, 1, leftEnd / 2, 0));
+            Wave.Draw(dc, trim, gold, 0, leftEnd, mid);
+            dc.Pop();
+            Wave.Draw(dc, trim, gold, left + text.Width + 10, w, mid);
             return;
         }
 
@@ -94,16 +98,18 @@ public sealed class Ornament : FrameworkElement
             var d = IconSize;
             var cookie = Scallop.Build(d, d, 9, 0.09, 0);
             dc.PushTransform(new TranslateTransform(0, mid - (d / 2)));
-            dc.DrawGeometry(TryFindResource("Surface3") as Brush ?? Brushes.DimGray, null, cookie);
+            var edge = new Pen(trim, 1);
+            edge.Freeze();
+            dc.DrawGeometry(TryFindResource("Surface3") as Brush ?? Brushes.DimGray, edge, cookie);
             dc.Pop();
             var glyph = new FormattedText(Icon, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
                 new Typeface((TryFindResource("IconFont") as FontFamily) ?? FallbackFont, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
-                d * 0.5, TryFindResource("Accent") as Brush ?? Brushes.LightGreen, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                d * 0.5, gold, VisualTreeHelper.GetDpi(this).PixelsPerDip);
             dc.DrawText(glyph, new Point((d - glyph.Width) / 2, mid - (glyph.Height / 2)));
             x = d + 10;
         }
 
         dc.DrawText(text, new Point(x, mid - (text.Height / 2)));
-        Wave.Draw(dc, wave, x + text.Width + 12, w, mid + 1, amplitude, wavelength, 1.4);
+        Wave.Draw(dc, trim, gold, x + text.Width + 12, w, mid + 1);
     }
 }

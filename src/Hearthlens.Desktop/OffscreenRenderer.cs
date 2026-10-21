@@ -84,7 +84,7 @@ internal static class OffscreenRenderer
             // Stand-in for the game behind the transparent overlay.
             Background = new RadialGradientBrush
             {
-                GradientStops = { new GradientStop(Color.FromRgb(0x3B, 0x40, 0x48), 0), new GradientStop(Color.FromRgb(0x16, 0x18, 0x1C), 1) },
+                GradientStops = { new GradientStop(Color.FromRgb(0x4A, 0x3A, 0x2A), 0), new GradientStop(Color.FromRgb(0x1A, 0x13, 0x0D), 1) },
                 RadiusX = new RelativeScalar(0.8, RelativeUnit.Relative),
                 RadiusY = new RelativeScalar(0.8, RelativeUnit.Relative),
             },

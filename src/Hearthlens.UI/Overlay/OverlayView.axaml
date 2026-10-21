@@ -26,7 +26,7 @@
                         <Rectangle Fill="{StaticResource TileFade}" />
                         <Border Width="2" HorizontalAlignment="Left" Background="{Binding Rarity, Converter={StaticResource KeyBrush}}" />
                         <DockPanel Margin="9,0,6,0">
-                            <Border DockPanel.Dock="Right" Background="#CC0E1013" CornerRadius="4" MinWidth="20" Height="18" Padding="5,0"
+                            <Border DockPanel.Dock="Right" Background="#CC140D08" CornerRadius="4" MinWidth="20" Height="18" Padding="5,0"
                                     VerticalAlignment="Center" IsVisible="{Binding ShowCount}">
                                 <TextBlock Text="{Binding Count}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Accent}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -114,7 +114,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border Classes="bestTag" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="999" Padding="8,1">
+                <Border Classes="bestTag" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="5" Padding="8,1">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xF0AE2;" Classes="icon" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
                         <TextBlock Text="BEST PICK" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
@@ -143,7 +143,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border Classes="bestTag" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="999" Padding="8,1">
+                <Border Classes="bestTag" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="5" Padding="8,1">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xF0AE2;" Classes="icon" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
                         <TextBlock Text="BEST PICK" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
@@ -154,7 +154,7 @@
 
         <!-- Tavern: buy hint pinned above one shop minion: reasons, plus how players who bought it placed -->
         <DataTemplate x:Key="ShopBadgeTemplate" x:DataType="o:ShopBadge">
-            <Border Classes="shopBadge" Classes.best="{Binding Best}" Width="126" MinHeight="26" CornerRadius="13" Padding="8,3" BorderThickness="1"
+            <Border Classes="shopBadge" Classes.best="{Binding Best}" Width="126" MinHeight="26" CornerRadius="6" Padding="8,3" BorderThickness="1"
                     HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="{Binding Left, Converter={StaticResource LeftMargin}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -190,7 +190,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border Classes="bestTag" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="999" Padding="8,1">
+                <Border Classes="bestTag" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="5" Padding="8,1">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xF0AE2;" Classes="icon" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
                         <TextBlock Text="BEST PICK" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
@@ -225,7 +225,7 @@
         <DataTemplate x:Key="AlternativeTemplate" x:DataType="o:CompRow">
             <Button Classes="bare alternative" Click="OnAlternativeClick" Focusable="False" Margin="0,0,0,3" HorizontalAlignment="Stretch"
                     ToolTip.Tip="Switch your plan to this comp and lock it there">
-                <Border Name="Bd" CornerRadius="12" Padding="10,6">
+                <Border Name="Bd" CornerRadius="6" Padding="10,6">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel>
                             <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
@@ -243,7 +243,7 @@
         <DataTemplate x:Key="BrowserCardTemplate" x:DataType="o:BrowserCard">
             <Panel Width="92" Margin="2" ToolTip.Tip="{Binding Name}">
                 <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="92" Height="128" Stretch="Uniform" />
-                <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Background="{StaticResource Accent}" CornerRadius="999"
+                <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Background="{StaticResource Accent}" CornerRadius="5"
                         Padding="6,0" Margin="0,0,0,2" IsVisible="{Binding InComp}">
                     <TextBlock Text="IN PLAN" FontSize="9" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
                 </Border>
@@ -303,7 +303,7 @@
         <Style Selector="Border.divider">
             <Setter Property="Width" Value="1" />
             <Setter Property="Margin" Value="12,2" />
-            <Setter Property="Background" Value="#1FFFFFFF" />
+            <Setter Property="Background" Value="{StaticResource OverlayBorder}" />
         </Style>
         <Style Selector="TextBlock.sectionLabel">
             <Setter Property="FontSize" Value="10" />
@@ -422,6 +422,7 @@
         </Style>
         <Style Selector="Button.lock:pointerover Border#Bd">
             <Setter Property="Background" Value="{StaticResource Surface4}" />
+            <Setter Property="BorderBrush" Value="{StaticResource GoldTrim}" />
         </Style>
         <Style Selector="Button.lock.pinned Border#Bd">
             <Setter Property="Background" Value="{StaticResource AccentContainer}" />
@@ -465,7 +466,7 @@
                     <Panel>
                         <LayoutTransformControl Name="PART_Scaler" ClipToBounds="False">
                             <Panel>
-                                <Border Name="Placeholder" IsVisible="False" MinWidth="200" MinHeight="56" Background="#E6121418" CornerRadius="10"
+                                <Border Name="Placeholder" IsVisible="False" MinWidth="200" MinHeight="56" Background="#E6201510" CornerRadius="8"
                                         BorderBrush="{StaticResource OverlayBorder}" BorderThickness="1">
                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,10">
                                         <TextBlock Text="{TemplateBinding Title}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
@@ -477,8 +478,8 @@
                             </Panel>
                         </LayoutTransformControl>
                         <!-- Layout-mode frame and name tag sit outside the scaler so they are never clipped. -->
-                        <Border Name="Frame" IsVisible="False" Margin="-4" CornerRadius="12" BorderBrush="{StaticResource AccentLine}"
-                                BorderThickness="1.5" IsHitTestVisible="False" />
+                        <Rectangle Name="Frame" IsVisible="False" Margin="-4" RadiusX="12" RadiusY="12" Stroke="{StaticResource Accent}"
+                                   StrokeThickness="1.5" StrokeDashArray="4,3" IsHitTestVisible="False" />
                         <Border Name="Tag" IsVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-4,-26,0,0"
                                 Background="{StaticResource Accent}" CornerRadius="5" Padding="7,2" IsHitTestVisible="False">
                             <TextBlock Text="{TemplateBinding Title}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
@@ -490,7 +491,7 @@
         <Style Selector="o|MovablePanel.editing /template/ Border#Shield">
             <Setter Property="IsVisible" Value="True" />
         </Style>
-        <Style Selector="o|MovablePanel.editing /template/ Border#Frame">
+        <Style Selector="o|MovablePanel.editing /template/ Rectangle#Frame">
             <Setter Property="IsVisible" Value="True" />
         </Style>
         <Style Selector="o|MovablePanel.editing /template/ Border#Tag">
@@ -677,7 +678,7 @@
                                     <TextBlock Text="loss" FontSize="10" Foreground="{StaticResource Muted}" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </UniformGrid>
-                            <Border Height="4" CornerRadius="2" ClipToBounds="True" Margin="0,6,0,5" Background="{StaticResource Surface3}">
+                            <Border Height="4" CornerRadius="1" ClipToBounds="True" Margin="0,6,0,5" Background="{StaticResource Surface3}">
                                 <StackPanel Orientation="Horizontal">
                                     <Border Background="{StaticResource Positive}" Width="{Binding WinShare, Converter={StaticResource Fraction}, ConverterParameter=220}" />
                                     <Border Background="{StaticResource Faint}" Width="{Binding TieShare, Converter={StaticResource Fraction}, ConverterParameter=220}" />
@@ -692,7 +693,7 @@
                 <!-- ============ Battlegrounds: Discover pick hints (Dark Gift, triple reward…) ============ -->
                 <o:MovablePanel Id="choice-row" Title="Choice pick (Discover, hero powers, spells)" MinWidth="1360" Shown="{Binding ShowDiscover}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="14,222,0,0">
                     <StackPanel>
-                        <Border HorizontalAlignment="Center" CornerRadius="999" Background="{StaticResource OverlayPanelSolid}" Padding="12,3"
+                        <Border HorizontalAlignment="Center" CornerRadius="6" Background="{StaticResource OverlayPanelSolid}" BorderBrush="{StaticResource OverlayBorder}" BorderThickness="1" Padding="11,2"
                                 IsVisible="{Binding DiscoverTitle, Converter={StaticResource Truthy}}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xF0674;" Classes="icon" FontSize="12" Foreground="{StaticResource Accent}" Margin="0,0,6,0" />
@@ -734,7 +735,7 @@
                                     <Button Grid.Column="1" Classes="bare lock" Classes.pinned="{Binding Target.IsPinned, FallbackValue=False}"
                                             Command="{Binding Pin}" CommandParameter="{Binding Target.Id, FallbackValue=''}" Focusable="False" VerticalAlignment="Top" Margin="6,0,0,0"
                                             ToolTip.Tip="Lock keeps this comp as your plan, even if you pick up cards for another one. Click again to unlock and let Hearthlens choose.">
-                                        <Border Name="Bd" CornerRadius="999" Padding="8,3">
+                                        <Border Name="Bd" CornerRadius="6" Padding="7,2" BorderBrush="{StaticResource Outline}" BorderThickness="1">
                                             <StackPanel Orientation="Horizontal">
                                                 <Panel>
                                                     <TextBlock Text="&#xF0FC7;" Classes="icon" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center"
@@ -764,7 +765,7 @@
                                     <TextBlock FontSize="11.5" Foreground="{StaticResource Muted}" Margin="7,0,0,0" VerticalAlignment="Center"><Run Text="{Binding Target.Placement, Mode=OneWay, FallbackValue=''}" Foreground="{StaticResource Text}" FontWeight="SemiBold" /><Run Text=" avg place  ·  " /><Run Text="{Binding Target.OwnedCore, Mode=OneWay, FallbackValue=0}" Foreground="{StaticResource Text}" FontWeight="SemiBold" /><Run Text="/" /><Run Text="{Binding Target.CoreCount, Mode=OneWay, FallbackValue=0}" /><Run Text=" core" /></TextBlock>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Target.Tribes, FallbackValue=''}" FontSize="11" Foreground="{StaticResource Faint}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
-                                <Border Margin="0,8,0,0" Padding="10,6" CornerRadius="12" Background="{StaticResource SecondaryContainer}"
+                                <Border Margin="0,8,0,0" Padding="10,6" CornerRadius="6" Background="{StaticResource SecondaryContainer}"
                                         IsVisible="{Binding Target.LookFor, Converter={StaticResource Truthy}, FallbackValue=False}"
                                         ToolTip.Tip="Core cards you are missing that you can find at your tavern tier or the next one">
                                     <TextBlock FontSize="11.5" TextWrapping="Wrap" Foreground="{StaticResource OnSecondaryContainer}"><Run Text="Look for  " FontWeight="Bold" /><Run Text="{Binding Target.LookFor, Mode=OneWay, FallbackValue=''}" /></TextBlock>
@@ -772,13 +773,13 @@
                             </StackPanel>
 
                             <!-- Dark Gift timing -->
-                            <Border DockPanel.Dock="Top" Margin="12,0,12,8" Padding="9,6" CornerRadius="7" Background="{StaticResource AccentSoft}"
+                            <Border DockPanel.Dock="Top" Margin="12,0,12,8" Padding="9,6" CornerRadius="6" Background="{StaticResource AccentSoft}"
                                     BorderBrush="{StaticResource AccentLine}" BorderThickness="1" IsVisible="{Binding DarkGift, Converter={StaticResource Truthy}}">
                                 <TextBlock Text="{Binding DarkGift}" FontSize="11.5" TextWrapping="Wrap" />
                             </Border>
 
                             <!-- Freeze reminder -->
-                            <Border DockPanel.Dock="Top" Margin="12,0,12,8" Padding="9,6" CornerRadius="7" Background="{StaticResource Surface3}"
+                            <Border DockPanel.Dock="Top" Margin="12,0,12,8" Padding="9,6" CornerRadius="6" Background="{StaticResource Surface3}"
                                     IsVisible="{Binding Freeze, Converter={StaticResource Truthy}}">
                                 <TextBlock Text="{Binding Freeze}" FontSize="11.5" TextWrapping="Wrap" />
                             </Border>
@@ -835,7 +836,7 @@
                                     <TextBlock Text="{Binding HeroName}" FontSize="14" FontWeight="SemiBold" />
                                     <TextBlock FontSize="11.5" Foreground="{StaticResource Muted}"><Run Text="#" /><Run Text="{Binding Place, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text=" ·  " /><Run Text="{Binding Health, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text=" HP" /><Run Text=" ·  tier " /><Run Text="{Binding Tier, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text=" ·  triples " /><Run Text="{Binding Triples, Mode=OneWay}" Foreground="{StaticResource Text}" /></TextBlock>
                                 </StackPanel>
-                                <Border Grid.Column="2" Background="{StaticResource Accent}" CornerRadius="999" Padding="8,1" VerticalAlignment="Top"
+                                <Border Grid.Column="2" Background="{StaticResource Accent}" CornerRadius="5" Padding="8,1" VerticalAlignment="Top"
                                         IsVisible="{Binding NextOpponent}">
                                     <TextBlock Text="NEXT" FontSize="10" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
                                 </Border>
@@ -901,7 +902,7 @@
                 <o:MovablePanel Id="toast" Title="Game summary" Shown="{Binding ShowToast}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,120">
                     <Border Classes="overlayCard" Background="{StaticResource OverlayPanelSolid}" Padding="0">
                         <StackPanel Orientation="Horizontal">
-                            <Border Width="4" CornerRadius="10,0,0,10" Background="{Binding ToastResult, Converter={StaticResource KeyBrush}}" />
+                            <Border Width="4" CornerRadius="7,0,0,7" Background="{Binding ToastResult, Converter={StaticResource KeyBrush}}" />
                             <StackPanel Margin="16,11,22,12">
                                 <TextBlock Text="{Binding ToastTitle}" Classes="number" FontSize="22" />
                                 <TextBlock Text="{Binding ToastDetail}" FontSize="12.5" Foreground="{StaticResource Muted}" />

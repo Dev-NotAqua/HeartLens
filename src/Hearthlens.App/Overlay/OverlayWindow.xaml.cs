@@ -381,7 +381,7 @@ public partial class OverlayWindow : Window
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            dc.DrawRectangle(new RadialGradientBrush(Color.FromRgb(0x3B, 0x40, 0x48), Color.FromRgb(0x16, 0x18, 0x1C)) { RadiusX = 0.8, RadiusY = 0.8 },
+            dc.DrawRectangle(new RadialGradientBrush(Color.FromRgb(0x4A, 0x33, 0x1E), Color.FromRgb(0x14, 0x0D, 0x08)) { RadiusX = 0.8, RadiusY = 0.8 },
                 null, new Rect(0, 0, width, height));
             dc.DrawRectangle(new VisualBrush(Root) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top },
                 null, new Rect(0, 0, width, height));

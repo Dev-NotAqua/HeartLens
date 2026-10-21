@@ -90,7 +90,7 @@ public sealed class RatingChart : Control
             ctx.EndFigure(true);
         }
 
-        var color = accent is ISolidColorBrush solid ? solid.Color : Colors.LightGreen;
+        var color = accent is ISolidColorBrush solid ? solid.Color : Color.FromRgb(0xE9, 0xB9, 0x49);
         var fill = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),

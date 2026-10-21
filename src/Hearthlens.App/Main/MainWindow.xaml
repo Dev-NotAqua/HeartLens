@@ -22,9 +22,9 @@
             <Setter Property="FontSize" Value="11.5" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-        <!-- List rows: no rules, a soft rounded highlight on hover -->
+        <!-- List rows: no rules, a soft highlight on hover -->
         <Style x:Key="RowBorder" TargetType="Border">
-            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="Margin" Value="-10,0,-10,2" />
             <Setter Property="Background" Value="Transparent" />
@@ -37,7 +37,7 @@
         <Style x:Key="TierBadge" TargetType="Border">
             <Setter Property="Width" Value="30" />
             <Setter Property="Height" Value="26" />
-            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="CornerRadius" Value="6" />
             <Setter Property="HorizontalAlignment" Value="Left" />
         </Style>
         <Style x:Key="NavGroup" TargetType="Grid">
@@ -86,7 +86,7 @@
                     <TextBlock Grid.Column="2" Text="{Binding Detail}" Style="{StaticResource Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding Detail}" />
                     <TextBlock Grid.Column="3" Text="{Binding When}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                    <Border Grid.Column="4" CornerRadius="999" Padding="10,3" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{StaticResource Surface3}">
+                    <Border Grid.Column="4" CornerRadius="6" Padding="10,3" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{StaticResource Surface3}">
                         <TextBlock Text="{Binding Result}" FontWeight="Bold" FontSize="12.5" Foreground="{Binding ResultKey, Converter={StaticResource KeyBrush}}" />
                     </Border>
                     <TextBlock Grid.Column="5" Text="{Binding Rating}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="SemiBold"
@@ -157,14 +157,15 @@
             </DockPanel>
 
             <!-- ================= Content ================= -->
-            <Border Grid.Column="1" Background="{StaticResource Surface}" CornerRadius="30" Margin="0,10,10,10" ClipToBounds="True">
+            <Border Grid.Column="1" Background="{StaticResource Surface}" BorderBrush="{StaticResource PanelEdge}" BorderThickness="1" CornerRadius="16"
+                    Margin="0,10,10,10" ClipToBounds="True">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="52" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Soft decorative shapes, Material 3 Expressive -->
+                    <!-- Soft decorative shapes: a faint warm glow -->
                     <Canvas Grid.RowSpan="2" IsHitTestVisible="False">
                         <c:Scallop Canvas.Right="70" Canvas.Top="70" Width="190" Height="190" Fill="{StaticResource Decor}" Lobes="9" Depth="0.12" Angle="12" />
                         <c:Scallop Canvas.Right="250" Canvas.Top="20" Width="80" Height="80" Fill="{StaticResource Decor}" Lobes="4" Depth="0.3" Angle="20" />
@@ -205,7 +206,7 @@
                                 </TextBlock>
                             </StackPanel>
 
-                            <Border Background="{StaticResource AccentContainer}" CornerRadius="22" Padding="18,14" Margin="0,0,0,16"
+                            <Border Background="{StaticResource AccentContainer}" BorderBrush="{StaticResource GoldTrim}" BorderThickness="1" CornerRadius="12" Padding="17,13" Margin="0,0,0,16"
                                     Visibility="{Binding SetupWarning, Converter={StaticResource Vis}}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xF002A;" Style="{StaticResource Icon}" Foreground="{StaticResource OnAccentContainer}" Margin="0,0,12,0" />
@@ -241,8 +242,8 @@
                                                             <ColumnDefinition Width="70" />
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Text="{Binding Place}" Style="{StaticResource Caption}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                        <Border Grid.Column="1" Height="12" CornerRadius="6" Background="{StaticResource Surface3}" VerticalAlignment="Center">
-                                                            <Border x:Name="Bar" HorizontalAlignment="Left" CornerRadius="6" Background="{StaticResource Negative}" Opacity="0.85"
+                                                        <Border Grid.Column="1" Height="12" CornerRadius="3" Background="{StaticResource Surface3}" VerticalAlignment="Center">
+                                                            <Border x:Name="Bar" HorizontalAlignment="Left" CornerRadius="3" Background="{StaticResource Negative}" Opacity="0.85"
                                                                     Width="{Binding Fraction, Converter={StaticResource Fraction}, ConverterParameter=220}" />
                                                         </Border>
                                                         <TextBlock Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12">
@@ -315,15 +316,15 @@
                             <Grid Margin="0,0,0,14">
                                 <Border HorizontalAlignment="Left" Style="{StaticResource SegmentBar}">
                                     <StackPanel Orientation="Horizontal">
-                                        <RadioButton x:Name="TabHeroes" Style="{StaticResource Segment}" Content="Heroes" GroupName="BgTab" IsChecked="True" Checked="OnBgTab"
+                                        <RadioButton x:Name="TabHeroes" Style="{StaticResource Tab}" Content="Heroes" GroupName="BgTab" IsChecked="True" Checked="OnBgTab"
                                                      ToolTip="Heroes ranked by average final placement" />
-                                        <RadioButton x:Name="TabComps" Style="{StaticResource Segment}" Content="Comps" GroupName="BgTab" Checked="OnBgTab"
+                                        <RadioButton x:Name="TabComps" Style="{StaticResource Tab}" Content="Comps" GroupName="BgTab" Checked="OnBgTab"
                                                      ToolTip="Board archetypes ranked by average final placement" />
-                                        <RadioButton x:Name="TabTrinkets" Style="{StaticResource Segment}" Content="Trinkets" GroupName="BgTab" Checked="OnBgTab"
+                                        <RadioButton x:Name="TabTrinkets" Style="{StaticResource Tab}" Content="Trinkets" GroupName="BgTab" Checked="OnBgTab"
                                                      ToolTip="Trinkets ranked by the average placement of players who picked them" />
-                                        <RadioButton x:Name="TabCards" Style="{StaticResource Segment}" Content="Cards" GroupName="BgTab" Checked="OnBgTab"
+                                        <RadioButton x:Name="TabCards" Style="{StaticResource Tab}" Content="Cards" GroupName="BgTab" Checked="OnBgTab"
                                                      ToolTip="Minions and tavern spells, ranked inside each tier" />
-                                        <RadioButton x:Name="TabMine" Style="{StaticResource Segment}" Content="My heroes" GroupName="BgTab" Checked="OnBgTab"
+                                        <RadioButton x:Name="TabMine" Style="{StaticResource Tab}" Content="My heroes" GroupName="BgTab" Checked="OnBgTab"
                                                      ToolTip="Your own results per hero" />
                                     </StackPanel>
                                 </Border>
@@ -386,8 +387,8 @@
                                                         </Border>
                                                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding AveragePlace}" Width="44" FontWeight="Bold" />
-                                                            <Border Width="164" Height="8" CornerRadius="4" Background="{StaticResource Surface3}" VerticalAlignment="Center">
-                                                                <Border HorizontalAlignment="Left" CornerRadius="4" Background="{Binding Tier, Converter={StaticResource KeyBrush}}"
+                                                            <Border Width="164" Height="8" CornerRadius="3" Background="{StaticResource Surface3}" VerticalAlignment="Center">
+                                                                <Border HorizontalAlignment="Left" CornerRadius="3" Background="{Binding Tier, Converter={StaticResource KeyBrush}}"
                                                                         Width="{Binding BarFraction, Converter={StaticResource Fraction}, ConverterParameter=164}" />
                                                             </Border>
                                                         </StackPanel>
@@ -399,7 +400,7 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Faint}" Margin="0,12,0,0" />
+                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,12,0,0" />
                                 </StackPanel>
                             </Border>
 
@@ -437,8 +438,8 @@
                                                         </Border>
                                                         <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,4,0,0" ToolTip="Average final placement (lower is better)">
                                                             <TextBlock Text="{Binding Placement}" Width="44" FontWeight="Bold" />
-                                                            <Border Width="164" Height="8" CornerRadius="4" Background="{StaticResource Surface3}" VerticalAlignment="Center">
-                                                                <Border HorizontalAlignment="Left" CornerRadius="4" Background="{StaticResource Accent}"
+                                                            <Border Width="164" Height="8" CornerRadius="3" Background="{StaticResource Surface3}" VerticalAlignment="Center">
+                                                                <Border HorizontalAlignment="Left" CornerRadius="3" Background="{StaticResource Accent}"
                                                                         Width="{Binding BarFraction, Converter={StaticResource Fraction}, ConverterParameter=164}" />
                                                             </Border>
                                                         </StackPanel>
@@ -447,7 +448,7 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Faint}" Margin="0,12,0,0" />
+                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,12,0,0" />
                                 </StackPanel>
                             </Border>
 
@@ -491,8 +492,8 @@
                                                         </Border>
                                                         <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding Placement}" Width="44" FontWeight="Bold" />
-                                                            <Border Width="164" Height="8" CornerRadius="4" Background="{StaticResource Surface3}" VerticalAlignment="Center">
-                                                                <Border HorizontalAlignment="Left" CornerRadius="4" Background="{Binding Tier, Converter={StaticResource KeyBrush}}"
+                                                            <Border Width="164" Height="8" CornerRadius="3" Background="{StaticResource Surface3}" VerticalAlignment="Center">
+                                                                <Border HorizontalAlignment="Left" CornerRadius="3" Background="{Binding Tier, Converter={StaticResource KeyBrush}}"
                                                                         Width="{Binding BarFraction, Converter={StaticResource Fraction}, ConverterParameter=164}" />
                                                             </Border>
                                                         </StackPanel>
@@ -505,7 +506,7 @@
                                     </ItemsControl>
                                     <TextBlock Text="No trinket data yet." Style="{StaticResource Caption}" Margin="0,8"
                                                Visibility="{Binding TrinketTiers, Converter={StaticResource Vis}, ConverterParameter=!}" />
-                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Faint}" Margin="0,12,0,0" />
+                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,12,0,0" />
                                 </StackPanel>
                             </Border>
 
@@ -541,7 +542,7 @@
                                                             <ColumnDefinition Width="100" />
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Text="{Binding Rank}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                                                        <Border Grid.Column="1" Width="54" Height="38" CornerRadius="12" ClipToBounds="True" Background="{StaticResource Surface3}" HorizontalAlignment="Left">
+                                                        <Border Grid.Column="1" Width="54" Height="38" CornerRadius="6" c:RoundClip.Radius="6" Background="{StaticResource Surface3}" HorizontalAlignment="Left">
                                                             <Image i:CardArt.Tile="{Binding CardId}" Stretch="UniformToFill" />
                                                         </Border>
                                                         <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="4,0,12,0">
@@ -550,8 +551,8 @@
                                                         </StackPanel>
                                                         <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" ToolTip="Average final placement (lower is better)">
                                                             <TextBlock Text="{Binding Placement}" Width="44" FontWeight="Bold" />
-                                                            <Border Width="164" Height="8" CornerRadius="4" Background="{StaticResource Surface3}" VerticalAlignment="Center">
-                                                                <Border HorizontalAlignment="Left" CornerRadius="4" Background="{StaticResource Accent}"
+                                                            <Border Width="164" Height="8" CornerRadius="3" Background="{StaticResource Surface3}" VerticalAlignment="Center">
+                                                                <Border HorizontalAlignment="Left" CornerRadius="3" Background="{StaticResource Accent}"
                                                                         Width="{Binding BarFraction, Converter={StaticResource Fraction}, ConverterParameter=164}" />
                                                             </Border>
                                                         </StackPanel>
@@ -564,7 +565,7 @@
                                     </ItemsControl>
                                     <TextBlock Text="No card data for this tier yet." Style="{StaticResource Caption}" Margin="0,8"
                                                Visibility="{Binding CardTiers, Converter={StaticResource Vis}, ConverterParameter=!}" />
-                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Faint}" Margin="0,12,0,0" />
+                                    <TextBlock Text="{Binding MetaUpdated}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,12,0,0" />
                                 </StackPanel>
                             </Border>
 
@@ -652,12 +653,13 @@
                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                             <ListBox.ItemContainerStyle>
                                                 <Style TargetType="ListBoxItem">
-                                                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                                    <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingRow}" />
                                                     <Setter Property="Cursor" Value="Hand" />
                                                     <Setter Property="Template">
                                                         <Setter.Value>
                                                             <ControlTemplate TargetType="ListBoxItem">
-                                                                <Border x:Name="Bd" CornerRadius="18" Padding="14,10" Margin="0,0,0,3" Background="Transparent">
+                                                                <Border x:Name="Bd" CornerRadius="8" Padding="13,9" Margin="0,0,0,3" Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
+                                                                        SnapsToDevicePixels="True">
                                                                     <ContentPresenter />
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
@@ -665,7 +667,8 @@
                                                                         <Setter TargetName="Bd" Property="Background" Value="{StaticResource Hover}" />
                                                                     </Trigger>
                                                                     <Trigger Property="IsSelected" Value="True">
-                                                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource SecondaryContainer}" />
+                                                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource SelectedFill}" />
+                                                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource SelectedEdge}" />
                                                                     </Trigger>
                                                                 </ControlTemplate.Triggers>
                                                             </ControlTemplate>
@@ -690,8 +693,8 @@
                                                         <TextBlock Grid.Column="1" Text="{Binding Record}" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource Caption}"
                                                                    ToolTip="Wins – losses" />
                                                         <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="Win rate">
-                                                            <Border Width="80" Height="8" CornerRadius="4" Background="{StaticResource NegativeSoft}" VerticalAlignment="Center">
-                                                                <Border HorizontalAlignment="Left" CornerRadius="4" Background="{StaticResource Positive}"
+                                                            <Border Width="80" Height="8" CornerRadius="3" Background="{StaticResource NegativeSoft}" VerticalAlignment="Center">
+                                                                <Border HorizontalAlignment="Left" CornerRadius="3" Background="{StaticResource Positive}"
                                                                         Width="{Binding WinFraction, Converter={StaticResource Fraction}, ConverterParameter=80}" />
                                                             </Border>
                                                             <TextBlock Text="{Binding WinRate}" Width="50" TextAlignment="Right" FontWeight="Bold" />
@@ -907,7 +910,8 @@
                     </ScrollViewer>
 
                     <!-- ===== Floating live bar (like a now-playing bar) ===== -->
-                    <Border Grid.Row="1" VerticalAlignment="Bottom" Margin="24,0,24,18" CornerRadius="28" Background="{StaticResource Surface3}" Padding="10,10,16,10">
+                    <Border Grid.Row="1" VerticalAlignment="Bottom" Margin="24,0,24,18" CornerRadius="12" Background="{StaticResource Surface3}"
+                            BorderBrush="{StaticResource Outline}" BorderThickness="1" Padding="9,9,15,9">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.35" Color="Black" />
                         </Border.Effect>

@@ -28,7 +28,8 @@ public sealed class RatingChart : FrameworkElement
         }
 
         var accent = (Brush)FindResource("Accent");
-        var muted = (Brush)FindResource("Faint");
+        var faint = (Brush)FindResource("Faint");
+        var muted = (Brush)FindResource("Muted");
         var grid = new Pen((Brush)FindResource("Border"), 1) { DashStyle = new DashStyle([3, 4], 0) };
         var typeface = new Typeface(new FontFamily("Segoe UI Variable Text, Segoe UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
@@ -38,7 +39,7 @@ public sealed class RatingChart : FrameworkElement
         if (points is null || points.Count < 2)
         {
             var empty = new FormattedText("Play a few rated Battlegrounds games to see your rating curve.", CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight, typeface, 12, muted, dpi);
+                FlowDirection.LeftToRight, typeface, 12, faint, dpi);
             dc.DrawText(empty, new Point((w - empty.Width) / 2, (h - empty.Height) / 2));
             return;
         }
@@ -88,7 +89,8 @@ public sealed class RatingChart : FrameworkElement
         }
 
         area.Freeze();
-        var fill = new LinearGradientBrush(Color.FromArgb(0x40, 0xE2, 0xB5, 0x4C), Color.FromArgb(0x00, 0xE2, 0xB5, 0x4C), 90);
+        var gold = accent is SolidColorBrush solid ? solid.Color : Color.FromRgb(0xE9, 0xB9, 0x49);
+        var fill = new LinearGradientBrush(Color.FromArgb(0x1F, gold.R, gold.G, gold.B), Color.FromArgb(0x00, gold.R, gold.G, gold.B), 90);
         dc.DrawGeometry(fill, null, area);
         dc.DrawGeometry(null, new Pen(accent, 2) { LineJoin = PenLineJoin.Round }, line);
 

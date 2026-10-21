@@ -366,7 +366,7 @@ public partial class App : Application
         menu.Items.Add("Quit", null, (_, _) => Quit());
         foreach (Forms.ToolStripItem item in menu.Items)
         {
-            item.ForeColor = System.Drawing.Color.FromArgb(0xE7, 0xE9, 0xEE);
+            item.ForeColor = System.Drawing.Color.FromArgb(0xF4, 0xE7, 0xC9);
         }
 
         _tray = new Forms.NotifyIcon
@@ -450,12 +450,12 @@ public partial class App : Application
         return timer;
     }
 
-    /// <summary>Tray menu in the app's dark palette.</summary>
+    /// <summary>Tray menu in the app's brown and gold palette (Surface, Surface3, Border and Accent).</summary>
     private sealed class DarkMenuRenderer : Forms.ToolStripProfessionalRenderer
     {
-        private static readonly System.Drawing.Color Background = System.Drawing.Color.FromArgb(0x1C, 0x21, 0x29);
-        private static readonly System.Drawing.Color Hover = System.Drawing.Color.FromArgb(0x2A, 0x31, 0x3C);
-        private static readonly System.Drawing.Color Line = System.Drawing.Color.FromArgb(0x26, 0x2C, 0x36);
+        private static readonly System.Drawing.Color Background = System.Drawing.Color.FromArgb(0x21, 0x16, 0x0E);
+        private static readonly System.Drawing.Color Hover = System.Drawing.Color.FromArgb(0x3A, 0x28, 0x17);
+        private static readonly System.Drawing.Color Line = System.Drawing.Color.FromArgb(0x3D, 0x2A, 0x19);
 
         protected override void OnRenderToolStripBackground(Forms.ToolStripRenderEventArgs e) => e.Graphics.Clear(Background);
 
@@ -480,7 +480,7 @@ public partial class App : Application
 
         protected override void OnRenderItemCheck(Forms.ToolStripItemImageRenderEventArgs e)
         {
-            using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0xE2, 0xB5, 0x4C));
+            using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0xE9, 0xB9, 0x49));
             e.Graphics.FillEllipse(brush, e.ImageRectangle.X + 4, e.ImageRectangle.Y + 4, 8, 8);
         }
     }
