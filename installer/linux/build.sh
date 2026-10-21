@@ -115,7 +115,6 @@ Release:        1
 Summary:        $SUMMARY
 License:        Proprietary
 URL:            https://github.com/Dev-NotAqua/HeartLens
-BuildArch:      $RPM_ARCH
 AutoReqProv:    no
 Requires:       libX11, libXext, libXi, libXrandr, libXcursor, libICE, libSM, fontconfig, libicu
 %global debug_package %{nil}
@@ -146,6 +145,8 @@ fi
 %postun
 $(cat "$WORK/after-remove.sh")
 SPEC
+  # The architecture comes from --target only: a BuildArch line makes rpmbuild refuse to
+  # package arm64 on an x86_64 machine ("No compatible architectures found for build").
   rpmbuild --quiet --define "_topdir $TOP" --target "$RPM_ARCH" -bb "$TOP/SPECS/hearthlens.spec" >/dev/null
   cp "$TOP/RPMS/$RPM_ARCH/hearthlens-$VERSION-1.$RPM_ARCH.rpm" "$DIST/"
   echo "wrote $DIST/hearthlens-$VERSION-1.$RPM_ARCH.rpm"
