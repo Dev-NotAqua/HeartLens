@@ -105,7 +105,7 @@ public sealed class CaptureTests
     {
         var log = new PowerLog()
             .BattlegroundsGame()
-            // Golden Wolf Pup (Rally, no effect registered yet), buffed.
+            // Golden Wolf Pup (Rally; no effect in the empty registry used below), buffed.
             .Minion(30, "BG36_207_G", Me, 1, 9, 14, ("PREMIUM", "1"), ("CARDRACE", "BEAST"))
             // Rescue Bot: its deathrattle only gives a card, so it is not "not simulated" any more.
             .Minion(31, "BG36_854", Me, 2, 2, 1, ("TAUNT", "1"), ("DEATHRATTLE", "1"), ("CARDRACE", "MECHANICAL"))
@@ -117,7 +117,8 @@ public sealed class CaptureTests
             .CombatStarts()
             .Block("ATTACK", Ref(30, "Wolf Pup", "BG36_207_G", Me));
 
-        var (_, tracker) = log.Replay(Cards);
+        // No registered effects, so the outcome does not depend on which cards Hearthlens.Core implements.
+        var (_, tracker) = log.Replay(Cards, EffectRegistry.Empty);
         var capture = tracker.LastCapture!;
 
         var pup = capture.Ours.Minions[0];
