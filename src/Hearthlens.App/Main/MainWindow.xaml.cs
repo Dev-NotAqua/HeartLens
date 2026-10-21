@@ -1,0 +1,160 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Interop;
+using System.Windows.Media;
+using Hearthlens.App.Infrastructure;
+
+namespace Hearthlens.App.Main;
+
+public partial class MainWindow : Window
+{
+    private readonly MainViewModel _viewModel;
+    private bool _allowClose;
+
+    public MainWindow(MainViewModel viewModel)
+    {
+        InitializeComponent();
+        _viewModel = viewModel;
+        DataContext = viewModel;
+        viewModel.PropertyChanged += OnViewModelChanged;
+        StateChanged += (_, _) =>
+        {
+            var maximized = WindowState == WindowState.Maximized;
+            MaxButton.Content = maximized ? "\U000F05B2" : "\U000F05AF";
+            // A maximized chrome-less window overhangs the screen by the resize border.
+            Frame.Margin = maximized ? new Thickness(7) : new Thickness(0);
+        };
+    }
+
+    /// <summary>Raised after any setting changes from the UI.</summary>
+    public event Action? SettingsChanged;
+
+    public event Action? ReimportRequested;
+
+    public event Action? ArrangeOverlayRequested;
+
+    public void CloseForReal()
+    {
+        _allowClose = true;
+        Close();
+    }
+
+    public void ShowPage(string page)
+    {
+        var nav = page switch
+        {
+            "Battlegrounds" => NavBattlegrounds,
+            "Constructed" => NavConstructed,
+            "History" => NavHistory,
+            "Settings" => NavSettings,
+            _ => NavOverview,
+        };
+        nav.IsChecked = true;
+    }
+
+    public void SyncOverlaySwitch() => OverlaySwitch.IsChecked = _viewModel.Settings.OverlayEnabled;
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        Native.UseDarkChrome(new WindowInteropHelper(this).Handle);
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (!_allowClose && _viewModel.Settings.MinimizeToTray)
+        {
+            e.Cancel = true;
+            Hide();
+            return;
+        }
+
+        base.OnClosing(e);
+    }
+
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(MainViewModel.HearthstoneRunning):
+                HsDot.Fill = (Brush)FindResource(_viewModel.HearthstoneRunning ? "Positive" : "Faint");
+                break;
+            case nameof(MainViewModel.MemoryAttached):
+                MemDot.Fill = (Brush)FindResource(_viewModel.MemoryAttached ? "Positive" : "Faint");
+                break;
+            case nameof(MainViewModel.InGame):
+                LivePulse.Fill = (Brush)FindResource(_viewModel.InGame ? "AccentContainer" : "Surface4");
+                break;
+        }
+    }
+
+    private void OnNavigate(object sender, RoutedEventArgs e)
+    {
+        if (PageOverview is null)
+        {
+            return;
+        }
+
+        PageOverview.Visibility = NavOverview.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PageBattlegrounds.Visibility = NavBattlegrounds.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PageConstructed.Visibility = NavConstructed.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PageHistory.Visibility = NavHistory.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PageSettings.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnBgTab(object sender, RoutedEventArgs e)
+    {
+        if (HeroTierCard is null)
+        {
+            return;
+        }
+
+        HeroTierCard.Visibility = TabHeroes.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        CompTierCard.Visibility = TabComps.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        TrinketTierCard.Visibility = TabTrinkets.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        CardStatsCard.Visibility = TabCards.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        MyHeroesCard.Visibility = TabMine.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        BracketPicker.Visibility = TabMine.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void OnViewHistory(object sender, RoutedEventArgs e) => NavHistory.IsChecked = true;
+
+    private void OnOverlaySwitch(object sender, RoutedEventArgs e)
+    {
+        _viewModel.Settings.OverlayEnabled = OverlaySwitch.IsChecked == true;
+        SettingsChanged?.Invoke();
+    }
+
+    private void OnSettingChanged(object sender, RoutedEventArgs e)
+    {
+        if (IsLoaded)
+        {
+            SyncOverlaySwitch();
+            SettingsChanged?.Invoke();
+        }
+    }
+
+    private void OnSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (IsLoaded)
+        {
+            SettingsChanged?.Invoke();
+        }
+    }
+
+    private void OnReimport(object sender, RoutedEventArgs e) => ReimportRequested?.Invoke();
+
+    private void OnArrangeOverlay(object sender, RoutedEventArgs e) => ArrangeOverlayRequested?.Invoke();
+
+    private void OnOpenData(object sender, RoutedEventArgs e) =>
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{_viewModel.DataFolder}\"") { UseShellExecute = true });
+
+    private void OnMinimize(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void OnMaximize(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void OnClose(object sender, RoutedEventArgs e) => Close();
+}

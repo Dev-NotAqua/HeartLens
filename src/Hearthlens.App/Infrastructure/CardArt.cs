@@ -1,0 +1,173 @@
+using System.Collections.Concurrent;
+using System.IO;
+using System.Net.Http;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Hearthlens.Core;
+
+namespace Hearthlens.App.Infrastructure;
+
+public enum ArtKind
+{
+    /// <summary>Deck-list strip (256x59).</summary>
+    Tile,
+
+    /// <summary>Square card art crop, used for hero portraits.</summary>
+    Portrait,
+
+    /// <summary>Full Battlegrounds card render.</summary>
+    BattlegroundsCard,
+}
+
+/// <summary>
+/// Card images from HearthstoneJSON, cached on disk and in memory as frozen bitmaps so list
+/// refreshes never flicker. Images set through the attached properties load asynchronously.
+/// </summary>
+public static class CardArt
+{
+    private static readonly ConcurrentDictionary<string, ImageSource> Memory = new();
+    private static readonly ConcurrentDictionary<string, Task<ImageSource?>> Pending = new();
+    private static readonly SemaphoreSlim Downloads = new(6);
+
+    public static HttpClient? Http { get; set; }
+
+    public static string Locale { get; set; } = "enUS";
+
+    public static readonly DependencyProperty TileProperty = Register("Tile", ArtKind.Tile);
+    public static readonly DependencyProperty PortraitProperty = Register("Portrait", ArtKind.Portrait);
+    public static readonly DependencyProperty BattlegroundsCardProperty = Register("BattlegroundsCard", ArtKind.BattlegroundsCard);
+
+    public static string? GetTile(DependencyObject d) => (string?)d.GetValue(TileProperty);
+    public static void SetTile(DependencyObject d, string? value) => d.SetValue(TileProperty, value);
+    public static string? GetPortrait(DependencyObject d) => (string?)d.GetValue(PortraitProperty);
+    public static void SetPortrait(DependencyObject d, string? value) => d.SetValue(PortraitProperty, value);
+    public static string? GetBattlegroundsCard(DependencyObject d) => (string?)d.GetValue(BattlegroundsCardProperty);
+    public static void SetBattlegroundsCard(DependencyObject d, string? value) => d.SetValue(BattlegroundsCardProperty, value);
+
+    private static DependencyProperty Register(string name, ArtKind kind) =>
+        DependencyProperty.RegisterAttached(name, typeof(string), typeof(CardArt),
+            new PropertyMetadata(null, (d, e) => Apply(d, kind, e.NewValue as string)));
+
+    private static async void Apply(DependencyObject target, ArtKind kind, string? cardId)
+    {
+        if (string.IsNullOrEmpty(cardId))
+        {
+            SetSource(target, null);
+            return;
+        }
+
+        var key = Key(kind, cardId);
+        if (Memory.TryGetValue(key, out var cached))
+        {
+            SetSource(target, cached);
+            return;
+        }
+
+        SetSource(target, null);
+        var image = await GetAsync(kind, cardId);
+        // The element may have been recycled for another card while we were downloading.
+        if (Equals(target.GetValue(PropertyFor(kind)), cardId))
+        {
+            SetSource(target, image);
+        }
+    }
+
+    private static DependencyProperty PropertyFor(ArtKind kind) => kind switch
+    {
+        ArtKind.Tile => TileProperty,
+        ArtKind.Portrait => PortraitProperty,
+        _ => BattlegroundsCardProperty,
+    };
+
+    private static void SetSource(DependencyObject target, ImageSource? source)
+    {
+        switch (target)
+        {
+            case Image image:
+                image.Source = source;
+                break;
+            case ImageBrush brush:
+                brush.ImageSource = source;
+                break;
+            case Border border:
+                border.Background = source is null ? null : new ImageBrush(source) { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Right };
+                break;
+        }
+    }
+
+    private static string Key(ArtKind kind, string cardId) => $"{kind}:{cardId}";
+
+    public static Task<ImageSource?> GetAsync(ArtKind kind, string cardId) =>
+        Pending.GetOrAdd(Key(kind, cardId), _ => LoadAsync(kind, cardId));
+
+    private static async Task<ImageSource?> LoadAsync(ArtKind kind, string cardId)
+    {
+        var (url, ext) = kind switch
+        {
+            ArtKind.Tile => ($"https://art.hearthstonejson.com/v1/tiles/{cardId}.png", "png"),
+            ArtKind.Portrait => ($"https://art.hearthstonejson.com/v1/256x/{cardId}.jpg", "jpg"),
+            _ => ($"https://art.hearthstonejson.com/v1/bgs/latest/{Locale}/256x/{cardId}.png", "png"),
+        };
+        var dir = Path.Combine(AppPaths.Images, kind.ToString().ToLowerInvariant());
+        var file = Path.Combine(dir, $"{cardId}.{ext}");
+        ImageSource? image = null;
+        try
+        {
+            if (!File.Exists(file) && Http is { } http)
+            {
+                await Downloads.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    using var response = await http.GetAsync(url).ConfigureAwait(false);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Directory.CreateDirectory(dir);
+                        var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                        await File.WriteAllBytesAsync(file + ".tmp", bytes).ConfigureAwait(false);
+                        File.Move(file + ".tmp", file, overwrite: true);
+                    }
+                }
+                finally
+                {
+                    Downloads.Release();
+                }
+            }
+
+            if (File.Exists(file))
+            {
+                image = Decode(file, kind);
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or NotSupportedException)
+        {
+            Diag.Error($"Art {kind} {cardId} unavailable", ex);
+        }
+
+        if (image is null)
+        {
+            // Allow a later retry (e.g. after reconnecting).
+            Pending.TryRemove(Key(kind, cardId), out _);
+        }
+        else
+        {
+            Memory[Key(kind, cardId)] = image;
+        }
+
+        return image;
+    }
+
+    private static BitmapImage Decode(string file, ArtKind kind)
+    {
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+        bitmap.DecodePixelWidth = kind == ArtKind.Tile ? 256 : 200;
+        bitmap.UriSource = new Uri(file);
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
+    }
+}
