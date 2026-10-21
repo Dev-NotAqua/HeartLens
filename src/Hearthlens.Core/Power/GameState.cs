@@ -1,5 +1,8 @@
 namespace Hearthlens.Core.Power;
 
+/// <summary>An open BLOCK_START … BLOCK_END section of Power.log.</summary>
+public sealed record PowerBlock(string Type, Entity? Source);
+
 public sealed class PlayerSlot
 {
     public int PlayerId { get; init; }
@@ -44,6 +47,14 @@ public sealed class GameState
     /// over the next ~25 seconds.
     /// </summary>
     public bool CombatOnScreen { get; internal set; }
+
+    /// <summary>
+    /// Power.log blocks enclosing the line being processed, outermost first. During <see cref="IPowerListener.OnBlockStart"/>
+    /// and <see cref="IPowerListener.OnBlockEnd"/> it holds the blocks around the one starting or ending.
+    /// </summary>
+    public IReadOnlyList<PowerBlock> OpenBlocks => BlockStack;
+
+    internal List<PowerBlock> BlockStack { get; } = new();
 
     public DateTime? EndedAt { get; internal set; }
 

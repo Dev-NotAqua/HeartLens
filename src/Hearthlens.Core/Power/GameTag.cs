@@ -29,11 +29,15 @@ public static class GameTag
     public const string Venomous = "VENOMOUS";
     public const string Reborn = "REBORN";
     public const string Windfury = "WINDFURY";
+    public const string MegaWindfury = "MEGA_WINDFURY";
     public const string Stealth = "STEALTH";
     public const string Secret = "SECRET";
     public const string Class = "CLASS";
     public const string CardRace = "CARDRACE";
     public const string TechLevel = "TECH_LEVEL";
+    public const string Attached = "ATTACHED";
+    public const string ScriptData1 = "TAG_SCRIPT_DATA_NUM_1";
+    public const string ScriptData2 = "TAG_SCRIPT_DATA_NUM_2";
 
     // Battlegrounds
     public const string PlayerId = "PLAYER_ID";
@@ -45,6 +49,7 @@ public static class GameTag
     public const string BoardVisualState = "BOARD_VISUAL_STATE";
     public const string BaconDummyPlayer = "BACON_DUMMY_PLAYER";
     public const string BaconAnomaly = "BACON_GLOBAL_ANOMALY_DBID";
+    public const string BaconDeity = "BACON_GLOBAL_OLD_GOD_DBID";
     public const string BaconMaxTechLevel = "BACON_MAX_PLAYER_TECH_LEVEL";
     public const string BaconDuoTeamId = "BACON_DUO_TEAM_ID";
 
