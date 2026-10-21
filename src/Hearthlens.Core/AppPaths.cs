@@ -2,8 +2,13 @@ namespace Hearthlens.Core;
 
 public static class AppPaths
 {
-    public static string Root { get; } = Ensure(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Hearthlens"));
+    /// <summary>
+    /// Data folder: %APPDATA%\Hearthlens on Windows, ~/Library/Application Support/Hearthlens on macOS,
+    /// ~/.local/share/Hearthlens on Linux, the app's private files on Android. HEARTHLENS_DATA overrides it.
+    /// </summary>
+    public static string Root { get; } = Ensure(Environment.GetEnvironmentVariable("HEARTHLENS_DATA") is { Length: > 0 } custom
+        ? custom
+        : Path.Combine(DefaultParent(), "Hearthlens"));
 
     public static string Cache { get; } = Ensure(Path.Combine(Root, "cache"));
 
@@ -14,6 +19,18 @@ public static class AppPaths
     public static string Database => Path.Combine(Root, "history.db");
 
     public static string LogFile => Path.Combine(Root, "hearthlens.log");
+
+    private static string DefaultParent()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        }
+
+        // .NET maps LocalApplicationData to ~/Library/Application Support on macOS and ~/.local/share on Linux.
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return local.Length > 0 ? local : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
+    }
 
     private static string Ensure(string path)
     {

@@ -178,6 +178,8 @@ public partial class App : Application
                 _settings.Save();
             }
 
+            _session.InstallDirectory = _installDir;
+
             var locale = _settings.Locale == "auto" ? HearthstoneInstall.DetectLocale(_installDir) : _settings.Locale;
             CardArt.Locale = locale;
 
@@ -185,7 +187,7 @@ public partial class App : Application
             {
                 try
                 {
-                    return LogConfig.Ensure();
+                    return LogConfig.Ensure(_installDir);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {

@@ -96,6 +96,9 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         _dirty = true;
     }
 
+    /// <summary>Hearthstone install folder, used to locate the client's log.config (it lives in the Wine prefix on Linux).</summary>
+    public string? InstallDirectory { get; set; }
+
     public CardDb Cards
     {
         get => _cards;
@@ -164,7 +167,7 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         if (now >= _nextConfigCheck)
         {
             _nextConfigCheck = now.AddSeconds(30);
-            _logConfigMissing = LogConfig.MissingSections();
+            _logConfigMissing = LogConfig.MissingSections(InstallDirectory);
         }
 
         if (_hearthstoneRunning && now >= _nextMemoryPoll)
