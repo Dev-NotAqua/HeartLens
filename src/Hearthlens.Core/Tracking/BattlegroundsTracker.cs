@@ -96,7 +96,7 @@ public sealed class BattlegroundsTracker : IPowerListener
         _discoverSource = null;
     }
 
-        public void OnEntityCreated(GameState game, Entity entity) => NoteShopMinion(game, entity);
+    public void OnEntityCreated(GameState game, Entity entity) => NoteShopMinion(game, entity);
 
     public void OnEntityRevealed(GameState game, Entity entity) => NoteShopMinion(game, entity);
 
@@ -167,7 +167,7 @@ public sealed class BattlegroundsTracker : IPowerListener
                 .OrderBy(e => e.ZonePosition)
                 .Select(e => new BgHeroOption(
                     e.CardId,
-                    Cards.NameOf(e.CardId) is { Length: > 0 } n ? n : e.Name,
+                    Cards.NameOr(e.CardId, e.Name),
                     e.GetInt(GameTag.Armor) is > 0 and var a ? a : Cards.Get(e.CardId)?.Armor ?? 0,
                     HeroStatsProvider?.Invoke(Cards.BaseHeroId(e.CardId))))
                 .ToList();
@@ -195,7 +195,7 @@ public sealed class BattlegroundsTracker : IPowerListener
                 return new BgOpponent(
                     playerId,
                     h.CardId,
-                    Cards.NameOf(h.CardId) is { Length: > 0 } name ? name : h.Name,
+                    Cards.NameOr(h.CardId, h.Name),
                     h.Health,
                     h.GetInt(GameTag.Armor),
                     h.GetInt(GameTag.PlayerTechLevel),
@@ -265,7 +265,7 @@ public sealed class BattlegroundsTracker : IPowerListener
         }
 
         return _trinketOffer
-            .Select(e => new BgTrinketOption(e.CardId, Cards.NameOf(e.CardId) is { Length: > 0 } n ? n : e.Name))
+            .Select(e => new BgTrinketOption(e.CardId, Cards.NameOr(e.CardId, e.Name)))
             .ToList();
     }
 
@@ -282,11 +282,11 @@ public sealed class BattlegroundsTracker : IPowerListener
             .Select(e =>
             {
                 var gift = game.Entities.GetValueOrDefault(e.GetInt("DARK_GIFT_ENTITY"));
-                var giftName = gift is null || gift.CardId.Length == 0 ? null : Cards.NameOf(gift.CardId) is { Length: > 0 } g ? g : gift.Name;
+                var giftName = gift is null || gift.CardId.Length == 0 ? null : Cards.NameOr(gift.CardId, gift.Name);
                 var card = Cards.Get(e.CardId);
                 var tier = e.GetInt(GameTag.TechLevel) is > 0 and var t ? t : card?.TechLevel ?? 0;
                 var type = card?.Type is { Length: > 0 } cardType ? cardType : e.CardType;
-                return new BgDiscoverOption(e.CardId, Cards.NameOf(e.CardId) is { Length: > 0 } n ? n : e.Name, tier, giftName, type);
+                return new BgDiscoverOption(e.CardId, Cards.NameOr(e.CardId, e.Name), tier, giftName, type);
             })
             .ToList();
     }
@@ -460,7 +460,7 @@ public sealed class BattlegroundsTracker : IPowerListener
         var keywords = KeywordTags.Where(k => e.Has(k.Tag)).Select(k => k.Label).ToList();
         return new BgMinion(
             e.CardId,
-            Cards.NameOf(e.CardId) is { Length: > 0 } name ? name : e.Name,
+            Cards.NameOr(e.CardId, e.Name),
             e.Attack,
             e.Health,
             e.GetInt(GameTag.Premium) > 0,

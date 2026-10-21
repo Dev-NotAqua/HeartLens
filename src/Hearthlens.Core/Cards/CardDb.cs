@@ -51,6 +51,15 @@ public sealed class CardDb
 
     public string NameOf(string? cardId) => Get(cardId)?.Name ?? cardId ?? string.Empty;
 
+    /// <summary>
+    /// Card name from the database, else <paramref name="fallback"/> (e.g. the name the client printed in the log),
+    /// else the card id.
+    /// </summary>
+    public string NameOr(string? cardId, string? fallback) =>
+        Get(cardId)?.Name is { Length: > 0 } name ? name
+        : !string.IsNullOrEmpty(fallback) ? fallback
+        : cardId ?? string.Empty;
+
     /// <summary>Loads from cache, refreshing from the network when stale. Never throws.</summary>
     public static async Task<CardDb> LoadAsync(string locale, HttpClient http, CancellationToken cancellationToken = default)
     {

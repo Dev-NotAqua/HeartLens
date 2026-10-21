@@ -46,6 +46,16 @@ public sealed class CombatOddsTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Next_attacker_stays_the_same_minion_when_one_to_its_left_dies()
+    {
+        // Their 1/6 taunt attacks first, then dies to our 5/10, so their 8/1 is next in line and kills us,
+        // leaving their stealthed 1/1. Skipping the 8/1 (sending the 1/1 first) would turn this into a tie.
+        SimMinion stealthed = new(1, 1, false, false, false, false, false, 1, true, 1, false);
+        var odds = CombatSimulator.Run([M(5, 10)], [M(1, 6, taunt: true), M(8, 1), stealthed], firstAttackerIsOurs: false);
+        Assert.Equal(1.0, odds.Loss, 3);
+    }
+
+    [Fact]
     public void Predictions_track_real_combat_results()
     {
         var cardsPath = Path.Combine(Path.GetTempPath(), "hl", "cards.json");
