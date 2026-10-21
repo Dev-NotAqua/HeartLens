@@ -77,6 +77,16 @@ public sealed class ParserTests
     }
 
     [Fact]
+    public void Card_names_fall_back_to_the_name_the_client_logged()
+    {
+        using var json = new MemoryStream("""[{"id":"BG_KNOWN","name":"Known Card"}]"""u8.ToArray());
+        var cards = CardDb.Parse("enUS", json);
+        Assert.Equal("Known Card", cards.NameOr("BG_KNOWN", "Logged"));
+        Assert.Equal("Logged Name", cards.NameOr("BG_MISSING", "Logged Name"));
+        Assert.Equal("BG_MISSING", cards.NameOr("BG_MISSING", ""));
+    }
+
+    [Fact]
     public void Deck_codes_round_trip()
     {
         // Version 1, Standard, one hero (dbf 7), cards: 1x dbf 1, 2x dbf 300, 3x dbf 70000.

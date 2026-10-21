@@ -56,7 +56,13 @@ public sealed class HearthstoneMemory : IDisposable
         }
     }
 
-    public string Status { get; private set; } = "Waiting for Hearthstone";
+    /// <summary>
+    /// Reading the client's memory (rating, ranks, lobby tribes) uses Windows APIs. On other platforms everything
+    /// else keeps working from the logs; these values are simply unavailable.
+    /// </summary>
+    public static bool IsSupported => OperatingSystem.IsWindows();
+
+    public string Status { get; private set; } = IsSupported ? "Waiting for Hearthstone" : "Memory reading is only available on Windows";
 
     /// <summary>Attaches to a running Hearthstone process; cheap to call repeatedly.</summary>
     public bool EnsureAttached()
@@ -69,6 +75,12 @@ public sealed class HearthstoneMemory : IDisposable
             }
 
             DetachLocked();
+            if (!IsSupported)
+            {
+                Status = "Memory reading is only available on Windows";
+                return false;
+            }
+
             if (DateTime.UtcNow < _nextAttachAttempt)
             {
                 return false;

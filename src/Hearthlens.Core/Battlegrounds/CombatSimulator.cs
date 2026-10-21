@@ -89,7 +89,7 @@ public static class CombatSimulator
             var attacker = own[index];
             for (var swing = 0; swing < attacker.AttacksPerTurn && attacker.Health > 0 && foe.Count > 0; swing++)
             {
-                Attack(attacker, own, foe, random);
+                Attack(attacker, own, foe, ref next[1 - side], random);
             }
 
             // Continue from the slot right of the attacker; a reborn copy takes the attacker's slot.
@@ -120,14 +120,19 @@ public static class CombatSimulator
         return -1;
     }
 
-    private static void Attack(Unit attacker, List<Unit> own, List<Unit> foe, Random random)
+    /// <param name="foeNext">Index of the defending side's next attacker; kept on the same minion when one to its left dies.</param>
+    private static void Attack(Unit attacker, List<Unit> own, List<Unit> foe, ref int foeNext, Random random)
     {
         var defender = PickTarget(foe, random);
         attacker.Stealth = false;
         var attackPower = attacker.Attack;
         Hit(defender, attackPower, attacker);
         Hit(attacker, defender.Attack, defender);
-        RemoveDead(foe, defender);
+        if (RemoveDead(foe, defender) is { Removed: >= 0 } removed && !removed.Reborn && removed.Removed < foeNext)
+        {
+            foeNext--;
+        }
+
         RemoveDead(own, attacker);
     }
 
@@ -165,24 +170,28 @@ public static class CombatSimulator
         }
     }
 
-    private static void RemoveDead(List<Unit> side, Unit unit)
+    /// <summary>Removes a dead unit; returns its former index (-1 if alive) and whether a reborn copy took its slot.</summary>
+    private static (int Removed, bool Reborn) RemoveDead(List<Unit> side, Unit unit)
     {
         if (unit.Health > 0)
         {
-            return;
+            return (-1, false);
         }
 
         var index = side.IndexOf(unit);
         if (index < 0)
         {
-            return;
+            return (-1, false);
         }
 
         side.RemoveAt(index);
         if (unit.Reborn && side.Count < 7)
         {
             side.Insert(index, unit.RebornCopy());
+            return (index, true);
         }
+
+        return (index, false);
     }
 
     private static int Seed(IReadOnlyList<SimMinion> ours, IReadOnlyList<SimMinion> theirs)

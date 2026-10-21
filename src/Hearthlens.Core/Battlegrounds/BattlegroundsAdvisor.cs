@@ -136,10 +136,6 @@ public sealed class BattlegroundsAdvisor
         return ranked.Select(t => t with { Recommended = t.CardId == best }).ToList();
     }
 
-    /// <summary>
-    /// The Dark Gift button discovers a minion carrying a Dark Gift. It beats a filler buy, but a shop
-    /// card that completes the plan (core card, triple) is still the better use of the gold.
-    /// </summary>
     /// <summary>A key card is in the tavern but there is no gold left to buy it this turn.</summary>
     private static string FreezeTip(BattlegroundsView view, IReadOnlyList<ShopPick> shop)
     {
@@ -153,6 +149,10 @@ public sealed class BattlegroundsAdvisor
         return keep.Count == 0 ? string.Empty : $"Freeze: keep {string.Join(" and ", keep)} for next turn";
     }
 
+    /// <summary>
+    /// The Dark Gift button discovers a minion carrying a Dark Gift. It beats a filler buy, but a shop
+    /// card that completes the plan (core card, triple) is still the better use of the gold.
+    /// </summary>
     private static string DarkGiftTip(BattlegroundsView view, IReadOnlyList<ShopPick> shop)
     {
         if (!view.DarkGiftReady || view.InCombat)
