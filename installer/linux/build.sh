@@ -118,6 +118,7 @@ URL:            https://github.com/Dev-NotAqua/HeartLens
 AutoReqProv:    no
 Requires:       libX11, libXext, libXi, libXrandr, libXcursor, libICE, libSM, fontconfig, libicu
 %global debug_package %{nil}
+%global _build_id_links none
 %global __os_install_post %{nil}
 
 %description
