@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Hearthlens.Core/Hearthlens.Core.csproj" />
+    <Project Path="src/Hearthlens.UI/Hearthlens.UI.csproj" />
+    <Project Path="src/Hearthlens.Desktop/Hearthlens.Desktop.csproj" />
     <Project Path="src/Hearthlens.App/Hearthlens.App.csproj" />
   </Folder>
   <Folder Name="/tests/">
