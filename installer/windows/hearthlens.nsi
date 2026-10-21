@@ -7,6 +7,8 @@ Unicode true
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 !include "LogicLib.nsh"
+!include "x64.nsh"
+!include "WinVer.nsh"
 
 !ifndef VERSION
   !define VERSION "0.2.0"
@@ -126,6 +128,12 @@ LangString UnSecDataDesc ${LANG_ENGLISH} "Also deletes your recorded games, sett
 LangString UnSecDataDesc ${LANG_ITALIAN} "Elimina anche le partite registrate, le impostazioni e le immagini in cache. Lascia deselezionato per conservarle."
 LangString ClosingApp ${LANG_ENGLISH} "Closing Hearthlens…"
 LangString ClosingApp ${LANG_ITALIAN} "Chiusura di Hearthlens…"
+LangString Needs64Bit ${LANG_ENGLISH} "Hearthlens needs 64-bit Windows 10 or 11.$\r$\n$\r$\nThis PC runs 32-bit Windows, so Hearthlens cannot run on it."
+LangString Needs64Bit ${LANG_ITALIAN} "Hearthlens richiede Windows 10 o 11 a 64 bit.$\r$\n$\r$\nQuesto PC usa Windows a 32 bit, quindi Hearthlens non può funzionare."
+LangString NeedsWin10 ${LANG_ENGLISH} "Hearthlens needs Windows 10 or 11."
+LangString NeedsWin10 ${LANG_ITALIAN} "Hearthlens richiede Windows 10 o 11."
+LangString NeedsWin11Arm ${LANG_ENGLISH} "On PCs with an ARM processor, Hearthlens needs Windows 11."
+LangString NeedsWin11Arm ${LANG_ITALIAN} "Sui PC con processore ARM, Hearthlens richiede Windows 11."
 
 ; ---- Helpers -------------------------------------------------------------------------------
 !macro CloseApp
@@ -137,6 +145,22 @@ LangString ClosingApp ${LANG_ITALIAN} "Chiusura di Hearthlens…"
 
 Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY
+  ; The app is 64-bit and needs Windows 10 or later. Say so here instead of installing
+  ; something Windows refuses to start ("This app can't run on your PC").
+  ${IfNot} ${RunningX64}
+    MessageBox MB_ICONSTOP|MB_OK "$(Needs64Bit)" /SD IDOK
+    Abort
+  ${EndIf}
+  ${IfNot} ${AtLeastBuild} 10240
+    MessageBox MB_ICONSTOP|MB_OK "$(NeedsWin10)" /SD IDOK
+    Abort
+  ${EndIf}
+  ; ARM PCs run 64-bit (x64) apps only from Windows 11 on.
+  ${If} ${IsNativeARM64}
+  ${AndIfNot} ${AtLeastBuild} 22000
+    MessageBox MB_ICONSTOP|MB_OK "$(NeedsWin11Arm)" /SD IDOK
+    Abort
+  ${EndIf}
 FunctionEnd
 
 Function un.onInit
