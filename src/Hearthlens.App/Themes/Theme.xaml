@@ -54,6 +54,15 @@
         <GradientStop Color="#FA1C130C" Offset="1" />
     </LinearGradientBrush>
     <SolidColorBrush x:Key="OverlayBorder" Color="#40E9B949" />
+    <SolidColorBrush x:Key="Row" Color="#2E1F13" />
+    <LinearGradientBrush x:Key="TileFade" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF2E1F13" Offset="0" />
+        <GradientStop Color="#FF2E1F13" Offset="0.42" />
+        <GradientStop Color="#662E1F13" Offset="0.8" />
+        <GradientStop Color="#142E1F13" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="OverlayBadgeShade" Color="#CC140D08" />
+    <SolidColorBrush x:Key="OverlayPlaceholder" Color="#E6201510" />
 
     <!-- Selection and primary action: a raised leather plate with a gold edge, and a polished gold button -->
     <LinearGradientBrush x:Key="SelectedFill" StartPoint="0,0" EndPoint="0,1">

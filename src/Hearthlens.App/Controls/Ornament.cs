@@ -5,8 +5,8 @@ using System.Windows.Media;
 namespace Hearthlens.App.Controls;
 
 /// <summary>
-/// Section heading: an optional gold icon inside a bronze-edged cookie shape, a bold title and a gold
-/// rule (diamond plus fading hairline) that fills the rest of the width.
+/// Section heading: an optional gold icon inside a bronze-edged cookie shape and a bold title. The centered
+/// variant keeps the gold rules on both sides.
 /// </summary>
 public sealed class Ornament : FrameworkElement
 {
@@ -110,6 +110,5 @@ public sealed class Ornament : FrameworkElement
         }
 
         dc.DrawText(text, new Point(x, mid - (text.Height / 2)));
-        Wave.Draw(dc, trim, gold, x + text.Width + 12, w, mid + 1);
     }
 }

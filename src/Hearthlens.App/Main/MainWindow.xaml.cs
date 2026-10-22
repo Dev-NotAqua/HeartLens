@@ -19,6 +19,7 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
         viewModel.PropertyChanged += OnViewModelChanged;
+        SyncStatus();
         StateChanged += (_, _) =>
         {
             var maximized = WindowState == WindowState.Maximized;
@@ -56,6 +57,14 @@ public partial class MainWindow : Window
 
     public void SyncOverlaySwitch() => OverlaySwitch.IsChecked = _viewModel.Settings.OverlayEnabled;
 
+    /// <summary>The open page, as <see cref="ShowPage"/> takes it.</summary>
+    public string CurrentPage =>
+        NavBattlegrounds.IsChecked == true ? "Battlegrounds"
+        : NavConstructed.IsChecked == true ? "Constructed"
+        : NavHistory.IsChecked == true ? "History"
+        : NavSettings.IsChecked == true ? "Settings"
+        : "Overview";
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
@@ -74,20 +83,28 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        _viewModel.PropertyChanged -= OnViewModelChanged;
+        base.OnClosed(e);
+    }
+
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
         {
             case nameof(MainViewModel.HearthstoneRunning):
-                HsDot.Fill = (Brush)FindResource(_viewModel.HearthstoneRunning ? "Positive" : "Faint");
-                break;
             case nameof(MainViewModel.MemoryAttached):
-                MemDot.Fill = (Brush)FindResource(_viewModel.MemoryAttached ? "Positive" : "Faint");
-                break;
             case nameof(MainViewModel.InGame):
-                LivePulse.Fill = (Brush)FindResource(_viewModel.InGame ? "AccentContainer" : "Surface4");
+                SyncStatus();
                 break;
         }
+    }
+
+    private void SyncStatus()
+    {
+        StatusDot.Fill = (Brush)FindResource(_viewModel.MemoryAttached ? "Positive" : _viewModel.HearthstoneRunning ? "Accent" : "Faint");
+        LivePulse.Fill = (Brush)FindResource(_viewModel.InGame ? "AccentContainer" : "Surface4");
     }
 
     private void OnNavigate(object sender, RoutedEventArgs e)

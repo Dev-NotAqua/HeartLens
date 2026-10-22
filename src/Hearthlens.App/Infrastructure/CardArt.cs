@@ -19,6 +19,9 @@ public enum ArtKind
 
     /// <summary>Full Battlegrounds card render.</summary>
     BattlegroundsCard,
+
+    /// <summary>Full-size card art (512x512), used as a faded page banner.</summary>
+    Splash,
 }
 
 /// <summary>
@@ -62,6 +65,7 @@ public static class CardArt
     public static readonly DependencyProperty TileProperty = Register("Tile", ArtKind.Tile);
     public static readonly DependencyProperty PortraitProperty = Register("Portrait", ArtKind.Portrait);
     public static readonly DependencyProperty BattlegroundsCardProperty = Register("BattlegroundsCard", ArtKind.BattlegroundsCard);
+    public static readonly DependencyProperty SplashProperty = Register("Splash", ArtKind.Splash);
 
     public static string? GetTile(DependencyObject d) => (string?)d.GetValue(TileProperty);
     public static void SetTile(DependencyObject d, string? value) => d.SetValue(TileProperty, value);
@@ -69,6 +73,8 @@ public static class CardArt
     public static void SetPortrait(DependencyObject d, string? value) => d.SetValue(PortraitProperty, value);
     public static string? GetBattlegroundsCard(DependencyObject d) => (string?)d.GetValue(BattlegroundsCardProperty);
     public static void SetBattlegroundsCard(DependencyObject d, string? value) => d.SetValue(BattlegroundsCardProperty, value);
+    public static string? GetSplash(DependencyObject d) => (string?)d.GetValue(SplashProperty);
+    public static void SetSplash(DependencyObject d, string? value) => d.SetValue(SplashProperty, value);
 
     private static DependencyProperty Register(string name, ArtKind kind) =>
         DependencyProperty.RegisterAttached(name, typeof(string), typeof(CardArt),
@@ -102,6 +108,7 @@ public static class CardArt
     {
         ArtKind.Tile => TileProperty,
         ArtKind.Portrait => PortraitProperty,
+        ArtKind.Splash => SplashProperty,
         _ => BattlegroundsCardProperty,
     };
 
@@ -172,6 +179,7 @@ public static class CardArt
         {
             ArtKind.Tile => ($"https://art.hearthstonejson.com/v1/tiles/{cardId}.png", "png"),
             ArtKind.Portrait => ($"https://art.hearthstonejson.com/v1/256x/{cardId}.jpg", "jpg"),
+            ArtKind.Splash => ($"https://art.hearthstonejson.com/v1/512x/{cardId}.jpg", "jpg"),
             _ => ($"https://art.hearthstonejson.com/v1/bgs/latest/{Locale}/256x/{cardId}.png", "png"),
         };
         var dir = Path.Combine(AppPaths.Images, kind.ToString().ToLowerInvariant());
@@ -308,7 +316,7 @@ public static class CardArt
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
         bitmap.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-        bitmap.DecodePixelWidth = kind == ArtKind.Tile ? 256 : 200;
+        bitmap.DecodePixelWidth = kind switch { ArtKind.Tile => 256, ArtKind.Splash => 512, _ => 200 };
         bitmap.UriSource = new Uri(file);
         bitmap.EndInit();
         bitmap.Freeze();

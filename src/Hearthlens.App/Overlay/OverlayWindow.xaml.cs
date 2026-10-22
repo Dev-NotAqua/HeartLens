@@ -73,14 +73,7 @@ public partial class OverlayWindow : Window
                 panel.PlacementChanged += OnPlacementChanged;
             }
         };
-        viewModel.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(OverlayViewModel.ShowToast) && viewModel.ShowToast)
-            {
-                _toastTimer.Stop();
-                _toastTimer.Start();
-            }
-        };
+        viewModel.PropertyChanged += OnViewModelChanged;
     }
 
     public OverlayViewModel ViewModel { get; }
@@ -127,7 +120,20 @@ public partial class OverlayWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _timer.Stop();
+        _toastTimer.Stop();
+        // A theme change replaces this window; the view model lives on.
+        ViewModel.ResetLayoutRequested -= ResetLayout;
+        ViewModel.PropertyChanged -= OnViewModelChanged;
         base.OnClosed(e);
+    }
+
+    private void OnViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(OverlayViewModel.ShowToast) && ViewModel.ShowToast)
+        {
+            _toastTimer.Stop();
+            _toastTimer.Start();
+        }
     }
 
     private void Tick()

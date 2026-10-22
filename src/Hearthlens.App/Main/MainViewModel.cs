@@ -59,7 +59,7 @@ public sealed record MetaTrinketRow(int Rank, string CardId, string Name, string
 /// <summary>One minion or tavern spell in the community card list (compare cards of the same tier).</summary>
 public sealed record MetaCardRow(int Rank, string CardId, string Name, string Kind, string Tier, string Placement, string Games, double BarFraction);
 
-public sealed class MainViewModel : Observable
+public sealed partial class MainViewModel : Observable
 {
     private readonly HistoryStore _history;
     private CardDb _cards = CardDb.Empty;
@@ -196,7 +196,18 @@ public sealed class MainViewModel : Observable
     private string _metaUpdated = "Community data loading…";
     private int _historyCount;
 
-    public IReadOnlyList<GameRow> Recent { get => _recent; private set => Set(ref _recent, value); }
+    public IReadOnlyList<GameRow> Recent
+    {
+        get => _recent;
+        private set
+        {
+            if (Set(ref _recent, value))
+            {
+                Raise(nameof(BannerHero));
+            }
+        }
+    }
+
     public IReadOnlyList<GameRow> HistoryRows { get => _historyRows; private set => Set(ref _historyRows, value); }
     public IReadOnlyList<StatTile> OverviewTiles { get => _overviewTiles; private set => Set(ref _overviewTiles, value); }
     public IReadOnlyList<StatTile> BgTiles { get => _bgTiles; private set => Set(ref _bgTiles, value); }
@@ -333,11 +344,11 @@ public sealed class MainViewModel : Observable
         var net = bg.Where(g => g.RatingDelta is not null).Sum(g => g.RatingDelta ?? 0);
         BgTiles =
         [
-            new StatTile("GAMES", bg.Count.ToString("N0", CultureInfo.CurrentCulture), mode == "Duos" ? "Duos" : "Solo"),
-            new StatTile("AVG PLACE", bg.Count == 0 ? "—" : bg.Average(g => g.Placement).ToString("0.00", CultureInfo.CurrentCulture), "lower is better"),
-            new StatTile($"TOP {top}", bg.Count == 0 ? "—" : (bg.Count(g => g.Placement <= top) / (double)bg.Count).ToString("P0", CultureInfo.CurrentCulture), "of games"),
-            new StatTile("FIRSTS", bg.Count(g => g.Placement == 1).ToString(CultureInfo.CurrentCulture), bg.Count == 0 ? "—" : (bg.Count(g => g.Placement == 1) / (double)bg.Count).ToString("P0", CultureInfo.CurrentCulture) + " win rate"),
-            new StatTile("NET RATING", net == 0 ? "±0" : net > 0 ? $"+{net:N0}" : $"−{-net:N0}", "tracked games", Math.Sign(net)),
+            new StatTile("Games", bg.Count.ToString("N0", CultureInfo.CurrentCulture), mode == "Duos" ? "Duos" : "Solo"),
+            new StatTile("Avg place", bg.Count == 0 ? "—" : bg.Average(g => g.Placement).ToString("0.00", CultureInfo.CurrentCulture), "lower is better"),
+            new StatTile($"Top {top}", bg.Count == 0 ? "—" : (bg.Count(g => g.Placement <= top) / (double)bg.Count).ToString("P0", CultureInfo.CurrentCulture), "of games"),
+            new StatTile("Firsts", bg.Count(g => g.Placement == 1).ToString(CultureInfo.CurrentCulture), bg.Count == 0 ? "—" : (bg.Count(g => g.Placement == 1) / (double)bg.Count).ToString("P0", CultureInfo.CurrentCulture) + " win rate"),
+            new StatTile("Net rating", net == 0 ? "±0" : net > 0 ? $"+{net:N0}" : $"−{-net:N0}", "tracked games", Math.Sign(net)),
         ];
 
         MyHeroes = data.Heroes.Select(h => new HeroRow(
@@ -357,10 +368,10 @@ public sealed class MainViewModel : Observable
         var wins = constructed.Count(g => g.Result == "Win");
         ConstructedTiles =
         [
-            new StatTile("GAMES", constructed.Count.ToString(CultureInfo.CurrentCulture), "recent"),
-            new StatTile("WIN RATE", constructed.Count == 0 ? "—" : (wins / (double)constructed.Count).ToString("P0", CultureInfo.CurrentCulture), $"{wins}–{constructed.Count - wins}"),
-            new StatTile("DECKS", data.Decks.Count.ToString(CultureInfo.CurrentCulture), "tracked"),
-            new StatTile("BEST CLASS", data.Classes.Where(c => c.Games >= 3).MaxBy(c => c.WinRate) is { } best ? OverlayViewModel.ClassName(best.PlayerClass) : "—",
+            new StatTile("Games", constructed.Count.ToString(CultureInfo.CurrentCulture), "recent"),
+            new StatTile("Win rate", constructed.Count == 0 ? "—" : (wins / (double)constructed.Count).ToString("P0", CultureInfo.CurrentCulture), $"{wins}–{constructed.Count - wins}"),
+            new StatTile("Decks", data.Decks.Count.ToString(CultureInfo.CurrentCulture), "tracked"),
+            new StatTile("Best class", data.Classes.Where(c => c.Games >= 3).MaxBy(c => c.WinRate) is { } best ? OverlayViewModel.ClassName(best.PlayerClass) : "—",
                 data.Classes.Where(c => c.Games >= 3).MaxBy(c => c.WinRate) is { } b2 ? b2.WinRate.ToString("P0", CultureInfo.CurrentCulture) : "3+ games needed"),
         ];
 
@@ -384,11 +395,11 @@ public sealed class MainViewModel : Observable
         var todayBg = today.Where(g => g.IsBattlegrounds && g.Placement > 0).ToList();
         OverviewTiles =
         [
-            new StatTile("SOLO RATING", SoloRating, SessionDelta.Length > 0 ? SessionDelta : "Battlegrounds", SessionDeltaValue),
-            new StatTile("DUOS RATING", DuosRating, "Battlegrounds Duos"),
-            new StatTile("TODAY", today.Count.ToString(CultureInfo.CurrentCulture),
+            new StatTile("Solo rating", SoloRating, SessionDelta.Length > 0 ? SessionDelta : "Battlegrounds", SessionDeltaValue),
+            new StatTile("Duos rating", DuosRating, "Battlegrounds Duos"),
+            new StatTile("Today", today.Count.ToString(CultureInfo.CurrentCulture),
                 todayBg.Count > 0 ? $"BG avg {todayBg.Average(g => g.Placement):0.0}" : today.Count > 0 ? $"{today.Count(g => g.Result == "Win")}–{today.Count(g => g.Result == "Loss")}" : "no games yet"),
-            new StatTile("ALL TIME", HistoryCount.ToString("N0", CultureInfo.CurrentCulture), "games tracked"),
+            new StatTile("All time", HistoryCount.ToString("N0", CultureInfo.CurrentCulture), "games tracked"),
         ];
     }
 

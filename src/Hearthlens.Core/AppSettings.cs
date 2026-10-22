@@ -144,6 +144,15 @@ public sealed class AppSettings
 
     public bool HistoryImported { get; set; }
 
+    /// <summary>Colour theme: a preset name, or "Custom" with the three values below.</summary>
+    public string Theme { get; set; } = "Tavern";
+
+    public double ThemeAccentHue { get; set; } = 42;
+
+    public double ThemeBaseHue { get; set; } = 28;
+
+    public double ThemeBaseTint { get; set; } = 1.0;
+
     public static AppSettings Load()
     {
         try

@@ -105,6 +105,7 @@ public partial class App : Application
         };
 
         _settings = AppSettings.Load();
+        ApplyTheme();
         Diag.Info($"Hearthlens {UpdateService.CurrentVersion} (app {typeof(App).Assembly.GetName().Version?.ToString(3)}) starting on "
                   + $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription}, {Environment.ProcessorCount} CPUs, "
                   + $"{GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / (1024 * 1024):N0} MB RAM, software rendering {(_settings.OverlaySoftwareRendering ? "on" : "off")}");
@@ -135,13 +136,9 @@ public partial class App : Application
         _session.SetCompMode(_settings.CompMode, _settings.ChosenCompId);
         _overlayViewModel.PinRequested += OnPinRequested;
 
-        _main = new MainWindow(_mainViewModel);
-        _main.SettingsChanged += OnSettingsChanged;
-        _main.ReimportRequested += () => _ = ImportLogsAsync(force: true);
-        _overlay = new OverlayWindow(_overlayViewModel, _settings);
-        _overlay.LayoutChanged += OnSettingsChanged;
-        _overlay.HoveredHero = () => _memory.IsAttached ? _memory.GetHoveredLeaderboardHero() : null;
-        _main.ArrangeOverlayRequested += () => _overlayViewModel.LayoutEditing = !_overlayViewModel.LayoutEditing;
+        _mainViewModel.ThemeChanged += OnThemeChanged;
+        _main = CreateMainWindow();
+        _overlay = CreateOverlay();
         if (_renderDir is not null)
         {
             PrepareOffscreenRender();
@@ -477,6 +474,83 @@ public partial class App : Application
         {
             _overlayViewModel.ShowOutcome(outcome);
         }
+    }
+
+    private MainWindow CreateMainWindow()
+    {
+        var main = new MainWindow(_mainViewModel);
+        main.SettingsChanged += OnSettingsChanged;
+        main.ReimportRequested += () => _ = ImportLogsAsync(force: true);
+        main.ArrangeOverlayRequested += () => _overlayViewModel.LayoutEditing = !_overlayViewModel.LayoutEditing;
+        return main;
+    }
+
+    private OverlayWindow CreateOverlay()
+    {
+        var overlay = new OverlayWindow(_overlayViewModel, _settings);
+        overlay.LayoutChanged += OnSettingsChanged;
+        overlay.HoveredHero = () => _memory.IsAttached ? _memory.GetHoveredLeaderboardHero() : null;
+        return overlay;
+    }
+
+    private ThemeSpec CurrentTheme()
+    {
+        // Off-screen renders can preview a theme without touching the saved settings.
+        var name = _renderDir is not null && Environment.GetEnvironmentVariable("HEARTHLENS_THEME") is { Length: > 0 } forced ? forced : _settings.Theme;
+        return ThemePalette.Resolve(name, _settings.ThemeAccentHue, _settings.ThemeBaseHue, _settings.ThemeBaseTint);
+    }
+
+    private bool ApplyTheme()
+    {
+        try
+        {
+            ThemeEngine.Apply(this, CurrentTheme());
+            return true;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Diag.Error("Theme could not be built; keeping the current colours", ex);
+            return false;
+        }
+    }
+
+    /// <summary>Windows take their colours when they are created, so a new theme rebuilds both in place.</summary>
+    private void OnThemeChanged()
+    {
+        _settings.Save();
+        if (!ApplyTheme())
+        {
+            return;
+        }
+
+        var oldMain = _main;
+        var bounds = oldMain.WindowState == WindowState.Normal ? new Rect(oldMain.Left, oldMain.Top, oldMain.Width, oldMain.Height) : oldMain.RestoreBounds;
+        var main = CreateMainWindow();
+        main.WindowStartupLocation = WindowStartupLocation.Manual;
+        main.Left = bounds.Left;
+        main.Top = bounds.Top;
+        main.Width = bounds.Width;
+        main.Height = bounds.Height;
+        main.ShowPage(oldMain.CurrentPage);
+        _main = main;
+        if (oldMain.IsVisible)
+        {
+            main.Show();
+            if (oldMain.WindowState == WindowState.Maximized)
+            {
+                main.WindowState = WindowState.Maximized;
+            }
+
+            main.Activate();
+        }
+
+        oldMain.CloseForReal();
+
+        var oldOverlay = _overlay;
+        _overlay = CreateOverlay();
+        _overlay.Suppressed = oldOverlay.Suppressed;
+        oldOverlay.Close();
+        _overlay.Show();
     }
 
     private void OnSettingsChanged()

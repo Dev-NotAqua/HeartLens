@@ -15,14 +15,7 @@
         <i:SignBrush x:Key="SignBrush" />
         <i:FractionWidth x:Key="Fraction" />
 
-        <SolidColorBrush x:Key="Row" Color="#2E1F13" />
         <SolidColorBrush x:Key="Ink" Color="{StaticResource BgColor}" />
-        <LinearGradientBrush x:Key="TileFade" StartPoint="0,0" EndPoint="1,0">
-            <GradientStop Color="#FF2E1F13" Offset="0" />
-            <GradientStop Color="#FF2E1F13" Offset="0.42" />
-            <GradientStop Color="#662E1F13" Offset="0.8" />
-            <GradientStop Color="#142E1F13" Offset="1" />
-        </LinearGradientBrush>
 
         <Style x:Key="Divider" TargetType="Border">
             <Setter Property="Width" Value="1" />
@@ -64,7 +57,7 @@
                         <Rectangle Fill="{StaticResource TileFade}" />
                         <Border Width="2" HorizontalAlignment="Left" Background="{Binding Rarity, Converter={StaticResource KeyBrush}}" />
                         <DockPanel Margin="9,0,6,0">
-                            <Border DockPanel.Dock="Right" Background="#CC140D08" CornerRadius="4" MinWidth="20" Height="18" Padding="5,0"
+                            <Border DockPanel.Dock="Right" Background="{StaticResource OverlayBadgeShade}" CornerRadius="4" MinWidth="20" Height="18" Padding="5,0"
                                     VerticalAlignment="Center" Visibility="{Binding ShowCount, Converter={StaticResource Vis}}">
                                 <TextBlock Text="{Binding Count}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Accent}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -558,7 +551,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type o:MovablePanel}">
                         <Grid>
-                            <Border x:Name="Placeholder" Visibility="Collapsed" MinWidth="200" MinHeight="56" Background="#E6201510" CornerRadius="8"
+                            <Border x:Name="Placeholder" Visibility="Collapsed" MinWidth="200" MinHeight="56" Background="{StaticResource OverlayPlaceholder}" CornerRadius="8"
                                     BorderBrush="{StaticResource OverlayBorder}" BorderThickness="1">
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,10">
                                     <TextBlock Text="{TemplateBinding Title}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" />
@@ -724,11 +717,11 @@
                             <Border Style="{StaticResource Divider}" />
                             <ItemsControl ItemsSource="{Binding Tiers}" ItemTemplate="{StaticResource TierTemplate}" ItemsPanel="{StaticResource HRow}" VerticalAlignment="Center" />
                             <Border Style="{StaticResource Divider}" />
-                            <Grid VerticalAlignment="Center" MaxWidth="300" ToolTip="Tribes in this lobby. Comps that need other tribes are left out.">
-                                <ItemsControl ItemsSource="{Binding Tribes}" ItemsPanel="{StaticResource WrapRow}" Margin="0,4,0,0">
+                            <Grid VerticalAlignment="Center" ToolTip="Tribes in this lobby. Comps that need other tribes are left out.">
+                                <ItemsControl ItemsSource="{Binding Tribes}" ItemsPanel="{StaticResource HRow}" VerticalAlignment="Center">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Style="{StaticResource Pill}" Margin="0,0,4,4" Padding="7,1">
+                                            <Border Style="{StaticResource Pill}" Margin="0,0,4,0" Padding="7,1">
                                                 <TextBlock Text="{Binding}" FontSize="10.5" Foreground="{StaticResource Muted}" />
                                             </Border>
                                         </DataTemplate>

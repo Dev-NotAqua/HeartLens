@@ -95,7 +95,9 @@ public sealed class RatingChart : FrameworkElement
 
         // A wide faint stroke under the line reads as a glow without a bitmap effect.
         dc.DrawGeometry(null, new Pen(new SolidColorBrush(Gold(0x2E)), 7) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, line);
-        var stroke = new LinearGradientBrush(Color.FromRgb(0xC4, 0x8E, 0x2C), Color.FromRgb(0xFF, 0xE3, 0x8E), 0);
+        var deep = TryFindResource("AccentDeep") is SolidColorBrush d ? d.Color : Color.FromRgb(0xC4, 0x8E, 0x2C);
+        var light = Color.FromRgb((byte)(((gold.R * 2) + 255) / 3), (byte)(((gold.G * 2) + 255) / 3), (byte)(((gold.B * 2) + 255) / 3));
+        var stroke = new LinearGradientBrush(deep, light, 0);
         dc.DrawGeometry(null, new Pen(stroke, 2.4) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, line);
 
         var last = at[^1];

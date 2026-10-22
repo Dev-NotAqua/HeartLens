@@ -32,6 +32,8 @@
     <Resource Include="Assets\hearthlens.png" />
     <!-- Montserrat: SIL Open Font License 1.1. Material Design Icons: Pictogrammers (Apache 2.0). -->
     <Resource Include="Assets\Fonts\*.ttf" />
+    <!-- The theme source is also kept as text so other colour themes can be built from it at runtime. -->
+    <EmbeddedResource Include="Themes\Theme.xaml" LogicalName="Hearthlens.Theme.xaml" />
   </ItemGroup>
 
 </Project>
