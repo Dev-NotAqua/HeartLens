@@ -54,7 +54,7 @@ public sealed record MetaComp(
 /// </summary>
 public sealed class BattlegroundsMeta
 {
-    public const string Attribution = "Community stats: Firestone (zerotoheroes.com)";
+    public const string Attribution = "Community stats: Hearthlens players who share their games";
 
     private static readonly int[] Brackets = [100, 50, 25, 10, 1];
     private static readonly TimeSpan MaxAge = TimeSpan.FromHours(6);

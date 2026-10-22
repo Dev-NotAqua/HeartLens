@@ -181,7 +181,6 @@ public partial class MainWindow : Window
         TrinketTierCard.Visibility = TabTrinkets.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         CardStatsCard.Visibility = TabCards.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         MyHeroesCard.Visibility = TabMine.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        BracketPicker.Visibility = TabMine.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
         if (sender is RadioButton { IsChecked: true })
         {
             Reveal(new FrameworkElement[] { HeroTierCard, CompTierCard, TrinketTierCard, CardStatsCard, MyHeroesCard }.First(c => c.Visibility == Visibility.Visible), 8);

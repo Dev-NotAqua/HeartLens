@@ -10,6 +10,7 @@ using Hearthlens.App.Main;
 using Hearthlens.App.Overlay;
 using Hearthlens.Core;
 using Hearthlens.Core.Battlegrounds;
+using Hearthlens.Core.Pool;
 using Hearthlens.Core.Constructed;
 using Hearthlens.Core.Cards;
 using Hearthlens.Core.Data;
@@ -146,6 +147,12 @@ public partial class App : Application
         };
 
         _mainViewModel.ThemeChanged += OnThemeChanged;
+        _mainViewModel.PoolAvailable = PoolClient.Available(_settings);
+        _mainViewModel.PoolConsentChanged += () =>
+        {
+            _settingsDebounce.Stop();
+            _settingsDebounce.Start();
+        };
         _mainViewModel.ConstructedMetaRequested += () =>
         {
             _settingsDebounce.Stop();
@@ -357,10 +364,10 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Community stats are no longer downloaded (they came from Firestone's servers without permission).
-    /// Deletes the copies older versions cached.
+    /// Hero stats from the Hearthlens stats pool (games players chose to share).
+    /// Also deletes the Firestone copies older versions cached; those were used without permission.
     /// </summary>
-    private Task LoadMetaAsync()
+    private async Task LoadMetaAsync()
     {
         try
         {
@@ -375,7 +382,18 @@ public partial class App : Application
             Diag.Error("Old community stats cache not removed", ex);
         }
 
-        return Task.CompletedTask;
+        if (!PoolClient.Available(_settings))
+        {
+            return;
+        }
+
+        var meta = await PoolClient.LoadHeroesAsync(_http, PoolClient.Endpoint(_settings));
+        if (meta is not null && meta.HeroesByBracket[100].Count > 0)
+        {
+            _meta = meta;
+            _session.SetMeta(meta);
+            _mainViewModel.SetMeta(meta);
+        }
     }
 
     // The Constructed meta tabs are hidden until a source with permission exists.
@@ -504,6 +522,13 @@ public partial class App : Application
 
     private void OnGameFinished(GameOutcome outcome)
     {
+        // The event fires again once the new rating is read; share the game only the first time.
+        if (outcome.RatingAfter is null && _settings.PoolConsent == true && PoolClient.Available(_settings)
+            && PoolGame.From(outcome, _cards.BaseHeroId) is { } game)
+        {
+            _ = PoolClient.SubmitAsync(_http, PoolClient.Endpoint(_settings), game);
+        }
+
         if (_settings.ShowGameToasts && _settings.OverlayEnabled)
         {
             _overlayViewModel.ShowOutcome(outcome);
