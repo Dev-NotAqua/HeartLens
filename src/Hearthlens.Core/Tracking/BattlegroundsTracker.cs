@@ -1,4 +1,5 @@
 using Hearthlens.Core.Battlegrounds;
+using Hearthlens.Core.Battlegrounds.Effects;
 using Hearthlens.Core.Cards;
 using Hearthlens.Core.Power;
 
@@ -21,12 +22,17 @@ public sealed class BattlegroundsTracker : IPowerListener
     ];
 
     private readonly Dictionary<int, SeenBoard> _boards = new();
+
+    // Minions removed by another minion's trigger after combat started and before the boards were captured
+    // (e.g. Stitched Salvager's start-of-combat destroy), as they were when removed, by the trigger's source.
+    private readonly Dictionary<int, List<SimMinion>> _removedBy = new();
     private readonly List<CombatRecord> _combats = new();
     private readonly List<TierStep> _tiers = new();
     private readonly HashSet<string> _shopRaces = new(StringComparer.Ordinal);
 
     private bool _inCombat;
     private bool _boardCaptured;
+    private bool _boardsSnapshotted;
     private int _combatOpponent;
     private int _localHealthAtCombat;
     private int _opponentHealthAtCombat;
@@ -39,10 +45,29 @@ public sealed class BattlegroundsTracker : IPowerListener
     private Entity? _discoverSource;
     private CombatOdds? _combatOdds;
 
-    // Card effects the combat simulator does not model; boards with them get an "estimate" flag.
-    private static readonly string[] UnsimulatedMechanics = ["DEATHRATTLE", "TRIGGER_VISUAL", "AURA", "AVENGE", "OVERKILL"];
+    // Player-level cards whose effects could take part in a fight (only registered effects are used).
+    private static readonly string[] ExtraCardTypes = ["HERO_POWER", "BATTLEGROUND_TRINKET", "BATTLEGROUND_QUEST_REWARD"];
+
+    // Game entity tags naming lobby-wide cards that could have combat effects.
+    private static readonly string[] GlobalCardTags = [GameTag.BaconAnomaly, GameTag.BaconDeity];
+
+    // Effect markers an enchantment can put on a minion.
+    private static readonly string[] GrantableTags = ["DEATHRATTLE", "BACON_RALLY", "AVENGE"];
 
     public CardDb Cards { get; set; } = CardDb.Empty;
+
+    /// <summary>
+    /// Card effects the combat simulator applies. Minions with combat-relevant text and no registered effect make the
+    /// odds an estimate.
+    /// </summary>
+    public EffectRegistry Effects { get; set; } = EffectRegistry.Default;
+
+    /// <summary>
+    /// Options for the combat simulation, which runs on the log thread at the first attack: up to 4000 fights, stopping
+    /// after 200 ms (at least 500 fights). Keyword-only boards need ~20–60 ms; a full 7v7 board full of effects
+    /// ~100–160 ms once the code is warm, more on the first fight after start-up.
+    /// </summary>
+    public SimOptions SimOptions { get; set; } = new() { TimeBudget = TimeSpan.FromMilliseconds(200) };
 
     public Func<string, HeroStats?>? HeroStatsProvider { get; set; }
 
@@ -127,6 +152,10 @@ public sealed class BattlegroundsTracker : IPowerListener
                 ResolvePendingDamage(game);
                 break;
 
+            case GameTag.Zone when _inCombat && !_boardCaptured && entity.IsMinion && previous == "PLAY" && value != "PLAY":
+                RememberRemoval(game, entity);
+                break;
+
             case GameTag.PlayState when entity.Id == game.LocalPlayer?.EntityId:
                 if (value is "WON" or "LOST" or "TIED" or "CONCEDED")
                 {
@@ -139,15 +168,39 @@ public sealed class BattlegroundsTracker : IPowerListener
 
     public void OnBlockStart(GameState game, string blockType, Entity? source)
     {
-        if (_inCombat && !_boardCaptured && blockType == "ATTACK")
+        if (!_inCombat || _boardCaptured || blockType != "ATTACK")
         {
-            CaptureBoards(game, source);
+            return;
         }
+
+        if (IsStartOfCombatAttack(game))
+        {
+            // Start-of-combat attacks (Illidan's Wingmen, Heroic Broodmother, Righteous Charge...) come before the other
+            // start-of-combat effects have all resolved, and their attacker is not the fight's first attacker. Keep the
+            // boards for history in case the fight ends before a regular attack, but simulate from the first regular one.
+            if (!_boardsSnapshotted)
+            {
+                SnapshotBoards(game);
+            }
+
+            return;
+        }
+
+        CaptureBoards(game, source);
     }
+
+    /// <summary>
+    /// An ATTACK block inside a TRIGGER block of a hero power, minion or quest reward is a start-of-combat attack;
+    /// regular attacks are not nested in such a block (blocks of the game or a player entity do not count).
+    /// Inferred from the log's block structure; not yet checked against a real Illidan/Broodmother log.
+    /// </summary>
+    private static bool IsStartOfCombatAttack(GameState game) =>
+        game.OpenBlocks.Any(b => b.Type == "TRIGGER" && b.Source is { } s && s.Id != game.GameEntityId
+                                 && s.CardType is "HERO_POWER" or "MINION" or "BATTLEGROUND_QUEST_REWARD");
 
     public void OnBlockEnd(GameState game)
     {
-        if (_inCombat && _boardCaptured)
+        if (_inCombat && (_boardCaptured || _boardsSnapshotted))
         {
             _localAlive = Minions(game, game.LocalPlayerId).Count();
             _opponentAlive = Minions(game, game.OpponentPlayerId).Count();
@@ -326,6 +379,8 @@ public sealed class BattlegroundsTracker : IPowerListener
     {
         _inCombat = true;
         _boardCaptured = false;
+        _boardsSnapshotted = false;
+        _removedBy.Clear();
         _combatOdds = null;
         _pendingDamage = -1;
         _combatOpponent = game.OpponentPlayerEntity?.GetInt(GameTag.CurrentCombatPlayerId) ?? 0;
@@ -356,11 +411,26 @@ public sealed class BattlegroundsTracker : IPowerListener
     private void CaptureBoards(GameState game, Entity? firstAttacker)
     {
         _boardCaptured = true;
-        // Start-of-combat effects have resolved by the first attack, so these boards are what actually fights.
-        var ourSim = Minions(game, game.LocalPlayerId).Select(ToSim).ToList();
-        var theirSim = Minions(game, game.OpponentPlayerId).Select(ToSim).ToList();
-        bool? oursFirst = firstAttacker is { IsMinion: true } a ? a.Controller == game.LocalPlayerId : null;
-        _combatOdds = CombatSimulator.Run(ourSim, theirSim, oursFirst);
+        // Start-of-combat effects have resolved by the first regular attack, so these boards are what actually fights.
+        var enchantments = Enchantments(game);
+        var ours = BuildSide(game, game.LocalPlayerId, isOpponent: false, enchantments);
+        var theirs = BuildSide(game, game.OpponentPlayerId, isOpponent: true, enchantments);
+        var attacker = firstAttacker is { IsMinion: true } a ? a : null;
+        bool? oursFirst = attacker is null ? null : attacker.Controller == game.LocalPlayerId;
+        var options = SimOptions with { Effects = Effects, FirstAttackerEntityId = attacker?.Id ?? 0 };
+        LastCapture = new CombatCapture(ours, theirs, oursFirst, options.FirstAttackerEntityId);
+        _combatOdds = CombatSimulator.Run(ours, theirs, oursFirst, options);
+        if (!_boardsSnapshotted)
+        {
+            // After start-of-combat attacks the history keeps the boards from before them (as they were shown).
+            SnapshotBoards(game);
+        }
+    }
+
+    /// <summary>Records both boards for history (the opponent's last seen board, our final board).</summary>
+    private void SnapshotBoards(GameState game)
+    {
+        _boardsSnapshotted = true;
         // The combat opponent id is tagged just after the board switches to combat.
         _combatOpponent = game.OpponentPlayerEntity?.GetInt(GameTag.CurrentCombatPlayerId) is > 0 and var id ? id : _combatOpponent;
         _opponentHealthAtCombat = Durability(LeaderboardHero(game, _combatOpponent));
@@ -435,12 +505,121 @@ public sealed class BattlegroundsTracker : IPowerListener
     private static Entity? LeaderboardHero(GameState game, int playerId) =>
         LeaderboardHeroes(game).FirstOrDefault(h => h.GetInt(GameTag.PlayerId) == playerId);
 
-    private SimMinion ToSim(Entity e)
+    /// <summary>
+    /// A minion left the board during start of combat inside a TRIGGER block of another minion: remember it for that
+    /// minion (Stitched Salvager's deathrattle summons a copy of the minion it destroyed). Inferred from the log's block
+    /// structure; not yet checked against a real log.
+    /// </summary>
+    private void RememberRemoval(GameState game, Entity removed)
     {
+        for (var i = game.OpenBlocks.Count - 1; i >= 0; i--)
+        {
+            var block = game.OpenBlocks[i];
+            if (block.Type != "TRIGGER" || block.Source is not { IsMinion: true } source || source.Id == removed.Id)
+            {
+                continue;
+            }
+
+            var noEnchantments = Array.Empty<string>().ToLookup(_ => 0);
+            var copy = ToSim(removed, removed.Controller != game.LocalPlayerId, noEnchantments) with { HasUnsimulatedEffect = false };
+            if (!_removedBy.TryGetValue(source.Id, out var list))
+            {
+                _removedBy[source.Id] = list = new List<SimMinion>();
+            }
+
+            list.Add(copy);
+            return;
+        }
+    }
+
+    /// <summary>Enchantment card ids by the minion they are attached to.</summary>
+    private static ILookup<int, string> Enchantments(GameState game) =>
+        game.Entities.Values
+            .Where(e => e.CardType == "ENCHANTMENT" && e.InPlay && e.CardId.Length > 0 && e.GetInt(GameTag.Attached) > 0)
+            .OrderBy(e => e.Id)
+            .ToLookup(e => e.GetInt(GameTag.Attached), e => e.CardId);
+
+    /// <summary>
+    /// One side for the simulator: board minions plus what the player can see about that player. The opponent's hand
+    /// and secrets are hidden information and are never read.
+    /// </summary>
+    private SimSide BuildSide(GameState game, int controller, bool isOpponent, ILookup<int, string> enchantments)
+    {
+        var minions = Minions(game, controller).Select(e => ToSim(e, isOpponent, enchantments)).ToList();
+        var player = game.Players.TryGetValue(controller, out var slot) ? game.Entities.GetValueOrDefault(slot.EntityId) : null;
+        var hero = game.HeroOf(player);
+        var played = game.Controlled(controller, "PLAY").Where(e => e.CardId.Length > 0).OrderBy(e => e.Id).ToList();
+        var heroPower = played.FirstOrDefault(e => e.CardType == "HERO_POWER");
+        var extras = played.Where(e => ExtraCardTypes.Contains(e.CardType) || IsTrinket(e)).Select(e => e.CardId).ToList();
+        // Lobby-wide cards: the anomaly and this season's Deity (tag name as hsdata names it; unverified in a real log).
+        foreach (var tag in GlobalCardTags)
+        {
+            var dbf = game.GameEntity?.GetInt(tag) ?? 0;
+            if (dbf > 0 && Cards.Get(dbf) is { } global)
+            {
+                extras.Add(global.Id);
+            }
+        }
+
+        var hand = isOpponent
+            ? Array.Empty<SimMinion>()
+            : game.Controlled(controller, "HAND")
+                .Where(e => e.IsMinion && e.CardId.Length > 0)
+                .OrderBy(e => e.ZonePosition)
+                .Select(e => ToSim(e, isOpponent: false, enchantments) with { HasUnsimulatedEffect = false })
+                .ToArray();
+        return new SimSide(minions)
+        {
+            HeroCardId = hero?.CardId ?? string.Empty,
+            HeroPowerCardId = heroPower?.CardId ?? string.Empty,
+            Extras = extras.Distinct().ToList(),
+            // Only the local player's own hand: it is on their screen. The opponent's is hidden.
+            Hand = hand,
+            Tags = NumericTags(player),
+            TavernTier = hero?.GetInt(GameTag.PlayerTechLevel) is > 0 and var tier ? tier : player?.GetInt(GameTag.PlayerTechLevel) ?? 0,
+        };
+    }
+
+    private static IReadOnlyDictionary<string, int> NumericTags(Entity? entity)
+    {
+        var tags = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (entity is null)
+        {
+            return tags;
+        }
+
+        foreach (var (tag, value) in entity.Tags)
+        {
+            if (int.TryParse(value, out var number))
+            {
+                tags[tag] = number;
+            }
+        }
+
+        return tags;
+    }
+
+    private SimMinion ToSim(Entity e, bool isOpponent, ILookup<int, string> enchantments)
+    {
+        // Golden minions have their own card id (golden stats and text); effects are keyed by the normal id + Golden.
         var card = Cards.Get(e.CardId);
+        var (cardId, goldenId) = CombatRelevance.Normalize(e.CardId, Cards);
+        var golden = goldenId || e.GetInt(GameTag.Premium) > 0;
         var mechanics = card?.Mechanics ?? Array.Empty<string>();
-        var unsimulated = mechanics.Any(m => UnsimulatedMechanics.Contains(m)) || UnsimulatedMechanics.Any(e.Has);
-        var attacks = e.Has("MEGA_WINDFURY") ? 4 : e.Has(GameTag.Windfury) ? 2 : 1;
+        var attached = enchantments[e.Id].ToList();
+        // Known card: the generated table (or the text fallback for a newer card). Unknown card: its effect tags.
+        var relevant = card is null && CombatRelevance.Find(e.CardId) is null
+            ? CombatRelevance.TagsSuggestCombatEffect(e.Has)
+            : CombatRelevance.IsCombatRelevant(e.CardId, card, Cards.Locale);
+        // A deathrattle, Avenge or Rally the card does not print came from an enchantment (Dark Gift, Tamsin...).
+        var granted = card is not null && CombatRelevance.HasGrantedEffect(e.Has, mechanics);
+        var unsimulated = CombatRelevance.IsUnsimulated(cardId, golden, relevant, granted, attached, isOpponent, Effects);
+
+        var keywords = KeywordsOf(e);
+        // A reborn copy is a fresh copy of the card. Without card data, keep what the minion has minus one-shot keywords.
+        var baseKeywords = card is not null
+            ? Traits.KeywordsFromMechanics(mechanics)
+            : keywords & (Keyword.Taunt | Keyword.Poisonous | Keyword.Windfury | Keyword.MegaWindfury);
         return new SimMinion(
             e.Attack,
             e.Health,
@@ -449,11 +628,40 @@ public sealed class BattlegroundsTracker : IPowerListener
             e.Has(GameTag.Poisonous),
             e.Has(GameTag.Venomous),
             e.Has(GameTag.Reborn),
-            attacks,
+            Traits.AttacksPerTurn(keywords),
             e.Has(GameTag.Stealth),
-            card is { Attack: > 0 } ? card.Attack : e.Attack,
-            unsimulated);
+            card is not null ? card.Attack : e.Attack,
+            unsimulated)
+        {
+            CardId = cardId,
+            Golden = golden,
+            EntityId = e.Id,
+            Tribes = Traits.ParseTribes(card?.Races) | TribeTag(e.GetString(GameTag.CardRace)),
+            MaxHealth = e.GetInt(GameTag.Health),
+            BaseHealth = card?.Health ?? 0,
+            BaseKeywords = baseKeywords,
+            Mechanics = Traits.MechanicsFrom(mechanics) | Traits.MechanicsFrom(GrantableTags.Where(e.Has)),
+            TechLevel = e.GetInt(GameTag.TechLevel) is > 0 and var tier ? tier : card?.TechLevel ?? 0,
+            ScriptData1 = e.GetInt(GameTag.ScriptData1),
+            ScriptData2 = e.GetInt(GameTag.ScriptData2),
+            Enchantments = attached,
+            Remembered = _removedBy.TryGetValue(e.Id, out var removed) ? removed.ToArray() : Array.Empty<SimMinion>(),
+        };
     }
+
+    private static Keyword KeywordsOf(Entity e) =>
+        (e.Has(GameTag.Taunt) ? Keyword.Taunt : 0)
+        | (e.Has(GameTag.DivineShield) ? Keyword.DivineShield : 0)
+        | (e.Has(GameTag.Poisonous) ? Keyword.Poisonous : 0)
+        | (e.Has(GameTag.Venomous) ? Keyword.Venomous : 0)
+        | (e.Has(GameTag.Reborn) ? Keyword.Reborn : 0)
+        | (e.Has(GameTag.Windfury) ? Keyword.Windfury : 0)
+        | (e.Has(GameTag.MegaWindfury) ? Keyword.MegaWindfury : 0)
+        | (e.Has(GameTag.Stealth) ? Keyword.Stealth : 0);
+
+    /// <summary>CARDRACE as Power.log prints it: a name ("BEAST") or, for races the client does not name, a number.</summary>
+    private static Tribe TribeTag(string value) =>
+        int.TryParse(value, out var id) ? Traits.ParseTribe(Races.ById.GetValueOrDefault(id)) : Traits.ParseTribe(value);
 
     private BgMinion ToMinion(Entity e)
     {
@@ -467,6 +675,11 @@ public sealed class BattlegroundsTracker : IPowerListener
             e.GetInt(GameTag.TechLevel),
             keywords);
     }
+
+    /// <summary>What the last combat simulation was given (for tests and diagnostics).</summary>
+    internal CombatCapture? LastCapture { get; private set; }
+
+    internal sealed record CombatCapture(SimSide Ours, SimSide Theirs, bool? OursFirst, int FirstAttackerEntityId);
 
     private sealed record SeenBoard(int Turn, IReadOnlyList<BgMinion> Minions);
 }

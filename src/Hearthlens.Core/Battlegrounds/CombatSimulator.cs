@@ -1,6 +1,11 @@
+using System.Diagnostics;
+using Hearthlens.Core.Battlegrounds.Effects;
+
 namespace Hearthlens.Core.Battlegrounds;
 
 /// <summary>One minion as it stands when the first attack of a combat starts.</summary>
+/// <param name="RebornAttack">The card's printed Attack (golden-aware), which a reborn copy comes back with.</param>
+/// <param name="HasUnsimulatedEffect">The card (or an enchantment on it) changes the fight in a way no registered effect models.</param>
 public sealed record SimMinion(
     int Attack,
     int Health,
@@ -12,231 +17,277 @@ public sealed record SimMinion(
     int AttacksPerTurn,
     bool Stealth,
     int RebornAttack,
-    bool HasUnsimulatedEffect);
+    bool HasUnsimulatedEffect)
+{
+    /// <summary>Normal (non-golden) card id; effects are looked up by it with <see cref="Golden"/>. Empty when unknown.</summary>
+    public string CardId { get; init; } = string.Empty;
+
+    public bool Golden { get; init; }
+
+    /// <summary>Power.log entity id at capture (0 for minions created by the simulator).</summary>
+    public int EntityId { get; init; }
+
+    public Tribe Tribes { get; init; }
+
+    /// <summary>Maximum Health (the HEALTH tag); 0 means "same as <see cref="Health"/>".</summary>
+    public int MaxHealth { get; init; }
+
+    /// <summary>The card's printed Health (golden-aware); 0 when unknown.</summary>
+    public int BaseHealth { get; init; }
+
+    /// <summary>
+    /// Keywords printed on the card (golden-aware). A reborn copy comes back with these (minus Reborn),
+    /// not with keywords the minion gained from buffs.
+    /// </summary>
+    public Keyword BaseKeywords { get; init; }
+
+    public CardMechanic Mechanics { get; init; }
+
+    public int TechLevel { get; init; }
+
+    /// <summary>TAG_SCRIPT_DATA_NUM_1/2 at capture: card-specific counters (e.g. the current bonus of a scaling card).</summary>
+    public int ScriptData1 { get; init; }
+
+    public int ScriptData2 { get; init; }
+
+    /// <summary>Card ids of enchantments attached to the minion (Dark Gifts, granted deathrattles, ...).</summary>
+    public IReadOnlyList<string> Enchantments { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Minions this one's start-of-combat trigger removed from the board before capture (e.g. the minion Stitched
+    /// Salvager destroyed), as they were when removed.
+    /// </summary>
+    public IReadOnlyList<SimMinion> Remembered { get; init; } = Array.Empty<SimMinion>();
+
+    /// <summary>Current keywords as flags.</summary>
+    public Keyword Keywords =>
+        (Taunt ? Keyword.Taunt : 0) | (DivineShield ? Keyword.DivineShield : 0) | (Poisonous ? Keyword.Poisonous : 0)
+        | (Venomous ? Keyword.Venomous : 0) | (Reborn ? Keyword.Reborn : 0) | (Stealth ? Keyword.Stealth : 0)
+        | (AttacksPerTurn >= 4 ? Keyword.MegaWindfury : AttacksPerTurn >= 2 ? Keyword.Windfury : 0);
+
+    /// <summary>
+    /// A minion with the given printed stats and keywords: a token an effect summons, or a test minion.
+    /// Base stats and keywords are the given ones.
+    /// </summary>
+    public static SimMinion Create(string cardId, int attack, int health, Tribe tribes = Tribe.None, Keyword keywords = Keyword.None,
+                                   bool golden = false, CardMechanic mechanics = CardMechanic.None) =>
+        new(attack, health,
+            (keywords & Keyword.Taunt) != 0,
+            (keywords & Keyword.DivineShield) != 0,
+            (keywords & Keyword.Poisonous) != 0,
+            (keywords & Keyword.Venomous) != 0,
+            (keywords & Keyword.Reborn) != 0,
+            Traits.AttacksPerTurn(keywords),
+            (keywords & Keyword.Stealth) != 0,
+            attack,
+            false)
+        {
+            CardId = cardId,
+            Golden = golden,
+            Tribes = tribes,
+            MaxHealth = health,
+            BaseHealth = health,
+            BaseKeywords = keywords,
+            Mechanics = mechanics,
+        };
+
+    /// <summary>
+    /// What Reborn brings back: a fresh copy of the card with its printed Attack, 1 Health and its printed keywords
+    /// (not buffs, not enchantments), golden if the minion was golden, without Reborn.
+    /// </summary>
+    public SimMinion RebornCopy() =>
+        Create(CardId, RebornAttack, 1, Tribes, BaseKeywords & ~Keyword.Reborn, Golden, Mechanics) with
+        {
+            BaseHealth = BaseHealth,
+            TechLevel = TechLevel,
+        };
+}
+
+/// <summary>
+/// One side of a combat: the minions plus what the player can see about that player. Only public information:
+/// the opponent's hand and secrets are never filled in.
+/// </summary>
+public sealed record SimSide(IReadOnlyList<SimMinion> Minions)
+{
+    public string HeroCardId { get; init; } = string.Empty;
+
+    public string HeroPowerCardId { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Player-level cards (hero powers, trinkets, quest rewards, the anomaly, the Deity) whose registered effects take part
+    /// in the fight. Cards without a registered effect are ignored.
+    /// </summary>
+    public IReadOnlyList<string> Extras { get; init; } = Array.Empty<string>();
+
+    /// <summary>Minions in hand: the local player's only. Effects that need a hand do nothing for the opponent.</summary>
+    public IReadOnlyList<SimMinion> Hand { get; init; } = Array.Empty<SimMinion>();
+
+    /// <summary>Numeric tags of the player entity at capture, by the name Power.log prints (player-wide counters).</summary>
+    public IReadOnlyDictionary<string, int> Tags { get; init; } = EmptyTags;
+
+    public int TavernTier { get; init; }
+
+    internal static readonly IReadOnlyDictionary<string, int> EmptyTags = new Dictionary<string, int>();
+}
+
+public sealed record SimOptions
+{
+    public static SimOptions Default { get; } = new();
+
+    public int Runs { get; init; } = 4000;
+
+    /// <summary>Stop early once this much time has passed (checked every 100 runs, after <see cref="MinRuns"/>).</summary>
+    public TimeSpan? TimeBudget { get; init; }
+
+    public int MinRuns { get; init; } = 500;
+
+    /// <summary>Card effects to apply; null uses <see cref="EffectRegistry.Default"/>.</summary>
+    public EffectRegistry? Effects { get; init; }
+
+    /// <summary>Entity id of the minion that made the first attack, when known; attack order starts from it.</summary>
+    public int FirstAttackerEntityId { get; init; }
+}
 
 /// <summary>Estimated outcome of a combat. <see cref="Unsimulated"/> counts minions whose card effects are ignored.</summary>
 public sealed record CombatOdds(double Win, double Tie, double Loss, int Unsimulated)
 {
     public bool Approximate => Unsimulated > 0;
+
+    /// <summary>Number of simulated fights behind the numbers (0 when the result needed no simulation).</summary>
+    public int Runs { get; init; }
 }
 
+/// <summary>One simulated fight: +1 we won, -1 we lost, 0 tie; the surviving minions and (when traced) a log.</summary>
+public sealed record FightResult(int Outcome, IReadOnlyList<SimMinion> Ours, IReadOnlyList<SimMinion> Theirs, IReadOnlyList<string> Log);
+
 /// <summary>
-/// Monte Carlo Battlegrounds combat: attack order, random targets, taunt, divine shield, poisonous, venomous,
-/// reborn, windfury and stealth. Deathrattles, auras and triggered effects are not modelled, which the result
-/// reports through <see cref="CombatOdds.Unsimulated"/>. Start-of-combat effects have already resolved when the
-/// boards are captured (at the first attack), so they are reflected in the stats.
+/// Monte Carlo Battlegrounds combat. Keywords (taunt, divine shield, poisonous, venomous, reborn, windfury, stealth) are
+/// built in; card effects plug in through <see cref="CombatEffect"/> classes found by <see cref="EffectRegistry"/>.
+/// Minions whose effects are not implemented are reported through <see cref="CombatOdds.Unsimulated"/>.
+/// Start-of-combat effects have already resolved when the boards are captured (at the first attack), so they are
+/// reflected in the stats.
 /// </summary>
 public static class CombatSimulator
 {
-    private const int MaxAttacks = 400;
-
     /// <param name="firstAttackerIsOurs">Who attacks first if known (read from the first attack), else null.</param>
-    public static CombatOdds Run(IReadOnlyList<SimMinion> ours, IReadOnlyList<SimMinion> theirs, bool? firstAttackerIsOurs, int runs = 4000)
+    public static CombatOdds Run(IReadOnlyList<SimMinion> ours, IReadOnlyList<SimMinion> theirs, bool? firstAttackerIsOurs, int runs = 4000) =>
+        Run(new SimSide(ours), new SimSide(theirs), firstAttackerIsOurs, new SimOptions { Runs = runs });
+
+    public static CombatOdds Run(SimSide ours, SimSide theirs, bool? firstAttackerIsOurs, SimOptions? options = null)
     {
-        var unsimulated = ours.Count(m => m.HasUnsimulatedEffect) + theirs.Count(m => m.HasUnsimulatedEffect);
-        if (ours.Count == 0 || theirs.Count == 0)
+        options ??= SimOptions.Default;
+        var unsimulated = ours.Minions.Count(m => m.HasUnsimulatedEffect) + theirs.Minions.Count(m => m.HasUnsimulatedEffect);
+        if (ours.Minions.Count == 0 || theirs.Minions.Count == 0)
         {
-            var win = ours.Count > 0 ? 1.0 : 0;
-            var loss = theirs.Count > 0 ? 1.0 : 0;
+            var win = ours.Minions.Count > 0 ? 1.0 : 0;
+            var loss = theirs.Minions.Count > 0 ? 1.0 : 0;
             return new CombatOdds(win, 1 - win - loss, loss, unsimulated);
         }
 
-        // Stable seed: the same boards always show the same numbers.
-        var random = new Random(Seed(ours, theirs));
-        int wins = 0, losses = 0;
-        for (var i = 0; i < runs; i++)
+        var effects = options.Effects ?? EffectRegistry.Default;
+        var prepared = Fight.PreparedEffects.For(ours, theirs, effects);
+        // Stable seed: the same boards always show the same numbers, in every session.
+        var random = new Random(Seed(ours, theirs, firstAttackerIsOurs));
+        var clock = options.TimeBudget is { } ? Stopwatch.StartNew() : null;
+        int done = 0, wins = 0, losses = 0;
+        for (; done < options.Runs; done++)
         {
-            switch (Fight(ours, theirs, firstAttackerIsOurs, random))
+            if (clock is not null && done >= options.MinRuns && done % 100 == 0 && clock.Elapsed > options.TimeBudget)
+            {
+                break;
+            }
+
+            var fight = new Fight(ours, theirs, effects, random, trace: false, prepared);
+            switch (fight.Run(firstAttackerIsOurs, options.FirstAttackerEntityId))
             {
                 case > 0: wins++; break;
                 case < 0: losses++; break;
             }
         }
 
-        return new CombatOdds(wins / (double)runs, (runs - wins - losses) / (double)runs, losses / (double)runs, unsimulated);
+        return new CombatOdds(wins / (double)done, (done - wins - losses) / (double)done, losses / (double)done, unsimulated) { Runs = done };
     }
 
-    /// <summary>+1 we win, -1 we lose, 0 tie.</summary>
-    private static int Fight(IReadOnlyList<SimMinion> oursStart, IReadOnlyList<SimMinion> theirsStart, bool? firstOurs, Random random)
+    /// <summary>Runs one fight with the given random source and returns the survivors (and a log when <paramref name="trace"/>).</summary>
+    /// <remarks>Tests can pass a <see cref="Random"/> subclass overriding <see cref="Random.Next(int)"/> to script every random pick.</remarks>
+    public static FightResult RunSingle(SimSide ours, SimSide theirs, bool? firstAttackerIsOurs, Random random,
+                                        EffectRegistry? effects = null, bool trace = true, int firstAttackerEntityId = 0)
     {
-        var sides = new[] { oursStart.Select(m => new Unit(m)).ToList(), theirsStart.Select(m => new Unit(m)).ToList() };
-        var next = new int[2];
-        var side = firstOurs switch
-        {
-            true => 0,
-            false => 1,
-            // The side with more minions attacks first; a coin flip on equal counts.
-            null => sides[0].Count > sides[1].Count ? 0 : sides[1].Count > sides[0].Count ? 1 : random.Next(2),
-        };
+        var fight = new Fight(ours, theirs, effects ?? EffectRegistry.Default, random, trace);
+        var outcome = fight.Run(firstAttackerIsOurs, firstAttackerEntityId);
+        return new FightResult(
+            outcome,
+            fight.Ours.Minions.Select(u => u.ToSimMinion()).ToList(),
+            fight.Theirs.Minions.Select(u => u.ToSimMinion()).ToList(),
+            fight.Log);
+    }
 
-        for (var step = 0; step < MaxAttacks && sides[0].Count > 0 && sides[1].Count > 0; step++)
+    /// <summary>FNV-1a over the boards: stable across processes and machines (unlike string/record hash codes).</summary>
+    internal static int Seed(SimSide ours, SimSide theirs, bool? firstAttackerIsOurs)
+    {
+        var hash = 14695981039346656037UL;
+        void Add(long value)
         {
-            var own = sides[side];
-            var foe = sides[1 - side];
-            var index = NextAttacker(own, next[side]);
-            if (index < 0)
+            for (var i = 0; i < 8; i++)
             {
-                // This side cannot attack; if neither can, the fight stalls into a tie.
-                if (NextAttacker(foe, next[1 - side]) < 0)
+                hash ^= (byte)(value >> (8 * i));
+                hash *= 1099511628211UL;
+            }
+        }
+
+        void AddText(string text)
+        {
+            Add(text.Length);
+            foreach (var c in text)
+            {
+                Add(c);
+            }
+        }
+
+        void AddSide(SimSide side)
+        {
+            Add(side.Minions.Count);
+            foreach (var m in side.Minions)
+            {
+                Add(m.Attack);
+                Add(m.Health);
+                Add((long)m.Keywords);
+                Add(m.RebornAttack);
+                Add(m.HasUnsimulatedEffect ? 1 : 0);
+                AddText(m.CardId);
+                Add(m.Golden ? 1 : 0);
+                Add((long)m.Tribes);
+                Add(m.MaxHealth);
+                Add((long)m.BaseKeywords);
+                Add(m.ScriptData1);
+                Add(m.ScriptData2);
+                foreach (var enchantment in m.Enchantments)
                 {
-                    return 0;
+                    AddText(enchantment);
                 }
 
-                side = 1 - side;
-                continue;
+                foreach (var remembered in m.Remembered)
+                {
+                    AddText(remembered.CardId);
+                    Add(remembered.Attack);
+                    Add(remembered.Health);
+                }
             }
 
-            var attacker = own[index];
-            for (var swing = 0; swing < attacker.AttacksPerTurn && attacker.Health > 0 && foe.Count > 0; swing++)
+            AddText(side.HeroCardId);
+            AddText(side.HeroPowerCardId);
+            foreach (var extra in side.Extras)
             {
-                Attack(attacker, own, foe, ref next[1 - side], random);
+                AddText(extra);
             }
 
-            // Continue from the slot right of the attacker; a reborn copy takes the attacker's slot.
-            var position = own.IndexOf(attacker);
-            var resume = position >= 0 ? position + 1
-                : index < own.Count && own[index].Origin == attacker ? index + 1
-                : index;
-            next[side] = own.Count == 0 ? 0 : resume % own.Count;
-            side = 1 - side;
+            Add(side.Hand.Count);
         }
 
-        return sides[0].Count > 0 && sides[1].Count == 0 ? 1
-            : sides[1].Count > 0 && sides[0].Count == 0 ? -1
-            : 0;
-    }
-
-    private static int NextAttacker(List<Unit> side, int from)
-    {
-        for (var i = 0; i < side.Count; i++)
-        {
-            var index = (from + i) % side.Count;
-            if (side[index].Attack > 0)
-            {
-                return index;
-            }
-        }
-
-        return -1;
-    }
-
-    /// <param name="foeNext">Index of the defending side's next attacker; kept on the same minion when one to its left dies.</param>
-    private static void Attack(Unit attacker, List<Unit> own, List<Unit> foe, ref int foeNext, Random random)
-    {
-        var defender = PickTarget(foe, random);
-        attacker.Stealth = false;
-        var attackPower = attacker.Attack;
-        Hit(defender, attackPower, attacker);
-        Hit(attacker, defender.Attack, defender);
-        if (RemoveDead(foe, defender) is { Removed: >= 0 } removed && !removed.Reborn && removed.Removed < foeNext)
-        {
-            foeNext--;
-        }
-
-        RemoveDead(own, attacker);
-    }
-
-    private static Unit PickTarget(List<Unit> foe, Random random)
-    {
-        var visible = foe.Where(u => !u.Stealth).ToList();
-        if (visible.Count == 0)
-        {
-            visible = foe;
-        }
-
-        var taunts = visible.Where(u => u.Taunt).ToList();
-        var pool = taunts.Count > 0 ? taunts : visible;
-        return pool[random.Next(pool.Count)];
-    }
-
-    private static void Hit(Unit target, int damage, Unit source)
-    {
-        if (damage <= 0)
-        {
-            return;
-        }
-
-        if (target.DivineShield)
-        {
-            target.DivineShield = false;
-            return;
-        }
-
-        target.Health -= damage;
-        if (source.Poisonous || source.Venomous)
-        {
-            target.Health = Math.Min(target.Health, 0);
-            source.Venomous = false;
-        }
-    }
-
-    /// <summary>Removes a dead unit; returns its former index (-1 if alive) and whether a reborn copy took its slot.</summary>
-    private static (int Removed, bool Reborn) RemoveDead(List<Unit> side, Unit unit)
-    {
-        if (unit.Health > 0)
-        {
-            return (-1, false);
-        }
-
-        var index = side.IndexOf(unit);
-        if (index < 0)
-        {
-            return (-1, false);
-        }
-
-        side.RemoveAt(index);
-        if (unit.Reborn && side.Count < 7)
-        {
-            side.Insert(index, unit.RebornCopy());
-            return (index, true);
-        }
-
-        return (index, false);
-    }
-
-    private static int Seed(IReadOnlyList<SimMinion> ours, IReadOnlyList<SimMinion> theirs)
-    {
-        var hash = new HashCode();
-        foreach (var m in ours) hash.Add(m);
-        hash.Add(-1);
-        foreach (var m in theirs) hash.Add(m);
-        return hash.ToHashCode();
-    }
-
-    private sealed class Unit
-    {
-        public Unit(SimMinion m)
-        {
-            Attack = m.Attack;
-            Health = m.Health;
-            Taunt = m.Taunt;
-            DivineShield = m.DivineShield;
-            Poisonous = m.Poisonous;
-            Venomous = m.Venomous;
-            Reborn = m.Reborn;
-            AttacksPerTurn = Math.Max(1, m.AttacksPerTurn);
-            Stealth = m.Stealth;
-            RebornAttack = m.RebornAttack;
-        }
-
-        public int Attack { get; }
-        public int Health { get; set; }
-        public bool Taunt { get; }
-        public bool DivineShield { get; set; }
-        public bool Poisonous { get; }
-        public bool Venomous { get; set; }
-        public bool Reborn { get; }
-        public int AttacksPerTurn { get; }
-        public bool Stealth { get; set; }
-        public int RebornAttack { get; }
-
-        /// <summary>The minion this one was reborn from, or null.</summary>
-        public Unit? Origin { get; private init; }
-
-        /// <summary>Reborn brings the minion back with its base attack and 1 health, without reborn.</summary>
-        public Unit RebornCopy() => new(new SimMinion(RebornAttack, 1, Taunt, false, Poisonous, false, false, AttacksPerTurn, false, RebornAttack, false))
-        {
-            Origin = this,
-        };
+        AddSide(ours);
+        Add(-1);
+        AddSide(theirs);
+        Add(firstAttackerIsOurs switch { true => 1, false => 2, null => 3 });
+        return (int)(hash ^ (hash >> 32));
     }
 }

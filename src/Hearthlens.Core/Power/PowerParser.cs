@@ -33,6 +33,8 @@ public interface IPowerListener
 /// </summary>
 public sealed partial class PowerParser
 {
+    private const int MaxBlockDepth = 64;
+
     private readonly List<IPowerListener> _listeners = new();
     private DateOnly _date;
     private TimeSpan _lastTime = TimeSpan.MinValue;
@@ -189,7 +191,16 @@ public sealed partial class PowerParser
             if (m.Success && Game is { } game)
             {
                 var source = Resolve(m.Groups["entity"].Value);
-                foreach (var listener in _listeners) listener.OnBlockStart(game, m.Groups["type"].Value, source);
+                var type = m.Groups["type"].Value;
+                foreach (var listener in _listeners) listener.OnBlockStart(game, type, source);
+                // Pushed after notifying, so listeners see the blocks around the one starting.
+                if (game.BlockStack.Count >= MaxBlockDepth)
+                {
+                    // Unbalanced log (e.g. read from the middle of a game): start over rather than grow forever.
+                    game.BlockStack.Clear();
+                }
+
+                game.BlockStack.Add(new PowerBlock(type, source));
             }
 
             return;
@@ -199,6 +210,11 @@ public sealed partial class PowerParser
         {
             if (Game is { } game)
             {
+                if (game.BlockStack.Count > 0)
+                {
+                    game.BlockStack.RemoveAt(game.BlockStack.Count - 1);
+                }
+
                 foreach (var listener in _listeners) listener.OnBlockEnd(game);
             }
 
