@@ -10,6 +10,7 @@ using Hearthlens.App.Main;
 using Hearthlens.App.Overlay;
 using Hearthlens.Core;
 using Hearthlens.Core.Battlegrounds;
+using Hearthlens.Core.Constructed;
 using Hearthlens.Core.Cards;
 using Hearthlens.Core.Data;
 using Hearthlens.Core.Hearthstone;
@@ -53,6 +54,8 @@ public partial class App : Application
     private DeckAggregate? _deckStats;
     private MatchupAggregate? _matchupStats;
     private string? _renderDir;
+    private ConstructedMeta? _constructedMeta;
+    private int _constructedMetaRequest;
     private BattlegroundsMeta? _meta;
     private UpdateInfo? _stagedUpdate;
     private DispatcherTimer? _watchdog;
@@ -145,6 +148,12 @@ public partial class App : Application
         };
 
         _mainViewModel.ThemeChanged += OnThemeChanged;
+        _mainViewModel.ConstructedMetaRequested += () =>
+        {
+            _settingsDebounce.Stop();
+            _settingsDebounce.Start();
+            _ = LoadConstructedMetaAsync();
+        };
         _main = CreateMainWindow();
         _overlay = CreateOverlay();
         if (_renderDir is not null)
@@ -163,7 +172,11 @@ public partial class App : Application
         _historyDebounce = Debouncer(TimeSpan.FromMilliseconds(600), () => _ = _mainViewModel.RefreshAsync());
         _settingsDebounce = Debouncer(TimeSpan.FromMilliseconds(400), _settings.Save);
         _metaRefresh = new DispatcherTimer { Interval = TimeSpan.FromHours(3) };
-        _metaRefresh.Tick += (_, _) => _ = LoadMetaAsync();
+        _metaRefresh.Tick += (_, _) =>
+        {
+            _ = LoadMetaAsync();
+            _ = LoadConstructedMetaAsync();
+        };
 
         _session.SnapshotChanged += OnSnapshot;
         _session.GameFinished += outcome => Dispatcher.BeginInvoke(() => OnGameFinished(outcome));
@@ -279,6 +292,7 @@ public partial class App : Application
             }
 
             await LoadMetaAsync();
+            await LoadConstructedMetaAsync();
             _metaRefresh.Start();
         }
         catch (Exception ex)
@@ -352,6 +366,25 @@ public partial class App : Application
         catch (Exception ex)
         {
             Diag.Error("Community stats unavailable", ex);
+        }
+    }
+
+    private async Task LoadConstructedMetaAsync()
+    {
+        // Filters can change while a download runs; only the latest request may update the page.
+        var request = ++_constructedMetaRequest;
+        try
+        {
+            var meta = await ConstructedMeta.LoadAsync(_http, _settings.MetaFormat, _settings.MetaRank, _settings.MetaPeriod);
+            if (request == _constructedMetaRequest)
+            {
+                _constructedMeta = meta ?? _constructedMeta;
+                _mainViewModel.SetConstructedMeta(meta);
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Error("Constructed stats unavailable", ex);
         }
     }
 

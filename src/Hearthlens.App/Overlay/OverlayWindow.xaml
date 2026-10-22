@@ -469,9 +469,7 @@
                                            Visibility="{Binding DataContext.CompManual, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Vis}}" />
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock FontSize="10.5" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis">
-                                        <Run Text="{Binding Tribes, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding OwnedCore, Mode=OneWay}" /><Run Text="/" /><Run Text="{Binding CoreCount, Mode=OneWay}" /><Run Text=" core owned" />
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding Detail}" FontSize="10.5" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0">
                                     <TextBlock Text="{Binding Placement}" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Right" />

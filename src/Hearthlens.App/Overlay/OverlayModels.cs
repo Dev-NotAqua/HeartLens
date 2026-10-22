@@ -56,7 +56,12 @@ public sealed record CompRow(
     bool IsTarget,
     bool IsPinned,
     string Why = "",
-    string LookFor = "");
+    string LookFor = "")
+{
+    public string Detail => string.IsNullOrWhiteSpace(Tribes)
+        ? $"{OwnedCore}/{CoreCount} core owned"
+        : $"{Tribes}  ·  {OwnedCore}/{CoreCount} core owned";
+}
 
 public sealed record BrowserGroup(string Title, IReadOnlyList<BrowserCard> Cards);
 

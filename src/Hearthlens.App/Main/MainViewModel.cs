@@ -34,7 +34,9 @@ public sealed record MetaHeroRow(
     string PickRate,
     string DataPoints,
     string Personal,
-    double BarFraction);
+    double BarFraction,
+    string Top4 = "",
+    string FirstPlace = "");
 
 public sealed record MetaCompRow(
     int Rank,
@@ -47,7 +49,7 @@ public sealed record MetaCompRow(
     string Commit,
     string KeyCards);
 
-public sealed record DeckRow(string Key, string Name, string Class, int Games, string Record, string WinRate, double WinFraction, string LastPlayed, string? DeckCode);
+public sealed record DeckRow(string Key, string Name, string Class, int Games, string Record, string WinRate, double WinFraction, string LastPlayed, string? DeckCode, string ClassKey = "", string Meta = "");
 
 public sealed record MatchupRow(string Class, int Games, string Record, string WinRate, double WinFraction);
 
@@ -384,7 +386,9 @@ public sealed partial class MainViewModel : Observable
                 d.WinRate.ToString("P0", CultureInfo.CurrentCulture),
                 d.WinRate,
                 When(d.LastPlayed),
-                d.DeckCode))
+                d.DeckCode,
+                d.PlayerClass ?? string.Empty,
+                DeckMeta(d.DeckCode, d.PlayerClass)))
             .ToList();
         if (SelectedDeck is null || Decks.All(d => d.Key != SelectedDeck.Key))
         {
@@ -441,7 +445,9 @@ public sealed partial class MainViewModel : Observable
                 h.PickRate.ToString("P0", CultureInfo.CurrentCulture),
                 h.DataPoints.ToString("N0", CultureInfo.CurrentCulture),
                 personal.TryGetValue(h.HeroCardId, out var p) ? $"{p.Games} · {p.AveragePlace}" : string.Empty,
-                worst - best < 0.01 ? 1 : 1 - ((h.AveragePosition - best) / (worst - best) * 0.85)))
+                worst - best < 0.01 ? 1 : 1 - ((h.AveragePosition - best) / (worst - best) * 0.85),
+                h.Top4Rate > 0 ? h.Top4Rate.ToString("P0", CultureInfo.CurrentCulture) : string.Empty,
+                h.FirstRate > 0 ? h.FirstRate.ToString("P0", CultureInfo.CurrentCulture) : string.Empty))
             .ToList();
 
         var comps = meta.Comps

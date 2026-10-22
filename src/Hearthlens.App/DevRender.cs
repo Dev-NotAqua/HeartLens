@@ -34,6 +34,7 @@ public partial class App
     {
         Directory.CreateDirectory(folder);
         await LoadMetaAsync();
+        await LoadConstructedMetaAsync();
         await _mainViewModel.RefreshAsync();
         _session.Cards = _cards;
         _mainViewModel.Busy = string.Empty;
@@ -46,6 +47,17 @@ public partial class App
                 _main.UpdateLayout();
                 Save(_main, Path.Combine(folder, $"main-{page.ToLowerInvariant()}.png"));
             }
+
+            _main.ShowPage("Constructed");
+            foreach (var tab in new[] { "Tiers", "Top" })
+            {
+                _main.ShowConstructedTab(tab);
+                await Task.Delay(2500);
+                _main.UpdateLayout();
+                Save(_main, Path.Combine(folder, $"main-constructed-{tab.ToLowerInvariant()}.png"));
+            }
+
+            _main.ShowConstructedTab("Decks");
 
             var rating = _history.RatingHistory().LastOrDefault()?.Rating;
             var moments = new (string Name, Func<BattlegroundsView, bool> When, int Hover)[]

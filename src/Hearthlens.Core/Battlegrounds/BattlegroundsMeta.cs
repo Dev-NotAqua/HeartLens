@@ -11,7 +11,9 @@ public sealed record MetaHero(
     int DataPoints,
     double AveragePosition,
     double PickRate,
-    IReadOnlyDictionary<int, double> TribeImpact);
+    IReadOnlyDictionary<int, double> TribeImpact,
+    double Top4Rate = 0,
+    double FirstRate = 0);
 
 public sealed record MetaTrinket(
     string CardId,
@@ -329,6 +331,30 @@ public sealed class BattlegroundsMeta
                 }
             }
 
+            double top4 = 0, first = 0;
+            if (hero.TryGetProperty("placementDistribution", out var places) && places.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var place in places.EnumerateArray())
+                {
+                    if (place.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    var rank = GetInt(place, "rank");
+                    var share = GetDouble(place, "percentage") / 100;
+                    if (rank is >= 1 and <= 4)
+                    {
+                        top4 += share;
+                    }
+
+                    if (rank == 1)
+                    {
+                        first = share;
+                    }
+                }
+            }
+
             var offered = GetDouble(hero, "totalOffered");
             var picked = GetDouble(hero, "totalPicked");
             result[id] = new MetaHero(
@@ -336,7 +362,9 @@ public sealed class BattlegroundsMeta
                 GetInt(hero, "dataPoints"),
                 GetDouble(hero, "averagePosition"),
                 offered > 0 ? picked / offered : 0,
-                impact);
+                impact,
+                Math.Min(1, top4),
+                first);
         }
 
         return result;
@@ -774,7 +802,7 @@ public sealed class BattlegroundsMeta
     /// Makes sure the file is in the cache and returns its path. The download is streamed straight to disk, so a
     /// large file is never held in memory twice, and a response that is not JSON never replaces a good cache file.
     /// </summary>
-    private static async Task<string?> CacheFileAsync(HttpClient http, string path, string cacheName, CancellationToken cancellationToken)
+    internal static async Task<string?> CacheFileAsync(HttpClient http, string path, string cacheName, CancellationToken cancellationToken)
     {
         var dir = Directory.CreateDirectory(Path.Combine(AppPaths.Cache, "meta")).FullName;
         var file = Path.Combine(dir, cacheName);
