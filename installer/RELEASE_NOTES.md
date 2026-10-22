@@ -23,6 +23,17 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**A new look for the Windows app.** The whole app and the in-game overlay get a gilded tavern style:
+
+- Page titles and the logo are gold; panels look lit from above with a gold top edge.
+- Buttons and switches are polished gold metal; the selected menu item glows.
+- Filter bars and text boxes sit in a recessed groove; scrollbars are gold.
+- The rating chart is a smooth gold curve with a soft glow and a tag with your current rating. The curve never dips past a real value.
+- Pages slide up and fade in when you open them (off when Windows animations are off).
+- In game, the recommended hero, trinket and Discover option has a gold edge, a metal BEST PICK tag and a soft gold glow, drawn without heavy effects so the overlay stays fast.
+
+## What was new in 0.7.3
+
 **Tracking no longer stops around turn 8.** Hearthstone stops writing its game log once the file reaches 10 MB, and a Battlegrounds game passes 10 MB around turn 8. From then on the game writes nothing more until it restarts, so the overlay froze with no error anywhere. Other trackers turn this limit off; Hearthlens did not. It now sets `FileSizeLimit.Int=-1` in the `[Log]` section of `client.config` in the Hearthstone folder, keeps everything else in that file, and puts the setting back if it disappears.
 
 **Restart Hearthstone once after installing this version.** The game only reads `client.config` when it starts. Hearthlens shows a "Restart Hearthstone" note while the old limit is still active, and another one if a game hits the limit.
