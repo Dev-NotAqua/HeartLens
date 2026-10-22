@@ -6,8 +6,7 @@ namespace Hearthlens.Core.Battlegrounds.Effects.Ongoing;
 /// point of its Health goes, one at a time, to a random other living friendly minion. C'Thun keeps its own stats. With no
 /// other minion nothing happens. See <see cref="DeityEffect"/> for how it awakens.
 /// </summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect(Tokens.CThunId)]
+[CardEffect(Tokens.CThunId)]
 internal sealed class CThun : DeityEffect
 {
     protected override CardMechanic Mechanics => CardMechanic.None;

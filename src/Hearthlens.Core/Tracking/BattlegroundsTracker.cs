@@ -1,6 +1,7 @@
 using Hearthlens.Core.Battlegrounds;
 using Hearthlens.Core.Battlegrounds.Effects;
 using Hearthlens.Core.Cards;
+using Hearthlens.Core.Memory;
 using Hearthlens.Core.Power;
 
 namespace Hearthlens.Core.Tracking;
@@ -9,6 +10,9 @@ namespace Hearthlens.Core.Tracking;
 public sealed class BattlegroundsTracker : IPowerListener
 {
     private const string PlaceholderHero = "TB_BaconShop_HERO_PH";
+
+    /// <summary>How long a combat latch may stay set without new combat evidence before it is treated as stale.</summary>
+    private const int CombatLatchTimeoutMs = 120_000;
 
     private static readonly (string Tag, string Label)[] KeywordTags =
     [
@@ -31,6 +35,12 @@ public sealed class BattlegroundsTracker : IPowerListener
     private readonly HashSet<string> _shopRaces = new(StringComparer.Ordinal);
 
     private bool _inCombat;
+
+    /// <summary>Round the current combat started in, to notice a missed end-of-combat transition.</summary>
+    private int _combatTurn;
+
+    /// <summary>Environment.TickCount64 of the last combat block activity, for stale-latch recovery.</summary>
+    private long _combatActivityAt;
     private bool _boardCaptured;
     private bool _boardsSnapshotted;
     private int _combatOpponent;
@@ -74,6 +84,11 @@ public sealed class BattlegroundsTracker : IPowerListener
     /// <summary>Tribes read from client memory (authoritative when present).</summary>
     public IReadOnlyList<string>? MemoryRaces { get; set; }
 
+    /// <summary>
+    /// Live gold costs of the Battlegrounds buttons, including discounts (null when client memory is unavailable).
+    /// </summary>
+    public BattlegroundsButtonCosts? LiveButtonCosts { get; set; }
+
     public bool LocalFinished { get; private set; }
 
     public void OnGameStarted(GameState game)
@@ -83,6 +98,8 @@ public sealed class BattlegroundsTracker : IPowerListener
         _tiers.Clear();
         _shopRaces.Clear();
         _inCombat = false;
+        _combatTurn = 0;
+        _combatActivityAt = 0;
         _boardCaptured = false;
         _lastOwnBoard = Array.Empty<BgMinion>();
         _trinketOffer = Array.Empty<Entity>();
@@ -90,6 +107,7 @@ public sealed class BattlegroundsTracker : IPowerListener
         _discoverSource = null;
         _combatOdds = null;
         MemoryRaces = null;
+        LiveButtonCosts = null;
         LocalFinished = false;
         _pendingDamage = -1;
     }
@@ -121,9 +139,9 @@ public sealed class BattlegroundsTracker : IPowerListener
         _discoverSource = null;
     }
 
-    public void OnEntityCreated(GameState game, Entity entity) => NoteShopMinion(game, entity);
+    public void OnEntityCreated(GameState game, Entity entity) => NoteShopCard(game, entity);
 
-    public void OnEntityRevealed(GameState game, Entity entity) => NoteShopMinion(game, entity);
+    public void OnEntityRevealed(GameState game, Entity entity) => NoteShopCard(game, entity);
 
     public void OnTagChanged(GameState game, Entity entity, string tag, string previous, string value)
     {
@@ -135,8 +153,24 @@ public sealed class BattlegroundsTracker : IPowerListener
         switch (tag)
         {
             case GameTag.BoardVisualState when entity.Id == game.GameEntityId:
-                if (value == "2") BeginCombat(game);
-                else if (_inCombat) EndCombat(game);
+                if (value == "2")
+                {
+                    game.CombatOnScreen = true;
+                    BeginCombat(game);
+                }
+                else if (value == "1")
+                {
+                    game.CombatOnScreen = false;
+                    if (_inCombat)
+                    {
+                        EndCombat(game);
+                    }
+                }
+                else if (_inCombat)
+                {
+                    EndCombat(game);
+                }
+
                 break;
 
             case GameTag.PlayerTechLevel when IsLocal(game, entity):
@@ -168,7 +202,13 @@ public sealed class BattlegroundsTracker : IPowerListener
 
     public void OnBlockStart(GameState game, string blockType, Entity? source)
     {
-        if (!_inCombat || _boardCaptured || blockType != "ATTACK")
+        if (!_inCombat)
+        {
+            return;
+        }
+
+        _combatActivityAt = Environment.TickCount64;
+        if (_boardCaptured || blockType != "ATTACK")
         {
             return;
         }
@@ -200,7 +240,13 @@ public sealed class BattlegroundsTracker : IPowerListener
 
     public void OnBlockEnd(GameState game)
     {
-        if (_inCombat && (_boardCaptured || _boardsSnapshotted))
+        if (!_inCombat)
+        {
+            return;
+        }
+
+        _combatActivityAt = Environment.TickCount64;
+        if (_boardCaptured || _boardsSnapshotted)
         {
             _localAlive = Minions(game, game.LocalPlayerId).Count();
             _opponentAlive = Minions(game, game.OpponentPlayerId).Count();
@@ -209,8 +255,11 @@ public sealed class BattlegroundsTracker : IPowerListener
 
     public BattlegroundsView BuildView(GameState game)
     {
+        EndStaleCombat(game);
         // Combat as the player sees it: from the server resolving it until the client finishes playing it.
-        var combat = _inCombat || game.CombatOnScreen;
+        // If the client never sent the closing BOARD_VISUAL_STATE line (build-dependent), the latch is released
+        // by the next round's shop or by the timeout so the overlay cannot stay stuck on Combat in the tavern.
+        var combat = _inCombat || (game.CombatOnScreen && !CombatLatchStale(game));
         var localHero = game.LocalHero;
         var heroChosen = localHero is not null && localHero.CardId != PlaceholderHero && !localHero.InHand;
         var options = heroChosen
@@ -289,8 +338,8 @@ public sealed class BattlegroundsTracker : IPowerListener
             _inCombat ? _lastOwnBoard : Minions(game, game.LocalPlayerId).Select(ToMinion).ToList(),
             anomalyDbf > 0 ? Cards.Get(anomalyDbf)?.Id : null,
             game.LocalPlayerEntity?.GetInt(GameTag.PlayerTriples) ?? 0,
-            // Outside combat the opponent slot holds Bob's current offer.
-            combat || !heroChosen ? Array.Empty<BgMinion>() : Minions(game, game.OpponentPlayerId).Select(ToMinion).ToList(),
+            // Outside combat the opponent slot holds Bob's current offer (minions and tavern spells).
+            combat || !heroChosen ? Array.Empty<BgMinion>() : ShopCards(game).Select(ToMinion).ToList(),
             game.Controlled(game.LocalPlayerId, "HAND").Where(e => e.IsMinion && e.CardId.Length > 0).Select(e => e.CardId).ToList())
         {
             // A choice offered while the fight is still on screen waits until the player can see it.
@@ -302,6 +351,8 @@ public sealed class BattlegroundsTracker : IPowerListener
             DarkGiftReady = darkGift is not null && darkGift.GetInt("EXHAUSTED") == 0 && !combat,
             DarkGiftCost = darkGift?.GetInt(GameTag.Cost) ?? 0,
             Gold = player is null ? 0 : Math.Max(0, player.GetInt("RESOURCES") + player.GetInt("TEMP_RESOURCES") - player.GetInt("RESOURCES_USED")),
+            TavernUpgradeCost = LiveButtonCosts?.Upgrade,
+            ButtonCosts = LiveButtonCosts,
         };
     }
 
@@ -370,6 +421,32 @@ public sealed class BattlegroundsTracker : IPowerListener
         return kind is "Triple reward" or "Dark Gift" ? kind : $"{kind} · {name}";
     }
 
+    /// <summary>
+    /// Combat the server has finished but whose end transition never reached the log: if no combat block has been
+    /// seen for the timeout, treat the fight as over instead of staying on Combat for the rest of the game.
+    /// </summary>
+    private void EndStaleCombat(GameState game)
+    {
+        if (_inCombat && _combatActivityAt > 0 && Environment.TickCount64 - _combatActivityAt > CombatLatchTimeoutMs)
+        {
+            game.CombatOnScreen = false;
+            EndCombat(game);
+        }
+    }
+
+    /// <summary>True (and releases the latch) when the client's combat replay signal is older than the timeout.</summary>
+    internal static bool CombatLatchStale(GameState game)
+    {
+        if (game.CombatOnScreenSince <= 0 || Environment.TickCount64 - game.CombatOnScreenSince <= CombatLatchTimeoutMs)
+        {
+            return false;
+        }
+
+        game.CombatOnScreen = false;
+        game.CombatOnScreenSince = 0;
+        return true;
+    }
+
     /// <summary>Final board for history, captured at the last combat.</summary>
     public IReadOnlyList<BgMinion> LastOwnBoard => _lastOwnBoard;
 
@@ -378,6 +455,8 @@ public sealed class BattlegroundsTracker : IPowerListener
     private void BeginCombat(GameState game)
     {
         _inCombat = true;
+        _combatTurn = game.BattlegroundsTurn;
+        _combatActivityAt = Environment.TickCount64;
         _boardCaptured = false;
         _boardsSnapshotted = false;
         _removedBy.Clear();
@@ -463,9 +542,24 @@ public sealed class BattlegroundsTracker : IPowerListener
         ResolvePendingDamage(game);
     }
 
-    private void NoteShopMinion(GameState game, Entity entity)
+    private void NoteShopCard(GameState game, Entity entity)
     {
-        if (!game.IsBattlegrounds || _inCombat || entity.Controller != game.OpponentPlayerId || !entity.IsMinion)
+        if (!game.IsBattlegrounds || entity.Controller != game.OpponentPlayerId || !entity.InPlay
+            || (!entity.IsMinion && entity.CardType is not ("SPELL" or "BATTLEGROUND_SPELL")))
+        {
+            return;
+        }
+
+        // A shop card dealt in a later round than the combat start means the fight is over even if the
+        // client's BOARD_VISUAL_STATE transition was never logged.
+        if (_inCombat && game.BattlegroundsTurn != _combatTurn)
+        {
+            game.CombatOnScreen = false;
+            EndCombat(game);
+        }
+
+        // Mid-combat summons are opponent-controlled minions too: only a dealt shop counts for races.
+        if (_inCombat || !entity.IsMinion)
         {
             return;
         }
@@ -488,6 +582,13 @@ public sealed class BattlegroundsTracker : IPowerListener
     private static IEnumerable<Entity> Minions(GameState game, int controller) =>
         game.Entities.Values
             .Where(e => e.Controller == controller && e.InPlay && e.IsMinion)
+            .OrderBy(e => e.ZonePosition);
+
+    /// <summary>Bob's current offer: shop minions plus tavern spells, in row order.</summary>
+    private static IEnumerable<Entity> ShopCards(GameState game) =>
+        game.Entities.Values
+            .Where(e => e.Controller == game.OpponentPlayerId && e.InPlay
+                        && (e.IsMinion || e.CardType is "SPELL" or "BATTLEGROUND_SPELL"))
             .OrderBy(e => e.ZonePosition);
 
     /// <summary>Opponents' persistent leaderboard heroes (not combat copies or hero choices).</summary>
@@ -666,6 +767,13 @@ public sealed class BattlegroundsTracker : IPowerListener
     private BgMinion ToMinion(Entity e)
     {
         var keywords = KeywordTags.Where(k => e.Has(k.Tag)).Select(k => k.Label).ToList();
+        var card = Cards.Get(e.CardId);
+        var cost = e.GetInt(GameTag.Cost);
+        if (cost <= 0 && card?.Cost is > 0)
+        {
+            cost = card.Cost;
+        }
+
         return new BgMinion(
             e.CardId,
             Cards.NameOr(e.CardId, e.Name),
@@ -673,7 +781,11 @@ public sealed class BattlegroundsTracker : IPowerListener
             e.Health,
             e.GetInt(GameTag.Premium) > 0,
             e.GetInt(GameTag.TechLevel),
-            keywords);
+            keywords)
+        {
+            CardType = e.CardType is { Length: > 0 } type ? type : card?.Type ?? "MINION",
+            Cost = cost,
+        };
     }
 
     /// <summary>What the last combat simulation was given (for tests and diagnostics).</summary>

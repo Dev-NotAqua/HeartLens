@@ -148,7 +148,10 @@ public sealed record SimOptions
     public int FirstAttackerEntityId { get; init; }
 }
 
-/// <summary>Estimated outcome of a combat. <see cref="Unsimulated"/> counts minions whose card effects are ignored.</summary>
+/// <summary>
+/// Estimated outcome of a combat. <see cref="Unsimulated"/> counts minions and player-level cards (the Deity, anomaly...)
+/// whose combat-relevant effects are ignored.
+/// </summary>
 public sealed record CombatOdds(double Win, double Tie, double Loss, int Unsimulated)
 {
     public bool Approximate => Unsimulated > 0;
@@ -163,7 +166,7 @@ public sealed record FightResult(int Outcome, IReadOnlyList<SimMinion> Ours, IRe
 /// <summary>
 /// Monte Carlo Battlegrounds combat. Keywords (taunt, divine shield, poisonous, venomous, reborn, windfury, stealth) are
 /// built in; card effects plug in through <see cref="CombatEffect"/> classes found by <see cref="EffectRegistry"/>.
-/// Minions whose effects are not implemented are reported through <see cref="CombatOdds.Unsimulated"/>.
+/// Minions and player-level cards whose effects are not implemented are reported through <see cref="CombatOdds.Unsimulated"/>.
 /// Start-of-combat effects have already resolved when the boards are captured (at the first attack), so they are
 /// reflected in the stats.
 /// </summary>
@@ -176,7 +179,8 @@ public static class CombatSimulator
     public static CombatOdds Run(SimSide ours, SimSide theirs, bool? firstAttackerIsOurs, SimOptions? options = null)
     {
         options ??= SimOptions.Default;
-        var unsimulated = ours.Minions.Count(m => m.HasUnsimulatedEffect) + theirs.Minions.Count(m => m.HasUnsimulatedEffect);
+        var effects = options.Effects ?? EffectRegistry.Default;
+        var unsimulated = Unsimulated(ours, isOpponent: false, effects) + Unsimulated(theirs, isOpponent: true, effects);
         if (ours.Minions.Count == 0 || theirs.Minions.Count == 0)
         {
             var win = ours.Minions.Count > 0 ? 1.0 : 0;
@@ -184,7 +188,6 @@ public static class CombatSimulator
             return new CombatOdds(win, 1 - win - loss, loss, unsimulated);
         }
 
-        var effects = options.Effects ?? EffectRegistry.Default;
         var prepared = Fight.PreparedEffects.For(ours, theirs, effects);
         // Stable seed: the same boards always show the same numbers, in every session.
         var random = new Random(Seed(ours, theirs, firstAttackerIsOurs));
@@ -207,6 +210,15 @@ public static class CombatSimulator
 
         return new CombatOdds(wins / (double)done, (done - wins - losses) / (double)done, losses / (double)done, unsimulated) { Runs = done };
     }
+
+    /// <summary>
+    /// Minions with unknown effects, plus player-level extras that the combat-relevance table marks as changing a fight.
+    /// Unknown extras (hero powers, trinkets, cards newer than the table) cannot be classified and are not counted.
+    /// </summary>
+    private static int Unsimulated(SimSide side, bool isOpponent, EffectRegistry effects) =>
+        side.Minions.Count(m => m.HasUnsimulatedEffect)
+        + side.Extras.Count(id => CombatRelevance.Find(id) is { Relevance: Relevance.Relevant }
+                                  && !effects.Implements(id, golden: false, isOpponent));
 
     /// <summary>Runs one fight with the given random source and returns the survivors (and a log when <paramref name="trace"/>).</summary>
     /// <remarks>Tests can pass a <see cref="Random"/> subclass overriding <see cref="Random.Next(int)"/> to script every random pick.</remarks>

@@ -4,8 +4,7 @@ namespace Hearthlens.Core.Battlegrounds.Effects.Ongoing;
 /// Drifting Sacrifice (BG36_113): "Reborn. Deathrattle: Give your Deity +2/+1." Golden: "+4/+2". Reborn is a keyword the
 /// engine handles, so the deathrattle runs on each of its two lives. See <see cref="Deity.Give"/>.
 /// </summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_113")]
+[CardEffect("BG36_113")]
 internal sealed class DriftingSacrifice : CombatEffect
 {
     public override void Deathrattle(Fight fight, Unit self) =>

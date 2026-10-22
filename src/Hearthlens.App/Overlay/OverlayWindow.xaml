@@ -396,9 +396,30 @@
             </DataTemplate.Triggers>
         </DataTemplate>
 
+        <!-- Card art answers the mouse: the tile grows so small card text can be read -->
+        <Style x:Key="ZoomImage" TargetType="{x:Type Image}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="RenderTransform">
+                        <Setter.Value>
+                            <ScaleTransform ScaleX="2.2" ScaleY="2.2" />
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Comp card list row -->
         <DataTemplate x:Key="CompCardTemplate" DataType="{x:Type o:CompCardTile}">
-            <Grid x:Name="RowRoot" Height="22" Margin="0,0,0,2" Opacity="0.7">
+            <Grid x:Name="RowRoot" Height="22" Margin="0,0,0,2" Opacity="0.7" ToolTipService.InitialShowDelay="150" ToolTipService.ShowDuration="30000">
+                <Grid.ToolTip>
+                    <ToolTip Placement="Mouse">
+                        <StackPanel Width="248">
+                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" Margin="2,0,2,4" />
+                            <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="248" Height="340" Stretch="Uniform" />
+                        </StackPanel>
+                    </ToolTip>
+                </Grid.ToolTip>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="24" />
                     <ColumnDefinition Width="*" />
@@ -471,8 +492,17 @@
         </DataTemplate>
 
         <DataTemplate x:Key="BrowserCardTemplate" DataType="{x:Type o:BrowserCard}">
-            <Grid Width="92" Margin="2" ToolTip="{Binding Name}">
-                <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="92" Height="128" Stretch="Uniform" />
+            <Grid Width="92" Margin="2" ToolTipService.InitialShowDelay="120" ToolTipService.ShowDuration="30000">
+                <Grid.ToolTip>
+                    <ToolTip Placement="Mouse">
+                        <StackPanel Width="248">
+                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" Margin="2,0,2,4" />
+                            <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="248" Height="340" Stretch="Uniform" />
+                        </StackPanel>
+                    </ToolTip>
+                </Grid.ToolTip>
+                <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="92" Height="128" Stretch="Uniform"
+                       Style="{StaticResource ZoomImage}" RenderTransformOrigin="1,0.5" />
                 <Border x:Name="Tag" VerticalAlignment="Bottom" HorizontalAlignment="Center" Background="{StaticResource Accent}" CornerRadius="5"
                         Padding="6,0" Margin="0,0,0,2" Visibility="Collapsed">
                     <TextBlock Text="IN PLAN" FontSize="9" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
@@ -486,12 +516,21 @@
         </DataTemplate>
 
         <DataTemplate x:Key="LobbyMinionTemplate" DataType="{x:Type o:LobbyMinion}">
-            <Grid Width="78" Margin="2,0" ToolTip="{Binding Keywords}">
+            <Grid Width="78" Margin="2,0" ToolTipService.InitialShowDelay="120" ToolTipService.ShowDuration="30000">
+                <Grid.ToolTip>
+                    <ToolTip Placement="Mouse">
+                        <StackPanel Width="248">
+                            <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="248" Height="340" Stretch="Uniform" />
+                            <TextBlock Text="{Binding Keywords}" FontSize="11" TextWrapping="Wrap" Margin="2,4,2,0" />
+                        </StackPanel>
+                    </ToolTip>
+                </Grid.ToolTip>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="78" Height="108" Stretch="Uniform" />
+                <Image i:CardArt.BattlegroundsCard="{Binding CardId}" Width="78" Height="108" Stretch="Uniform"
+                       Style="{StaticResource ZoomImage}" RenderTransformOrigin="1,0.5" />
                 <Border x:Name="Gold" Width="78" Height="108" BorderBrush="{StaticResource TierS}" BorderThickness="2" CornerRadius="6" Visibility="Collapsed" />
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
                     <TextBlock Text="{Binding Attack}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TierS}" />
@@ -942,6 +981,22 @@
                         <!-- No comp targeted: how to choose one (or why the chosen one is missing from this lobby) -->
                         <TextBlock DockPanel.Dock="Top" Text="{Binding PlanHint}" FontSize="11.5" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="12,6,12,8"
                                    Visibility="{Binding PlanHint, Converter={StaticResource Vis}}" />
+
+                        <!-- Advisor's turn budget plan -->
+                        <Border DockPanel.Dock="Top" Margin="12,0,12,8" Padding="10,8" CornerRadius="8"
+                                Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentLine}" BorderThickness="1"
+                                Visibility="{Binding ShopPlan, Converter={StaticResource Vis}}"
+                                ToolTip="Uses live button costs (freeze, reroll, upgrade, Dark Gift) and the chosen comp">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Background="{StaticResource Accent}" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding ShopPlan.ActionLabel}" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
+                                    </Border>
+                                    <TextBlock Text="{Binding ShopPlan.Title}" FontSize="12.5" FontWeight="Bold" Margin="7,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding ShopPlan.Reason}" FontSize="11" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
 
                         <!-- Dark Gift (Rinvenimento Oscuro) timing -->
                         <Border DockPanel.Dock="Top" Margin="12,0,12,8" Padding="9,6" CornerRadius="6" Background="{StaticResource AccentSoft}"

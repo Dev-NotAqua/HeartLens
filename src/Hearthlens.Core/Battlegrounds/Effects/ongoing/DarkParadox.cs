@@ -53,18 +53,15 @@ internal abstract class MultiHitShield : CombatEffect
 }
 
 /// <summary>Dark Paradox, Divine Shield form (BG36_360t4): shield takes {0} hits to break, 3 (golden 4; the captured TAG_SCRIPT_DATA_NUM_1).</summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_360t4")]
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_360_Gt4", Golden = GoldenFilter.GoldenOnly)]
+[CardEffect("BG36_360t4")]
+[CardEffect("BG36_360_Gt4", Golden = GoldenFilter.GoldenOnly)]
 internal sealed class DarkParadoxShield : MultiHitShield
 {
     protected override int Hits(Unit self) => self.Spec.ScriptData1 > 0 ? self.Spec.ScriptData1 : self.Pick(3, 4);
 }
 
 /// <summary>Toreth's Blessing (Dark Gift enchantment BG36_MidGameEffect_000t15e): "This minion's Divine Shield takes 3 hits to break."</summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_MidGameEffect_000t15e")]
+[CardEffect("BG36_MidGameEffect_000t15e")]
 internal sealed class TorethsBlessing : MultiHitShield
 {
     protected override int Hits(Unit self) => 3;
@@ -74,18 +71,15 @@ internal sealed class TorethsBlessing : MultiHitShield
 /// Dark Paradox, Golem form (BG36_360t9): "Deathrattle: Summon a Golem with this minion's stats." Golden (BG36_360_Gt9):
 /// "with double this minion's stats". The Golem is a normal Deserted Golem with the Attack and maximum Health the minion had.
 /// </summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_360t9")]
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_360_Gt9", Golden = GoldenFilter.GoldenOnly)]
+[CardEffect("BG36_360t9")]
+[CardEffect("BG36_360_Gt9", Golden = GoldenFilter.GoldenOnly)]
 internal sealed class DarkParadoxGolem : CombatEffect
 {
     public override void Deathrattle(Fight fight, Unit self) => Golemancy.SummonGolem(fight, self, self.Pick(1, 2));
 }
 
 /// <summary>Golemancy (Dark Gift enchantment BG36_MidGameEffect_000t61e): "Deathrattle: Summon a Golem with this minion's stats."</summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_MidGameEffect_000t61e")]
+[CardEffect("BG36_MidGameEffect_000t61e")]
 internal sealed class Golemancy : CombatEffect
 {
     public override void Deathrattle(Fight fight, Unit self) => SummonGolem(fight, self, 1);

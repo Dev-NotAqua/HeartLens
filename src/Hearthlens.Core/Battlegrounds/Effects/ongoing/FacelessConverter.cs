@@ -5,8 +5,7 @@ namespace Hearthlens.Core.Battlegrounds.Effects.Ongoing;
 /// game!)" Printed +2/+1, golden +4/+2. The improved values are the captured TAG_SCRIPT_DATA_NUM_1/2 (the card's text
 /// variables); without them the printed numbers are used. See <see cref="Deity.Give"/>.
 /// </summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect("BG36_318")]
+[CardEffect("BG36_318")]
 internal sealed class FacelessConverter : CombatEffect
 {
     public override void Deathrattle(Fight fight, Unit self)

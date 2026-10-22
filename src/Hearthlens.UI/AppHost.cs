@@ -131,6 +131,7 @@ public sealed class AppHost : IDisposable
 
             Main.Busy = "Loading card data…";
             Cards = await CardDb.LoadAsync(locale, Http);
+            CardArt.FallbackUrl = id => Cards.BgCards.ImageUrl(id);
             if (Cards.Count == 0 && locale != "enUS")
             {
                 Cards = await CardDb.LoadAsync("enUS", Http);

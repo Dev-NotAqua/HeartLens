@@ -49,6 +49,12 @@ public sealed class GameState
     public bool CombatOnScreen { get; internal set; }
 
     /// <summary>
+    /// When <see cref="CombatOnScreen"/> last became true (Environment.TickCount64). Power.log replay lines are
+    /// not guaranteed on every client build; a latch older than the combat screen timeout is treated as stale.
+    /// </summary>
+    public long CombatOnScreenSince { get; internal set; }
+
+    /// <summary>
     /// Power.log blocks enclosing the line being processed, outermost first. During <see cref="IPowerListener.OnBlockStart"/>
     /// and <see cref="IPowerListener.OnBlockEnd"/> it holds the blocks around the one starting or ending.
     /// </summary>

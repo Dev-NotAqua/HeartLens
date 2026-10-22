@@ -21,6 +21,17 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Tavern spells.** Spells are now part of the advice: the game plan prices them at their real cost, the shop panel marks the best spell to buy (spells need no board space), and the best pick is marked for spells too.
+
+**Read any card you hover.** Hover a card in the overlay — a card in the tier browser, a minion on a board, or a comp card row — and it grows, with a full-size card tooltip, so a tier 6 effect is finally readable.
+
+**Fixes**
+- Fixed the overlay sometimes staying stuck "in combat" while you were back in the tavern. A stale combat state now clears itself after two minutes, and shop cards end combat reliably.
+- Community stats could load completely empty: the Firestone feed carries null fields (a stat row with no turn, for example) that the reader treated as an error and dropped the whole card list. Those rows are skipped now, so minion, hero and comp statistics load again.
+- Card art now falls back to a second card database (hsbg.cards) when the first source cannot be reached, instead of showing an empty tile.
+
+## What was new in 0.3.0
+
 **New look.** Hearthlens now wears Hearthstone's colours: dark wood browns, parchment text and gold. The selected page is a framed tile with a gold bar instead of a stretched oval, and buttons, chips and panels have a cleaner, framed shape.
 
 **You choose your picks.** Two new settings under *Settings → In-game overlay*:
@@ -34,4 +45,4 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 - Windows: long pages (Settings, Battlegrounds) no longer cut off their content above the bottom bar.
 - Linux: the ARM (aarch64) .rpm builds again, and .rpm packages no longer clash with other apps that bundle the same libraries.
 
-Community stats: Firestone (zerotoheroes.com). Card data and art: HearthstoneJSON. Not affiliated with Blizzard Entertainment.
+Community stats: Firestone (zerotoheroes.com). Card data and art: HearthstoneJSON and hsbg.cards. Not affiliated with Blizzard Entertainment.

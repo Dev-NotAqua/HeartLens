@@ -6,8 +6,7 @@ namespace Hearthlens.Core.Battlegrounds.Effects.Ongoing;
 /// summoned as a fresh copy of its card (printed keywords) with the Attack it had and its maximum Health. All-type minions
 /// are Aberrations. See <see cref="DeityEffect"/> for how it awakens.
 /// </summary>
-// Not registered yet: no test covers it, so the card keeps its "not simulated" warning.
-// [CardEffect(Tokens.YShaarjId)]
+[CardEffect(Tokens.YShaarjId)]
 internal sealed class YShaarj : DeityEffect
 {
     protected override CardMechanic Mechanics => CardMechanic.Deathrattle;

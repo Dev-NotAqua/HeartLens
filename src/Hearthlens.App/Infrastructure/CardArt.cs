@@ -35,6 +35,12 @@ public static class CardArt
 
     public static string Locale { get; set; } = "enUS";
 
+    /// <summary>
+    /// Optional fallback URL provider for art HearthstoneJSON does not have (e.g. hsbg.cards), given the card id.
+    /// Wired by the host after card data loads; null keeps HearthstoneJSON as the only source.
+    /// </summary>
+    public static Func<string, string?>? FallbackUrl { get; set; }
+
     public static readonly DependencyProperty TileProperty = Register("Tile", ArtKind.Tile);
     public static readonly DependencyProperty PortraitProperty = Register("Portrait", ArtKind.Portrait);
     public static readonly DependencyProperty BattlegroundsCardProperty = Register("BattlegroundsCard", ArtKind.BattlegroundsCard);
@@ -120,13 +126,9 @@ public static class CardArt
                 await Downloads.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    using var response = await http.GetAsync(url).ConfigureAwait(false);
-                    if (response.IsSuccessStatusCode)
+                    if (!await TryDownloadAsync(http, url, file, dir).ConfigureAwait(false) && FallbackUrl?.Invoke(cardId) is { Length: > 0 } fallback)
                     {
-                        Directory.CreateDirectory(dir);
-                        var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-                        await File.WriteAllBytesAsync(file + ".tmp", bytes).ConfigureAwait(false);
-                        File.Move(file + ".tmp", file, overwrite: true);
+                        await TryDownloadAsync(http, fallback, file, dir).ConfigureAwait(false);
                     }
                 }
                 finally
@@ -156,6 +158,29 @@ public static class CardArt
         }
 
         return image;
+    }
+
+    private static async Task<bool> TryDownloadAsync(HttpClient http, string url, string file, string dir)
+    {
+        try
+        {
+            using var response = await http.GetAsync(url).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            Directory.CreateDirectory(dir);
+            var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            await File.WriteAllBytesAsync(file + ".tmp", bytes).ConfigureAwait(false);
+            File.Move(file + ".tmp", file, overwrite: true);
+            return true;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
+        {
+            Diag.Error($"Art download failed ({url})", ex);
+            return false;
+        }
     }
 
     private static BitmapImage Decode(string file, ArtKind kind)

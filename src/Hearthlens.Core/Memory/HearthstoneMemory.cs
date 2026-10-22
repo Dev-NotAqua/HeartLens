@@ -4,6 +4,12 @@ namespace Hearthlens.Core.Memory;
 
 public sealed record BattlegroundsRating(int Solo, int Duos);
 
+/// <summary>
+/// Live gold costs of the Battlegrounds game-mode buttons. Null when that button is not on screen;
+/// the costs include hero-power and trinket discounts.
+/// </summary>
+public sealed record BattlegroundsButtonCosts(int? Freeze, int? Roll, int? Upgrade, int? DarkGift);
+
 public sealed record RankInfo(string Format, int LeagueId, int StarLevel, int LegendRank, int SeasonId)
 {
     private static readonly string[] Leagues = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"];
@@ -164,6 +170,72 @@ public sealed class HearthstoneMemory : IDisposable
         var races = list.IntListItems();
         return races.Count is > 0 and < 16 ? races : null;
     });
+
+    /// <summary>
+    /// Live gold costs of the Battlegrounds game-mode buttons: freeze (slot 1), reroll (slot 2),
+    /// tavern upgrade (slot 3) and Dark Gift (slot 5). Null when the button is not on screen.
+    /// </summary>
+    public BattlegroundsButtonCosts? GetBattlegroundsButtonCosts() => Safe<BattlegroundsButtonCosts?>(rt =>
+    {
+        var zoneMgr = rt.FindClass("ZoneMgr")?.GetStatic("s_instance") ?? default;
+        if (zoneMgr.IsNull)
+        {
+            return null;
+        }
+
+        int? freeze = null, roll = null, upgrade = null, darkGift = null;
+        foreach (var zone in zoneMgr["m_zones"].ListItems())
+        {
+            if (zone.ClassName != "ZoneGameModeButton" || zone.Int("m_Side") != 1)
+            {
+                continue;
+            }
+
+            var slot = zone.Int("m_ButtonSlot");
+            if (slot is not (1 or 2 or 3 or 5))
+            {
+                continue;
+            }
+
+            foreach (var card in zone["m_cards"].ListItems())
+            {
+                var entity = card["m_entity"];
+                if (entity.IsNull)
+                {
+                    continue;
+                }
+
+                var cardId = entity.String("m_cardIdInternal");
+                if (cardId is null)
+                {
+                    continue;
+                }
+
+                // Slot 3 is the upgrade only when the card is the tier button; other slots are stable enough
+                // to read by position (freeze, reroll, Dark Gift).
+                if (slot == 3 && !cardId.StartsWith("TB_BaconShopTechUp", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var cost = entity.Int("m_realTimeCost");
+                switch (slot)
+                {
+                    case 1: freeze = cost; break;
+                    case 2: roll = cost; break;
+                    case 3: upgrade = cost; break;
+                    case 5: darkGift = cost; break;
+                }
+
+                break;
+            }
+        }
+
+        return new BattlegroundsButtonCosts(freeze, roll, upgrade, darkGift);
+    });
+
+    /// <summary>Gold cost of the live tavern-upgrade button, or null when it is not on screen.</summary>
+    public int? GetTavernUpgradeCost() => GetBattlegroundsButtonCosts()?.Upgrade;
 
     /// <summary>
     /// Card id of the hero whose Battlegrounds leaderboard tile is under the mouse, or null. Read straight from the

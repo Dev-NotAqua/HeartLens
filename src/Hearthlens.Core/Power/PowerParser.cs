@@ -136,7 +136,13 @@ public sealed partial class PowerParser
             return;
         }
 
-        Game.CombatOnScreen = line.AsSpan(at + OnScreenBoardState.Length).Trim() is "2";
+        var onScreen = line.AsSpan(at + OnScreenBoardState.Length).Trim() is "2";
+        if (onScreen && !Game.CombatOnScreen)
+        {
+            Game.CombatOnScreenSince = Environment.TickCount64;
+        }
+
+        Game.CombatOnScreen = onScreen;
     }
 
     private void UpdateClock(ReadOnlySpan<char> text)

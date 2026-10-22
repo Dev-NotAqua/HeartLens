@@ -166,6 +166,7 @@ public sealed class OverlayViewModel : Observable
     private IReadOnlyList<string> _ownedTrinkets = Array.Empty<string>();
     private string _darkGift = string.Empty;
     private string _freeze = string.Empty;
+    private ShopPlan? _shopPlan;
     private IReadOnlyList<string> _pairs = Array.Empty<string>();
     private IReadOnlyList<DiscoverBadge> _discoverBadges = Array.Empty<DiscoverBadge>();
     private string _oddsWin = string.Empty;
@@ -203,6 +204,7 @@ public sealed class OverlayViewModel : Observable
     public IReadOnlyList<string> OwnedTrinkets { get => _ownedTrinkets; private set => Set(ref _ownedTrinkets, value); }
     public string DarkGift { get => _darkGift; private set => Set(ref _darkGift, value); }
     public string Freeze { get => _freeze; private set => Set(ref _freeze, value); }
+    public ShopPlan? ShopPlan { get => _shopPlan; private set => Set(ref _shopPlan, value); }
     public IReadOnlyList<string> Pairs { get => _pairs; private set => Set(ref _pairs, value); }
     public IReadOnlyList<DiscoverBadge> DiscoverBadges { get => _discoverBadges; private set => Set(ref _discoverBadges, value); }
     public string OddsWin { get => _oddsWin; private set => Set(ref _oddsWin, value); }
@@ -324,7 +326,7 @@ public sealed class OverlayViewModel : Observable
         ApplyPickSettings(settings);
         ShowHeroPick = bg is { IsHeroSelection: true } && ShowPickPanels && bg.HeroOptions.Count > 0;
         var playing = bg is { IsHeroSelection: false, HeroCardId: not null } && ShowPickPanels;
-        ShowComp = playing && (bg!.Comps.Count > 0 || bg.Trinkets.Count > 0 || bg.DarkGiftAdvice.Length > 0 || bg.Pairs.Count > 0);
+        ShowComp = playing && (bg!.Comps.Count > 0 || bg.Trinkets.Count > 0 || bg.DarkGiftAdvice.Length > 0 || bg.Pairs.Count > 0 || bg.ShopPlan is not null);
         ShowTrinkets = playing && bg!.TrinketOptions.Count > 0;
         ShowDiscover = playing && bg!.DiscoverAdvice.Count > 0;
         ShowOdds = settings.ShowCombatOdds && bg is { InCombat: true, CombatOdds: not null };
@@ -426,19 +428,19 @@ public sealed class OverlayViewModel : Observable
         Replace(nameof(Tribes), view.Races, r => r, () => Tribes = view.Races.Select(r => Races.Display(r, _locale)).ToList());
         Combats = view.Combats.TakeLast(8)
             .Select(c => new CombatDot(c.Result, $"T{c.Turn} vs {_cards.NameOf(c.OpponentHeroCardId)} — {c.Result}{(c.DamageTaken > 0 ? $", took {c.DamageTaken}" : c.DamageDealt > 0 ? $", dealt {c.DamageDealt}" : string.Empty)}"
-                + (c.Odds is { } o ? $" · predicted {o.Win:P0} win, {o.Loss:P0} loss" : string.Empty)))
+                + (c.Odds is { } o ? $" · predicted {OddsPercent(o.Win, o.Runs)} win, {OddsPercent(o.Loss, o.Runs)} loss" : string.Empty)))
             .ToList();
 
         if (view.CombatOdds is { } odds)
         {
-            OddsWin = odds.Win.ToString("P0", CultureInfo.CurrentCulture);
-            OddsTie = odds.Tie.ToString("P0", CultureInfo.CurrentCulture);
-            OddsLoss = odds.Loss.ToString("P0", CultureInfo.CurrentCulture);
+            OddsWin = OddsPercent(odds.Win, odds.Runs);
+            OddsTie = OddsPercent(odds.Tie, odds.Runs);
+            OddsLoss = OddsPercent(odds.Loss, odds.Runs);
             WinShare = new System.Windows.GridLength(odds.Win, System.Windows.GridUnitType.Star);
             TieShare = new System.Windows.GridLength(odds.Tie, System.Windows.GridUnitType.Star);
             LossShare = new System.Windows.GridLength(odds.Loss, System.Windows.GridUnitType.Star);
             OddsNote = odds.Approximate
-                ? $"estimate · {odds.Unsimulated} minion effect{(odds.Unsimulated == 1 ? string.Empty : "s")} not simulated"
+                ? $"estimate · {odds.Unsimulated} effect{(odds.Unsimulated == 1 ? string.Empty : "s")} not simulated"
                 : "simulated from both boards";
         }
         RebuildTiers();
@@ -486,6 +488,8 @@ public sealed class OverlayViewModel : Observable
             ? view.DarkGiftAdvice
             : $"Dark Gift ready  ·  {(view.DarkGiftCost > 0 ? view.DarkGiftCost : 3)} gold";
         Freeze = highlight ? view.FreezeAdvice : string.Empty;
+        // "Stats only" keeps the plan's numbers but does not single out one turn-plan action.
+        ShopPlan = highlight ? view.ShopPlan : null;
         Replace(nameof(Pairs), view.Pairs, p => p, () => Pairs = view.Pairs.ToList());
 
         // The plan shows the player's choice (or lock), and the advisor's own pick only with "Mark the best".
@@ -829,6 +833,25 @@ public sealed class OverlayViewModel : Observable
             "DEATHKNIGHT" => "Death Knight",
             _ => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(cardClass.ToLowerInvariant()),
         };
+
+    /// <summary>
+    /// A Monte Carlo result cannot prove 0% or 100%: show open bounds unless the odds came from an exact board
+    /// (empty board, <see cref="Hearthlens.Core.Battlegrounds.CombatOdds.Runs"/> == 0).
+    /// </summary>
+    private static string OddsPercent(double value, int runs)
+    {
+        if (runs <= 0)
+        {
+            return value.ToString("P0", CultureInfo.CurrentCulture);
+        }
+
+        if (value < 0.0005)
+        {
+            return "<0.1%";
+        }
+
+        return value > 0.9995 ? ">99.9%" : value.ToString("P1", CultureInfo.CurrentCulture);
+    }
 
     private static string Ordinal(int n) => n switch
     {

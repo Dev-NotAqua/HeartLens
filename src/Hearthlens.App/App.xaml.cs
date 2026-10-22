@@ -199,6 +199,7 @@ public partial class App : Application
 
             _mainViewModel.Busy = "Loading card data…";
             _cards = await CardDb.LoadAsync(locale, _http);
+            CardArt.FallbackUrl = id => _cards.BgCards.ImageUrl(id);
             if (_cards.Count == 0 && locale != "enUS")
             {
                 _cards = await CardDb.LoadAsync("enUS", _http);

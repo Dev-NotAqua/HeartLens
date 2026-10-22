@@ -11,12 +11,13 @@ return args.FirstOrDefault() switch
     "mem" => Memory(),
     "hover" => Hover(args.Length > 1 ? int.Parse(args[1]) : 30),
     "class" => ClassDump(args[1], args.Skip(2).ToArray()),
+    "upgrade" => Upgrade(),
     _ => Usage(),
 };
 
 static int Usage()
 {
-    Console.WriteLine("usage: heroes <Power.log> [maxLines] | mem | class <Name> [path...]");
+    Console.WriteLine("usage: heroes <Power.log> [maxLines] | mem | upgrade | class <Name> [path...]");
     return 1;
 }
 
@@ -55,6 +56,8 @@ static int Memory()
     Console.WriteLine($"Post-game rating: {memory.GetPostGameBattlegroundsRating()}");
     var races = memory.GetBattlegroundsRaces();
     Console.WriteLine($"BG races: {(races is null ? "n/a" : string.Join(",", races))}");
+    Console.WriteLine($"BG upgrade cost: {memory.GetTavernUpgradeCost()?.ToString() ?? "n/a"}");
+    Console.WriteLine($"BG buttons: {memory.GetBattlegroundsButtonCosts()?.ToString() ?? "n/a"}");
     var players = memory.GetMatchPlayers();
     Console.WriteLine($"Match: local={players?.Local} opponent={players?.Opponent}");
     return 0;
@@ -81,6 +84,35 @@ static int Hover(int seconds)
         }
 
         Thread.Sleep(100);
+    }
+
+    return 0;
+}
+
+static int Upgrade()
+{
+    using var memory = new HearthstoneMemory();
+    if (!memory.EnsureAttached() || memory.Runtime is not { } runtime)
+    {
+        Console.WriteLine("Not attached: " + memory.Status);
+        return 2;
+    }
+
+    var zoneMgr = runtime.FindClass("ZoneMgr")?.GetStatic("s_instance") ?? default;
+    if (zoneMgr.IsNull)
+    {
+        Console.WriteLine("ZoneMgr not available");
+        return 3;
+    }
+
+    foreach (var zone in zoneMgr["m_zones"].ListItems())
+    {
+        Console.WriteLine($"{zone.ClassName} slot={zone.Int("m_ButtonSlot")} side={zone.Int("m_Side")}");
+        foreach (var card in zone["m_cards"].ListItems())
+        {
+            var entity = card["m_entity"];
+            Console.WriteLine($"  card={entity.String("m_cardIdInternal")} cost={entity.Int("m_realTimeCost")} tech={entity.Int("m_realTimePlayerTechLevel")}");
+        }
     }
 
     return 0;

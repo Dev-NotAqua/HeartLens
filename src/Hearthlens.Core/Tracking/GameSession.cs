@@ -339,6 +339,17 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
             }
         }
 
+        // The buttons are the authority for shop costs: they carry hero-power and trinket discounts.
+        if (inGame && game!.IsBattlegrounds)
+        {
+            var buttonCosts = _memory.GetBattlegroundsButtonCosts();
+            if (buttonCosts != _battlegrounds.LiveButtonCosts)
+            {
+                _battlegrounds.LiveButtonCosts = buttonCosts;
+                _dirty = true;
+            }
+        }
+
         if (inGame && game!.IsConstructedLike && !_ranksRead && game.Turn >= 1)
         {
             var players = _memory.GetMatchPlayers();
