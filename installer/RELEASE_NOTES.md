@@ -23,10 +23,26 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Meta stats for Constructed.** The Constructed page has two new tabs with Firestone's community stats, refreshed every few hours. Choose the format (Standard or Wild), the rank, the time period and the class.
+
+- **Meta tier list:** every archetype with its win rate, how it does going first and on the coin, and how much it is played. Sort by best win rate or most played. Click an archetype for its **mulligan guide** (the win rate when a card stays in your opening hand, and how often players keep it) and its best decklists.
+- **Top decks:** the strongest lists with enough games, with their dust cost and a **Copy** button. In Hearthstone, start a new deck and it offers to paste the list.
+- **Your decks** now show the meta archetype they match and its win rate.
+
+**A game plan that follows you.** The suggested comps now follow the cards on your board, so they change as you buy. Tribe chips above the list let you pick a tribe to build around, and its comps come first. You see up to seven comps, with no more than two built on the same tribes unless you already own their cards.
+
+**More hero stats.** The Battlegrounds hero tier list shows how often each hero finishes in the top 4 and in first place.
+
+**Fixes**
+
+- Lists on the Constructed page no longer stop the page from scrolling with the mouse wheel.
+- Comps without a tribe no longer start with a stray dot.
+
+## What was new in 0.7.6
 **Combat odds are back.** The win, tie and loss chances now stay on screen for the whole fight. Hearthstone writes the entire fight to its log about a second after it starts and then plays it for another half a minute; Hearthlens took the end of the log entry as the end of the fight, so the odds disappeared before the fight was even shown.
 
 ## What was new in 0.7.5
-**Pick your colours.** *Settings â†’ Theme* has seven ready-made themes: Tavern (the gold you know), Frost, Fel, Arcane, Ember, Tide and Shadow. Click one and the app and the in-game overlay switch right away. **Make your own** sets the accent colour, the background colour and how strongly the background is tinted, with a live preview. Wins, losses, tiers and card rarities keep their usual colours in every theme.
+**Pick your colours.** *Settings → Theme* has seven ready-made themes: Tavern (the gold you know), Frost, Fel, Arcane, Ember, Tide and Shadow. Click one and the app and the in-game overlay switch right away. **Make your own** sets the accent colour, the background colour and how strongly the background is tinted, with a live preview. Wins, losses, tiers and card rarities keep their usual colours in every theme.
 
 **Your last hero behind every page.** The art of the hero you played last fades in behind the page titles.
 
