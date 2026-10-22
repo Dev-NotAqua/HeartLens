@@ -23,6 +23,20 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Pick your colours.** *Settings â†’ Theme* has seven ready-made themes: Tavern (the gold you know), Frost, Fel, Arcane, Ember, Tide and Shadow. Click one and the app and the in-game overlay switch right away. **Make your own** sets the accent colour, the background colour and how strongly the background is tinted, with a live preview. Wins, losses, tiers and card rarities keep their usual colours in every theme.
+
+**Your last hero behind every page.** The art of the hero you played last fades in behind the page titles.
+
+**A cleaner window.**
+
+- Decorative rings and lines are gone; headings are just an icon and a title.
+- Stat labels read normally instead of in capitals.
+- One status chip instead of two: grey when Hearthstone is closed, gold when it runs, green when Hearthlens is connected.
+- Hero names in History were nearly black on the dark background; they are readable again.
+- The overlay's top bar keeps the lobby tribes on one row.
+
+## What was new in 0.7.4
+
 **A new look for the Windows app.** The whole app and the in-game overlay get a gilded tavern style:
 
 - Page titles and the logo are gold; panels look lit from above with a gold top edge.
