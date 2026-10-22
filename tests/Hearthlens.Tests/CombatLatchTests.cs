@@ -13,13 +13,16 @@ public sealed class CombatLatchTests
     [Fact]
     public void Stale_combat_screen_latch_is_released()
     {
+        // The clock is passed in on purpose: CI runners boot seconds before this test runs, so
+        // Environment.TickCount64 - 200_000 would be negative there and the latch timestamp would look unset.
+        const long now = 900_000;
         var game = new GameState
         {
             CombatOnScreen = true,
-            CombatOnScreenSince = Environment.TickCount64 - 200_000,
+            CombatOnScreenSince = now - 200_000,
         };
 
-        Assert.True(BattlegroundsTracker.CombatLatchStale(game));
+        Assert.True(BattlegroundsTracker.CombatLatchStale(game, now));
         Assert.False(game.CombatOnScreen);
         Assert.Equal(0, game.CombatOnScreenSince);
     }
@@ -27,13 +30,14 @@ public sealed class CombatLatchTests
     [Fact]
     public void Fresh_combat_screen_latch_is_kept()
     {
+        const long now = 900_000;
         var game = new GameState
         {
             CombatOnScreen = true,
-            CombatOnScreenSince = Environment.TickCount64,
+            CombatOnScreenSince = now,
         };
 
-        Assert.False(BattlegroundsTracker.CombatLatchStale(game));
+        Assert.False(BattlegroundsTracker.CombatLatchStale(game, now));
         Assert.True(game.CombatOnScreen);
     }
 
@@ -42,7 +46,7 @@ public sealed class CombatLatchTests
     {
         var game = new GameState { CombatOnScreen = true };
 
-        Assert.False(BattlegroundsTracker.CombatLatchStale(game));
+        Assert.False(BattlegroundsTracker.CombatLatchStale(game, 900_000));
         Assert.True(game.CombatOnScreen);
     }
 }

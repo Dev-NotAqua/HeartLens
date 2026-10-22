@@ -435,9 +435,12 @@ public sealed class BattlegroundsTracker : IPowerListener
     }
 
     /// <summary>True (and releases the latch) when the client's combat replay signal is older than the timeout.</summary>
-    internal static bool CombatLatchStale(GameState game)
+    internal static bool CombatLatchStale(GameState game) => CombatLatchStale(game, Environment.TickCount64);
+
+    /// <summary>Same check with the clock passed in, so tests do not depend on how long the machine has been up.</summary>
+    internal static bool CombatLatchStale(GameState game, long nowMs)
     {
-        if (game.CombatOnScreenSince <= 0 || Environment.TickCount64 - game.CombatOnScreenSince <= CombatLatchTimeoutMs)
+        if (game.CombatOnScreenSince <= 0 || nowMs - game.CombatOnScreenSince <= CombatLatchTimeoutMs)
         {
             return false;
         }
