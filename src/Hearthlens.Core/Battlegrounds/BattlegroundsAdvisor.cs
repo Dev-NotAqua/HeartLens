@@ -30,6 +30,11 @@ public sealed class BattlegroundsAdvisor
     /// <summary>Composition the player chose from the UI; null leaves no target (Manual) or lets the advisor choose (Auto).</summary>
     public string? PinnedCompId { get; set; }
 
+    /// <summary>The tribe the player wants to build around (race key); its comps come first when it is in the lobby.</summary>
+    public string? CompFocus { get; set; }
+
+    private const int ShownComps = 7;
+
     // The comp the advisor chose last time (Auto), so the suggestion does not flip on every small change.
     private string? _autoTargetId;
     private string? _autoTargetHero;
@@ -251,14 +256,20 @@ public sealed class BattlegroundsAdvisor
     private IReadOnlyList<CompAdvice> RankComps(
         BattlegroundsView view, List<MetaComp> viable, string baseHero, int bracket, Dictionary<string, int> owned, CardDb cards, bool lobbyKnown)
     {
+        var focus = CompFocus is { Length: > 0 } wanted && view.Races.Contains(wanted) ? wanted : null;
         var ranked = viable
             .Select(c =>
             {
+                var core = c.Cards.Count(card => card.Status == "CORE");
                 var ownedCore = c.Cards.Count(card => card.Status == "CORE" && owned.ContainsKey(card.CardId));
                 var ownedAddon = c.Cards.Count(card => card.Status != "CORE" && owned.ContainsKey(card.CardId));
                 var placement = HeroCompPlacement(c, baseHero, bracket);
+                // Most comps sit within a few tenths of a place of each other, so what you already own has to weigh more
+                // than that gap: half of a comp's core moves it past almost any other, and the list follows your board.
+                var fit = core == 0 ? 0 : ownedCore / (double)core;
+                var focused = focus is null ? 0 : c.Tribes.Contains(focus) ? -1.0 : 0.5;
                 return (Comp: c, Placement: placement, OwnedCore: ownedCore, Weight: (ownedCore * 2) + ownedAddon,
-                    Score: placement - (0.15 * ownedCore) - (0.05 * ownedAddon));
+                    Score: placement - (0.35 * ownedCore) - (0.1 * ownedAddon) - (0.6 * fit) + focused);
             })
             .OrderBy(x => x.Score)
             .ToList();
@@ -301,7 +312,27 @@ public sealed class BattlegroundsAdvisor
             }
         }
 
-        var shown = ranked.Take(5).ToList();
+        // At most two comps of the same tribes unless you already own part of them, so the list offers real choices
+        // instead of five versions of the strongest tribe.
+        var shown = ranked.Take(0).ToList();
+        var perTribes = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var x in ranked)
+        {
+            var key = string.Join('+', x.Comp.Tribes.Order(StringComparer.Ordinal));
+            perTribes.TryGetValue(key, out var count);
+            if (count >= 2 && x.Weight == 0)
+            {
+                continue;
+            }
+
+            perTribes[key] = count + 1;
+            shown.Add(x);
+            if (shown.Count == ShownComps)
+            {
+                break;
+            }
+        }
+
         if (target.Comp is not null && !shown.Any(x => x.Comp.Id == target.Comp.Id))
         {
             shown[^1] = target;

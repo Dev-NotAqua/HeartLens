@@ -113,6 +113,18 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         _dirty = true;
     }
 
+    /// <summary>The tribe the player wants to build around (race key), or null for any.</summary>
+    public void SetCompFocus(string? tribe)
+    {
+        if (Advisor.CompFocus == tribe)
+        {
+            return;
+        }
+
+        Advisor.CompFocus = tribe;
+        _dirty = true;
+    }
+
     /// <summary>
     /// Applies the "Game plan comp" setting; call at start-up and whenever settings change. Manual: the stored
     /// <paramref name="chosenCompId"/> becomes the choice. Switching to Auto drops the manual choice so the advisor

@@ -266,6 +266,38 @@ public sealed class OverlayViewModel : Observable
     /// <summary>Selected composition (pin) requested from the overlay.</summary>
     public event Action<string?>? PinRequested;
 
+    /// <summary>The player picked a tribe to build around (race key), or null for any.</summary>
+    public event Action<string?>? FocusRequested;
+
+    private string? _compFocus;
+    private IReadOnlyList<string> _focusRaces = Array.Empty<string>();
+    private IReadOnlyList<FocusChoice> _focusChoices = Array.Empty<FocusChoice>();
+
+    /// <summary>"Any" plus the lobby's tribes; the selected one is the tribe the comps are built around.</summary>
+    public IReadOnlyList<FocusChoice> FocusChoices { get => _focusChoices; private set => Set(ref _focusChoices, value); }
+
+    public RelayCommand FocusTribe { get; }
+
+    private void RebuildFocus(IReadOnlyList<string> races)
+    {
+        var focus = _compFocus is { Length: > 0 } f && races.Contains(f) ? f : null;
+        var key = $"{focus}|{string.Join(',', races)}";
+        _focusRaces = races;
+        if (key == _focusKey)
+        {
+            return;
+        }
+
+        _focusKey = key;
+        FocusChoices = races.Count == 0
+            ? Array.Empty<FocusChoice>()
+            : races.Select(r => new FocusChoice(r, Races.Display(r, _locale), r == focus))
+                .Prepend(new FocusChoice(string.Empty, "Any tribe", focus is null))
+                .ToList();
+    }
+
+    private string _focusKey = string.Empty;
+
     public OverlayViewModel()
     {
         SelectTier = new RelayCommand(p =>
@@ -281,6 +313,13 @@ public sealed class OverlayViewModel : Observable
             // Clicking the chosen (or locked) comp again clears it: no target in "I choose", automatic choice otherwise.
             var pinned = Target is { IsPinned: true } t && t.Id == id;
             PinRequested?.Invoke(pinned ? null : id);
+        });
+        FocusTribe = new RelayCommand(p =>
+        {
+            var key = p as string;
+            _compFocus = string.IsNullOrEmpty(key) || key == _compFocus ? null : key;
+            RebuildFocus(_focusRaces);
+            FocusRequested?.Invoke(_compFocus);
         });
         ToggleComp = new RelayCommand(() => CompCollapsed = !CompCollapsed);
         FinishLayout = new RelayCommand(() => LayoutEditing = false);
@@ -307,6 +346,7 @@ public sealed class OverlayViewModel : Observable
 
     public void Update(LiveSnapshot snapshot, CardDb cards, AppSettings settings, DeckAggregate? deck, MatchupAggregate? matchup)
     {
+        _compFocus = settings.CompFocus;
         _cards = cards;
         _locale = cards.Locale;
         var enabled = settings.OverlayEnabled && snapshot.InGame;
@@ -426,6 +466,7 @@ public sealed class OverlayViewModel : Observable
         RatingDelta = delta is { } dv && dv != 0 ? (dv > 0 ? $"+{dv}" : $"−{-dv}") : string.Empty;
 
         Replace(nameof(Tribes), view.Races, r => r, () => Tribes = view.Races.Select(r => Races.Display(r, _locale)).ToList());
+        RebuildFocus(view.Races);
         Combats = view.Combats.TakeLast(8)
             .Select(c => new CombatDot(c.Result, $"T{c.Turn} vs {_cards.NameOf(c.OpponentHeroCardId)} — {c.Result}{(c.DamageTaken > 0 ? $", took {c.DamageTaken}" : c.DamageDealt > 0 ? $", dealt {c.DamageDealt}" : string.Empty)}"
                 + (c.Odds is { } o ? $" · predicted {OddsPercent(o.Win, o.Runs)} win, {OddsPercent(o.Loss, o.Runs)} loss" : string.Empty)))

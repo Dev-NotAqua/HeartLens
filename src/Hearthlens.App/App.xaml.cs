@@ -135,6 +135,14 @@ public partial class App : Application
         _overlayViewModel = new OverlayViewModel();
         _session.SetCompMode(_settings.CompMode, _settings.ChosenCompId);
         _overlayViewModel.PinRequested += OnPinRequested;
+        _session.SetCompFocus(_settings.CompFocus);
+        _overlayViewModel.FocusRequested += tribe =>
+        {
+            _settings.CompFocus = tribe;
+            _session.SetCompFocus(tribe);
+            _settingsDebounce.Stop();
+            _settingsDebounce.Start();
+        };
 
         _mainViewModel.ThemeChanged += OnThemeChanged;
         _main = CreateMainWindow();

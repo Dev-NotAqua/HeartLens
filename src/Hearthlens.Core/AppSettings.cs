@@ -73,6 +73,9 @@ public sealed class AppSettings
     /// <summary>Comp id (Firestone) the player chose in <see cref="CompMode.Manual"/>, kept across games; null when none.</summary>
     public string? ChosenCompId { get; set; }
 
+    /// <summary>The tribe the player wants to build around (a race key such as "BEAST"); null for any.</summary>
+    public string? CompFocus { get; set; }
+
     // One bool per option of the two choices above, for the settings page's segmented radio buttons. Setting false is
     // ignored: the radio group unchecks the old option after the new one is checked.
 

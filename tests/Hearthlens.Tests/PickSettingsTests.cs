@@ -233,6 +233,30 @@ public sealed class PickSettingsTests
         Assert.Equal("murlocs", session.Advisor.PinnedCompId);
     }
 
+    [Fact]
+    public void Comps_follow_the_cards_on_your_board()
+    {
+        var (advisor, cards) = Advisor(CompMode.Manual);
+        var comps = advisor.Enrich(View(["BEAST", "MURLOC", "DEMON"], 6), null, cards).Comps;
+
+        // Both beast core cards are on the board, so beasts lead although murlocs place better on average.
+        Assert.Equal("beasts", comps[0].Id);
+    }
+
+    [Fact]
+    public void A_chosen_tribe_puts_its_comps_first()
+    {
+        var (advisor, cards) = Advisor(CompMode.Manual);
+        advisor.CompFocus = "DEMON";
+        var comps = advisor.Enrich(View(["BEAST", "MURLOC", "DEMON"], 6), null, cards).Comps.Select(c => c.Id).ToList();
+        Assert.True(comps.IndexOf("demons") < comps.IndexOf("murlocs"), string.Join(", ", comps));
+
+        // A tribe that is not in this lobby changes nothing.
+        advisor.CompFocus = "PIRATE";
+        var plain = advisor.Enrich(View(["BEAST", "MURLOC", "DEMON"], 6), null, cards).Comps.Select(c => c.Id).ToList();
+        Assert.True(plain.IndexOf("murlocs") < plain.IndexOf("demons"), string.Join(", ", plain));
+    }
+
     private static (BattlegroundsAdvisor Advisor, CardDb Cards) Advisor(CompMode mode)
     {
         const string json = """

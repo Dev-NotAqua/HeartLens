@@ -40,6 +40,9 @@ public sealed record ShopBadge(double Left, string Label, bool Best, string Plac
 
 public sealed record CompCardTile(string CardId, string Name, string Status, string StatusText, int Tier, bool Owned);
 
+/// <summary>A tribe chip in the game plan: build around it (Key is the race key; empty for any tribe).</summary>
+public sealed record FocusChoice(string Key, string Name, bool Selected);
+
 public sealed record CompRow(
     string Id,
     string Name,
