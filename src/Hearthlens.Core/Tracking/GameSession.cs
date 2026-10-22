@@ -58,6 +58,13 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
     private bool _hearthstoneRunning;
     private DateTime _nextProcessCheck;
     private DateTime _nextParseErrorNote;
+
+    // Diagnostics.
+    private int _lastLoggedTurn = -1;
+    private DateTime _nextClientConfigFix;
+    private DateTime _nextHeartbeat;
+    private int _publishCount;
+    private long _slowestPublishMs;
     private DateTime _nextConfigCheck;
     private IReadOnlyList<string> _logConfigMissing = Array.Empty<string>();
     private bool _dirty = true;
@@ -256,6 +263,16 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         {
             _nextConfigCheck = now.AddSeconds(30);
             _logConfigMissing = LogConfig.MissingSections(InstallDirectory);
+            if (ClientConfig.LimitActive(InstallDirectory))
+            {
+                _logConfigMissing = [.. _logConfigMissing, "log size limit"];
+                if (now >= _nextClientConfigFix && ClientConfig.LogSizeLimit(InstallDirectory) is not -1)
+                {
+                    // Removed again (a game repair, another tool): put it back so the next client start has no limit.
+                    _nextClientConfigFix = now.AddMinutes(10);
+                    LogConfig.EnsureAll(InstallDirectory);
+                }
+            }
         }
 
         // The memory is read on its own thread; this thread only says what it needs and applies what came back.
@@ -274,7 +291,29 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         {
             _dirty = false;
             _lastPublish = now;
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
             Publish();
+            var took = (long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+            _publishCount++;
+            _slowestPublishMs = Math.Max(_slowestPublishMs, took);
+            if (took > 250)
+            {
+                Diag.Info($"Building the overlay data took {took:N0} ms (turn {_parser?.Game?.Turn})");
+            }
+        }
+
+        if (now >= _nextHeartbeat)
+        {
+            _nextHeartbeat = now.AddSeconds(15);
+            var g = _parser?.Game;
+            var game = g is null
+                ? "none"
+                : $"{(g.GameType.Length > 0 ? g.GameType : "?")} turn {g.Turn}{(g.IsBattlegrounds ? $" (BG turn {g.BattlegroundsTurn})" : string.Empty)}, "
+                  + $"{(g.IsComplete ? "over" : "live")}, {g.Entities.Count} entities";
+            Diag.Debug($"Tracker: scene {_scene}, Hearthstone {(_hearthstoneRunning ? "running" : "not running")}, game {game}, "
+                       + $"{_publishCount} updates (slowest {_slowestPublishMs:N0} ms), memory: {_memory.Status}");
+            _publishCount = 0;
+            _slowestPublishMs = 0;
         }
     }
 
@@ -283,6 +322,12 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
     public void OnGameStarted(GameState game)
     {
         _gameGeneration++;
+        _lastLoggedTurn = -1;
+        if (!_catchingUp)
+        {
+            Diag.Info("Game started");
+        }
+
         _recorded = false;
         _ranksRead = false;
         _racesRead = false;
@@ -306,6 +351,18 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         if (_parser?.Game is not { } game)
         {
             return;
+        }
+
+        if (game.Turn != _lastLoggedTurn)
+        {
+            // One line per turn shows exactly how far the tracker got before anything stopped.
+            _lastLoggedTurn = game.Turn;
+            if (!_catchingUp)
+            {
+                Diag.Info(game.IsBattlegrounds
+                    ? $"BG turn {game.BattlegroundsTurn} (game turn {game.Turn}), {game.Entities.Count} entities"
+                    : $"Turn {game.Turn}, {game.Entities.Count} entities");
+            }
         }
 
         if (game.IsConstructedLike && _constructed.Deck is null && _gameDeck is not null && game.GameType.Length > 0)
@@ -337,6 +394,7 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
             return;
         }
 
+        Diag.Info($"Game finished: {record.Mode}, {record.Result}, place {record.Placement}, {record.Turns} turns{(_catchingUp ? " (replayed)" : string.Empty)}");
         try
         {
             _history.Add(record);

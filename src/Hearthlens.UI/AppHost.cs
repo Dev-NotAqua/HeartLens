@@ -126,7 +126,7 @@ public sealed class AppHost : IDisposable
             {
                 try
                 {
-                    return LogConfig.Ensure(InstallDirectory);
+                    return LogConfig.EnsureAll(InstallDirectory);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {

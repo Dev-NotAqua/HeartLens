@@ -23,6 +23,21 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Tracking no longer stops around turn 8.** Hearthstone stops writing its game log once the file reaches 10 MB, and a Battlegrounds game passes 10 MB around turn 8. From then on the game writes nothing more until it restarts, so the overlay froze with no error anywhere. Other trackers turn this limit off; Hearthlens did not. It now sets `FileSizeLimit.Int=-1` in the `[Log]` section of `client.config` in the Hearthstone folder, keeps everything else in that file, and puts the setting back if it disappears.
+
+**Restart Hearthstone once after installing this version.** The game only reads `client.config` when it starts. Hearthlens shows a "Restart Hearthstone" note while the old limit is still active, and another one if a game hits the limit.
+
+**Detailed diagnostic log.** `%APPDATA%\Hearthlens\hearthlens.log` now records what every part of the app is doing, so a problem can be traced to the second it started:
+
+- every turn, game start and game end;
+- every 15 seconds: the size of Hearthstone's log and how far Hearthlens has read it, lines handled, the game and turn the tracker sees, the memory reader's state, how many updates the window showed and how long it waited for them, RAM use;
+- a note when Hearthstone's log stops growing, when it stopped at the 10 MB limit, when a log pass or an overlay update is slow, and when the window does not respond;
+- the Hearthstone folder, the log settings and the size limit found at startup.
+
+The previous log is kept as `hearthlens.old.log` when the log reaches 4 MB.
+
+## What was new in 0.7.1 and 0.7.2
+
 **The overlay no longer rebuilds itself ten times a second.** Every update of the game replaced every list on the overlay with a new copy, even when nothing in it had changed. The window then threw away and rebuilt every row and set its card picture again, up to ten times a second. A fast PC hides that; a slower one cannot keep up and the overlay freezes. A list that did not change is now left alone.
 
 **Other fixes from a full bug hunt:**

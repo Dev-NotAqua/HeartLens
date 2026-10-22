@@ -46,6 +46,9 @@ public static class Diag
 
     public static void Info(string message) => Write("INFO", message);
 
+    /// <summary>Regular state reports (heartbeats), so a log shows what every part was doing when something stopped.</summary>
+    public static void Debug(string message) => Write("DEBUG", message);
+
     public static void Error(string message, Exception? ex = null) =>
         Write("ERROR", ex is null ? message : $"{message}: {ex}");
 
@@ -58,7 +61,8 @@ public static class Diag
                 var file = new FileInfo(AppPaths.LogFile);
                 if (file.Exists && file.Length > 4 * 1024 * 1024)
                 {
-                    file.Delete();
+                    // The previous file is kept, so a long session never loses the start of a problem.
+                    File.Move(AppPaths.LogFile, Path.ChangeExtension(AppPaths.LogFile, ".old.log"), overwrite: true);
                 }
 
                 File.AppendAllText(AppPaths.LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {level} {message}{Environment.NewLine}");

@@ -62,6 +62,18 @@ public partial class App : Application
     private DateTime _lastRecovery;
     private DateTime _lastRestart;
 
+    // Diagnostics: how fast the UI thread shows snapshots and answers at all.
+    private System.Threading.Timer? _uiProbe;
+    private long _probeSentAt;
+    private long _lastFreezeNote;
+    private long _scheduledAt;
+    private int _appliedCount;
+    private long _slowestApply;
+    private long _longestWait;
+    private long _slowestUi;
+    private int _watchTicks;
+    private bool _capNotified;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -93,6 +105,9 @@ public partial class App : Application
         };
 
         _settings = AppSettings.Load();
+        Diag.Info($"Hearthlens {UpdateService.CurrentVersion} (app {typeof(App).Assembly.GetName().Version?.ToString(3)}) starting on "
+                  + $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription}, {Environment.ProcessorCount} CPUs, "
+                  + $"{GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / (1024 * 1024):N0} MB RAM, software rendering {(_settings.OverlaySoftwareRendering ? "on" : "off")}");
         if (_settings.OverlaySoftwareRendering)
         {
             // Some Windows 10 GPUs and drivers never compose the transparent layered window in hardware,
@@ -167,6 +182,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _watchdog?.Stop();
+        _uiProbe?.Dispose();
         _watcher?.Dispose();
         if (_hotkeySource is not null)
         {
@@ -213,7 +229,7 @@ public partial class App : Application
             {
                 try
                 {
-                    return LogConfig.Ensure(_installDir);
+                    return LogConfig.EnsureAll(_installDir);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -249,11 +265,12 @@ public partial class App : Application
             _watchdog = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             _watchdog.Tick += (_, _) => WatchPipeline();
             _watchdog.Start();
+            _uiProbe = new System.Threading.Timer(ProbeUiThread, null, 2000, 1000);
             _mainViewModel.Busy = string.Empty;
 
             if (logConfigChanged && HearthstoneInstall.IsRunning())
             {
-                Notify("Restart Hearthstone", "Hearthlens enabled the game's logging. Restart Hearthstone once so tracking can start.");
+                Notify("Restart Hearthstone", "Hearthlens changed the game's log settings. Restart Hearthstone once so tracking starts and lasts whole games.");
             }
 
             await LoadMetaAsync();
@@ -360,6 +377,7 @@ public partial class App : Application
         Volatile.Write(ref _pending, snapshot);
         if (Interlocked.Exchange(ref _applyScheduled, 1) == 0)
         {
+            Volatile.Write(ref _scheduledAt, Environment.TickCount64);
             Dispatcher.BeginInvoke(ApplySnapshot, DispatcherPriority.Background);
         }
     }
@@ -373,10 +391,53 @@ public partial class App : Application
             return;
         }
 
+        var waited = Environment.TickCount64 - Volatile.Read(ref _scheduledAt);
+        _longestWait = Math.Max(_longestWait, waited);
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         _last = snapshot;
         _mainViewModel.Apply(snapshot);
         RefreshDeckStats(snapshot.Constructed);
         _overlayViewModel.Update(snapshot, _cards, _settings, _deckStats, _matchupStats);
+        var took = (long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        _appliedCount++;
+        _slowestApply = Math.Max(_slowestApply, took);
+        if (took > 200 || waited > 1000)
+        {
+            Diag.Info($"Showing a snapshot took {took:N0} ms after waiting {waited:N0} ms for the UI thread (BG turn {snapshot.Battlegrounds?.Turn})");
+        }
+    }
+
+    /// <summary>
+    /// Watches the UI thread from a background thread. When the window stops answering, this writes it to the log while
+    /// it happens; a frozen window could never write that line itself.
+    /// </summary>
+    private void ProbeUiThread(object? state)
+    {
+        var now = Environment.TickCount64;
+        var sent = Volatile.Read(ref _probeSentAt);
+        var snapshotWait = Volatile.Read(ref _applyScheduled) == 1 ? now - Volatile.Read(ref _scheduledAt) : 0;
+        if (((sent != 0 && now - sent > 5000) || snapshotWait > 5000) && now - _lastFreezeNote > 10_000)
+        {
+            _lastFreezeNote = now;
+            Diag.Info($"UI thread slow: {(sent != 0 ? $"not answering for {now - sent:N0} ms" : "answering")}, newest snapshot waiting {snapshotWait:N0} ms to be shown");
+        }
+
+        if (sent != 0)
+        {
+            return;
+        }
+
+        Volatile.Write(ref _probeSentAt, now);
+        Dispatcher.BeginInvoke(() =>
+        {
+            var lag = Environment.TickCount64 - Volatile.Read(ref _probeSentAt);
+            Volatile.Write(ref _probeSentAt, 0);
+            _slowestUi = Math.Max(_slowestUi, lag);
+            if (lag > 1000)
+            {
+                Diag.Info($"UI thread answered after {lag:N0} ms");
+            }
+        }, DispatcherPriority.Normal);
     }
 
     private void RefreshDeckStats(ConstructedView? view)
@@ -534,6 +595,33 @@ public partial class App : Application
         if (_watcher is null)
         {
             return;
+        }
+
+        if (++_watchTicks % 8 == 0)
+        {
+            using var process = System.Diagnostics.Process.GetCurrentProcess();
+            Diag.Debug($"Window: showed {_appliedCount} snapshots (BG turn {_last.Battlegrounds?.Turn}), slowest {_slowestApply:N0} ms, "
+                       + $"longest wait {_longestWait:N0} ms, slowest UI answer {_slowestUi:N0} ms, overlay {(_overlay.Suppressed ? "hidden" : "on")}, "
+                       + $"RAM {process.WorkingSet64 / (1024 * 1024):N0} MB, managed {GC.GetTotalMemory(false) / (1024 * 1024):N0} MB");
+            _appliedCount = 0;
+            _slowestApply = 0;
+            _longestWait = 0;
+            _slowestUi = 0;
+        }
+
+        if (_watcher.PowerLogCapped)
+        {
+            if (!_capNotified)
+            {
+                _capNotified = true;
+                var install = _installDir;
+                _ = Task.Run(() => LogConfig.EnsureAll(install));
+                Notify("Restart Hearthstone", "Hearthstone stopped writing its game log at its 10 MB limit, so tracking stopped. Hearthlens removed the limit: restart Hearthstone to keep tracking.");
+            }
+        }
+        else
+        {
+            _capNotified = false;
         }
 
         if (_watcher.LastProgressAgeMs > 15_000)
