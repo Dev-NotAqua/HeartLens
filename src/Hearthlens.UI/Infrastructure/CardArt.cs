@@ -28,6 +28,15 @@ public static class CardArt
 {
     private static readonly ConcurrentDictionary<string, Bitmap> Memory = new();
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> Pending = new();
+    private static readonly ConcurrentDictionary<string, bool> Unreadable = new();
+
+    /// <summary>
+    /// How many card images stay in memory. Without a limit every card a long session shows stays loaded and a small
+    /// PC starts swapping; the oldest images are dropped first.
+    /// </summary>
+    private const int MaxCachedImages = 160;
+
+    private static readonly Queue<string> MemoryOrder = new();
     private static readonly SemaphoreSlim Downloads = new(6);
 
     public static HttpClient? Http { get; set; }
@@ -129,6 +138,11 @@ public static class CardArt
         var dir = Path.Combine(AppPaths.Images, kind.ToString().ToLowerInvariant());
         var file = Path.Combine(dir, $"{cardId}.{ext}");
         Bitmap? image = null;
+        if (Unreadable.ContainsKey(Key(kind, cardId)))
+        {
+            return null;
+        }
+
         try
         {
             if (!File.Exists(file) && Http is { } http)
@@ -149,8 +163,15 @@ public static class CardArt
 
             if (File.Exists(file))
             {
-                await using var stream = File.OpenRead(file);
-                image = Bitmap.DecodeToWidth(stream, kind == ArtKind.Tile ? 256 : 200, BitmapInterpolationMode.HighQuality);
+                try
+                {
+                    await using var stream = File.OpenRead(file);
+                    image = Bitmap.DecodeToWidth(stream, kind == ArtKind.Tile ? 256 : 200, BitmapInterpolationMode.HighQuality);
+                }
+                catch (Exception ex) when (ex is not (OutOfMemoryException or IOException))
+                {
+                    Discard(Key(kind, cardId), file, ex);
+                }
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or NotSupportedException or InvalidOperationException
@@ -159,18 +180,60 @@ public static class CardArt
             Diag.Error($"Art {kind} {cardId} unavailable", ex);
         }
 
-        if (image is null)
+        if (image is not null)
         {
-            // Allow a later retry (e.g. after reconnecting).
-            Pending.TryRemove(Key(kind, cardId), out _);
+            Remember(Key(kind, cardId), image);
         }
-        else
-        {
-            Memory[Key(kind, cardId)] = image;
-        }
+
+        // Only loads in flight stay here. A finished task would keep its image alive after the memory cache dropped
+        // it (so the cache limit freed nothing), and a failed one must allow a later retry (e.g. after reconnecting).
+        Pending.TryRemove(Key(kind, cardId), out _);
 
         return image;
     }
+
+    /// <summary>Caches the image and drops the oldest ones when the cache is full.</summary>
+    private static void Remember(string key, Bitmap image)
+    {
+        Memory[key] = image;
+        lock (MemoryOrder)
+        {
+            MemoryOrder.Enqueue(key);
+            while (MemoryOrder.Count > MaxCachedImages)
+            {
+                // The bitmap is not disposed: a control may still show it; the GC frees it once nothing does.
+                Memory.TryRemove(MemoryOrder.Dequeue(), out _);
+            }
+        }
+    }
+
+    /// <summary>
+    /// PNG, JPEG or WebP signature. A proxy or a captive portal can answer 200 with a web page, which must never land
+    /// in the image cache: it would fail to decode for that card on every later start.
+    /// </summary>
+    private static bool LooksLikeImage(byte[] bytes) =>
+        bytes.Length > 12
+        && ((bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+            || (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+            || (bytes[0] == (byte)'R' && bytes[1] == (byte)'I' && bytes[2] == (byte)'F' && bytes[3] == (byte)'F'
+                && bytes[8] == (byte)'W' && bytes[9] == (byte)'E' && bytes[10] == (byte)'B' && bytes[11] == (byte)'P'));
+
+    /// <summary>Deletes a cached file that cannot be decoded, so the next session downloads it again.</summary>
+    private static void Discard(string key, string file, Exception ex)
+    {
+        // The card is not retried in this session: a format the system cannot decode would otherwise be
+        // downloaded and thrown away again on every redraw.
+        Unreadable[key] = true;
+        Diag.Error($"Cached art {Path.GetFileName(file)} is unreadable and was deleted", ex);
+        try
+        {
+            File.Delete(file);
+        }
+        catch (Exception deleteError) when (deleteError is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
 
     private static async Task<bool> TryDownloadAsync(HttpClient http, string url, string file, string dir)
     {
@@ -182,8 +245,14 @@ public static class CardArt
                 return false;
             }
 
-            Directory.CreateDirectory(dir);
             var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            if (!LooksLikeImage(bytes))
+            {
+                Diag.Info($"Art download was not an image ({url})");
+                return false;
+            }
+
+            Directory.CreateDirectory(dir);
             await File.WriteAllBytesAsync(file + ".tmp", bytes).ConfigureAwait(false);
             File.Move(file + ".tmp", file, overwrite: true);
             return true;

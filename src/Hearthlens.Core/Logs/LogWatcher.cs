@@ -250,6 +250,8 @@ public sealed class LogWatcher : IDisposable
     private bool _firstSession = true;
     private int _resync;
     private long _lastPollTicks = Environment.TickCount64;
+    private long _lastProgressTicks = Environment.TickCount64;
+    private volatile string _stage = "starting";
     private long _pendingBytes;
     private volatile bool _stopped;
 
@@ -264,6 +266,15 @@ public sealed class LogWatcher : IDisposable
     /// <summary>Milliseconds since the last polling pass finished (a dead or wedged watcher stops growing this).</summary>
     public long LastPollAgeMs => Environment.TickCount64 - Volatile.Read(ref _lastPollTicks);
 
+    /// <summary>
+    /// Milliseconds since the watcher last got anywhere: a finished pass or a delivered batch. A long replay keeps
+    /// this small; only a pass that is stuck in one place lets it grow.
+    /// </summary>
+    public long LastProgressAgeMs => Environment.TickCount64 - Volatile.Read(ref _lastProgressTicks);
+
+    /// <summary>What the watcher thread is doing, for the log when it gets stuck.</summary>
+    public string Stage => _stage;
+
     /// <summary>Bytes the game's logs have that the watcher has not delivered yet.</summary>
     public long PendingBytes => Volatile.Read(ref _pendingBytes);
 
@@ -277,6 +288,7 @@ public sealed class LogWatcher : IDisposable
     public void Start()
     {
         Volatile.Write(ref _lastPollTicks, Environment.TickCount64);
+        Volatile.Write(ref _lastProgressTicks, Environment.TickCount64);
         _thread = new Thread(Run) { IsBackground = true, Name = "Hearthlens log watcher" };
         _thread.Start();
     }
@@ -297,7 +309,9 @@ public sealed class LogWatcher : IDisposable
                 }
                 finally
                 {
+                    _stage = "waiting";
                     Volatile.Write(ref _lastPollTicks, Environment.TickCount64);
+                    Volatile.Write(ref _lastProgressTicks, Environment.TickCount64);
                 }
 
                 _cts.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(100));
@@ -319,6 +333,7 @@ public sealed class LogWatcher : IDisposable
         var resync = Interlocked.Exchange(ref _resync, 0);
         if (resync != 0)
         {
+            _stage = "re-reading the current game";
             Resync(replayCurrentGame: resync == 1);
         }
 
@@ -353,6 +368,7 @@ public sealed class LogWatcher : IDisposable
 
         foreach (var tail in _tails)
         {
+            _stage = "reading " + tail.FileName;
             var lines = tail.ReadNewLines();
             if (_stopped)
             {
@@ -362,7 +378,9 @@ public sealed class LogWatcher : IDisposable
 
             if (lines.Count > 0)
             {
+                _stage = "handling " + tail.FileName;
                 _consumer.OnLines(tail.FileName, lines, catchingUp: false);
+                Volatile.Write(ref _lastProgressTicks, Environment.TickCount64);
             }
         }
 
@@ -373,6 +391,7 @@ public sealed class LogWatcher : IDisposable
         }
 
         Volatile.Write(ref _pendingBytes, pending);
+        _stage = "updating the view";
         _consumer.OnTick();
     }
 
@@ -420,7 +439,9 @@ public sealed class LogWatcher : IDisposable
                     return;
                 }
 
+                _stage = "catching up on " + tail.FileName;
                 _consumer.OnLines(tail.FileName, lines, catchingUp: historical);
+                Volatile.Write(ref _lastProgressTicks, Environment.TickCount64);
             }
         }
     }

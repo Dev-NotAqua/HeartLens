@@ -146,6 +146,9 @@ public sealed record SimOptions
 
     /// <summary>Entity id of the minion that made the first attack, when known; attack order starts from it.</summary>
     public int FirstAttackerEntityId { get; init; }
+
+    /// <summary>Ends the runs early (checked every 100 runs); the odds then cover the runs done so far.</summary>
+    public CancellationToken Cancel { get; init; }
 }
 
 /// <summary>
@@ -195,6 +198,11 @@ public static class CombatSimulator
         int done = 0, wins = 0, losses = 0;
         for (; done < options.Runs; done++)
         {
+            if (done > 0 && done % 100 == 0 && options.Cancel.IsCancellationRequested)
+            {
+                break;
+            }
+
             if (clock is not null && done >= options.MinRuns && done % 100 == 0 && clock.Elapsed > options.TimeBudget)
             {
                 break;

@@ -22,6 +22,52 @@ public sealed class ProcessMemory : IDisposable
 
     public int ProcessId { get; }
 
+    // A scan follows pointers it read a moment earlier. When the game frees an object mid-scan those pointers turn
+    // into garbage, and a garbage length or link can keep a scan busy for minutes. Each scan therefore gets a read
+    // budget: once it is spent every further read fails at once and the scan ends with nothing.
+    [ThreadStatic] private static int t_readsLeft;
+    [ThreadStatic] private static long t_deadline;
+    [ThreadStatic] private static bool t_exhausted;
+
+    /// <summary>True when the current thread's read budget ran out, so the scan's result is incomplete.</summary>
+    public static bool BudgetExhausted => t_exhausted;
+
+    /// <summary>Limits the reads of the current thread until the returned scope is disposed.</summary>
+    public static ReadBudget Budget(int maxReads, TimeSpan maxTime) => new(maxReads, maxTime);
+
+    private static bool TakeFromBudget()
+    {
+        if (t_deadline == 0)
+        {
+            return true;
+        }
+
+        if (t_exhausted || --t_readsLeft < 0 || Stopwatch.GetTimestamp() > t_deadline)
+        {
+            t_exhausted = true;
+            return false;
+        }
+
+        return true;
+    }
+
+    public readonly struct ReadBudget : IDisposable
+    {
+        private readonly int _readsLeft;
+        private readonly long _deadline;
+        private readonly bool _exhausted;
+
+        internal ReadBudget(int maxReads, TimeSpan maxTime)
+        {
+            (_readsLeft, _deadline, _exhausted) = (t_readsLeft, t_deadline, t_exhausted);
+            t_readsLeft = maxReads;
+            t_deadline = Stopwatch.GetTimestamp() + (long)(maxTime.TotalSeconds * Stopwatch.Frequency);
+            t_exhausted = false;
+        }
+
+        public void Dispose() => (t_readsLeft, t_deadline, t_exhausted) = (_readsLeft, _deadline, _exhausted);
+    }
+
     public bool HasExited => !GetExitCodeProcess(_handle, out var code) || code != StillActive;
 
     public static ProcessMemory? Open(int processId)
@@ -52,7 +98,7 @@ public sealed class ProcessMemory : IDisposable
 
     public unsafe bool TryRead(ulong address, Span<byte> buffer)
     {
-        if (address < 0x10000 || _handle == 0)
+        if (address < 0x10000 || _handle == 0 || !TakeFromBudget())
         {
             return false;
         }

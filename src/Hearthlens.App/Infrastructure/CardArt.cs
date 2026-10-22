@@ -40,6 +40,7 @@ public static class CardArt
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new();
     private static readonly ConcurrentDictionary<string, Task<ImageSource?>> Pending = new();
     private static readonly Queue<string> MemoryOrder = new();
+    private static readonly ConcurrentDictionary<string, bool> Unreadable = new();
     private static readonly SemaphoreSlim Downloads = new(6);
 
     /// <summary>
@@ -176,6 +177,11 @@ public static class CardArt
         var dir = Path.Combine(AppPaths.Images, kind.ToString().ToLowerInvariant());
         var file = Path.Combine(dir, $"{cardId}.{ext}");
         ImageSource? image = null;
+        if (Unreadable.ContainsKey(Key(kind, cardId)))
+        {
+            return null;
+        }
+
         try
         {
             if (!File.Exists(file) && Http is { } http)
@@ -199,7 +205,14 @@ public static class CardArt
                 // Decoding an image costs tens of milliseconds. It used to happen on the UI thread (the file was
                 // already on disk), so a burst of card art — the comp panel alone asks for dozens — froze the
                 // overlay for seconds while the tracker kept running in the background.
-                image = await DecodeAsync(file, kind).ConfigureAwait(false);
+                try
+                {
+                    image = await DecodeAsync(file, kind).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    Discard(Key(kind, cardId), file, ex);
+                }
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or NotSupportedException)
@@ -207,15 +220,14 @@ public static class CardArt
             Diag.Error($"Art {kind} {cardId} unavailable", ex);
         }
 
-        if (image is null)
-        {
-            // Allow a later retry (e.g. after reconnecting).
-            Pending.TryRemove(Key(kind, cardId), out _);
-        }
-        else
+        if (image is not null)
         {
             Remember(Key(kind, cardId), image);
         }
+
+        // Only loads in flight stay here. A finished task would keep its image alive after the memory cache dropped
+        // it (so the cache limit freed nothing), and a failed one must allow a later retry (e.g. after reconnecting).
+        Pending.TryRemove(Key(kind, cardId), out _);
 
         return image;
     }
@@ -244,8 +256,14 @@ public static class CardArt
                 return false;
             }
 
-            Directory.CreateDirectory(dir);
             var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            if (!LooksLikeImage(bytes))
+            {
+                Diag.Info($"Art download was not an image ({url})");
+                return false;
+            }
+
+            Directory.CreateDirectory(dir);
             await File.WriteAllBytesAsync(file + ".tmp", bytes).ConfigureAwait(false);
             File.Move(file + ".tmp", file, overwrite: true);
             return true;
@@ -254,6 +272,33 @@ public static class CardArt
         {
             Diag.Error($"Art download failed ({url})", ex);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// PNG, JPEG or WebP signature. A proxy or a captive portal can answer 200 with a web page, which must never land
+    /// in the image cache: it would fail to decode for that card on every later start.
+    /// </summary>
+    private static bool LooksLikeImage(byte[] bytes) =>
+        bytes.Length > 12
+        && ((bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+            || (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+            || (bytes[0] == (byte)'R' && bytes[1] == (byte)'I' && bytes[2] == (byte)'F' && bytes[3] == (byte)'F'
+                && bytes[8] == (byte)'W' && bytes[9] == (byte)'E' && bytes[10] == (byte)'B' && bytes[11] == (byte)'P'));
+
+    /// <summary>Deletes a cached file that cannot be decoded, so the next session downloads it again.</summary>
+    private static void Discard(string key, string file, Exception ex)
+    {
+        // The card is not retried in this session: a format the system cannot decode would otherwise be
+        // downloaded and thrown away again on every redraw.
+        Unreadable[key] = true;
+        Diag.Error($"Cached art {Path.GetFileName(file)} is unreadable and was deleted", ex);
+        try
+        {
+            File.Delete(file);
+        }
+        catch (Exception deleteError) when (deleteError is IOException or UnauthorizedAccessException)
+        {
         }
     }
 

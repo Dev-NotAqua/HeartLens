@@ -23,6 +23,16 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**The overlay no longer rebuilds itself ten times a second.** Every update of the game replaced every list on the overlay with a new copy, even when nothing in it had changed. The window then threw away and rebuilt every row and set its card picture again, up to ten times a second. A fast PC hides that; a slower one cannot keep up and the overlay freezes. A list that did not change is now left alone.
+
+**Other fixes from a full bug hunt:**
+
+- **The tracker keeps going after a log line it does not understand.** Before, one unexpected line in Hearthstone's log threw away the rest of that batch, and the overlay could then show a wrong board or turn.
+- **Reading the game's memory never slows the tracker down.** It runs on its own thread, every scan has a time limit, and a few rare cases where it could loop forever or crash the app are fixed.
+- **No more restart loops on a slow PC.** The automatic recovery waited too little and could restart the log reader again and again while it was still working.
+- **Card pictures:** a broken picture on disk is deleted and downloaded again instead of staying blank forever; error pages are never saved as pictures; the picture cache really stays small now (finished downloads kept their pictures in memory).
+- **Updates:** the downloaded setup is checked against GitHub's checksum before it runs; a Windows user name with accents (for example `C:\Users\Niccolò`) or a `%` in a path no longer stops the update from installing; old setup files are deleted.
+
 **The freeze on a slower PC was the card images.** When a card image was already on disk, Hearthlens decoded it **on the interface thread**: decoding one picture takes tens of milliseconds, and the comp panel alone asks for dozens of them at once. The window stopped repainting for seconds — the tracker was still running in the background, which is why the overlay looked stuck on an old turn while the log showed no error at all. Images are now decoded away from the interface thread, at most four at a time.
 
 That was the last piece of the freeze hunt: the other causes (the fight simulation on the log thread, the 85 MB statistics file, the unbounded image cache, the memory reader) are already fixed in 0.7.0.

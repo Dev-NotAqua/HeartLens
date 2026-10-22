@@ -24,7 +24,8 @@ public enum UpdateTarget
 }
 
 /// <summary>A newer release than the running one, together with the file this platform needs.</summary>
-public sealed record UpdateInfo(string Version, string AssetName, string DownloadUrl, string PageUrl);
+/// <param name="Sha256">The file's SHA-256 as GitHub publishes it (lower-case hex), or null when the release has none.</param>
+public sealed record UpdateInfo(string Version, string AssetName, string DownloadUrl, string PageUrl, string? Sha256 = null);
 
 /// <summary>
 /// Looks for a newer Hearthlens release on GitHub, downloads the file this copy needs and installs a downloaded
@@ -138,7 +139,12 @@ public static class UpdateService
                     && GetString(asset, "name") == wanted
                     && GetString(asset, "browser_download_url") is { Length: > 0 } url)
                 {
-                    return new UpdateInfo(version, wanted, url, GetString(root, "html_url"));
+                    // GitHub publishes "sha256:<hex>" for every release file; the download is checked against it.
+                    var digest = GetString(asset, "digest");
+                    var sha256 = digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) && digest.Length == 71
+                        ? digest[7..].ToLowerInvariant()
+                        : null;
+                    return new UpdateInfo(version, wanted, url, GetString(root, "html_url"), sha256);
                 }
             }
 
@@ -198,10 +204,16 @@ public static class UpdateService
             var existing = new FileInfo(staged);
             if (existing.Exists && existing.Length > 0)
             {
-                return staged;
+                if (await MatchesDigestAsync(staged, info, cancellationToken))
+                {
+                    return staged;
+                }
+
+                File.Delete(staged);
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(staged)!);
+            DeleteOldDownloads(staged);
             var part = staged + ".part";
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromMinutes(30));
@@ -217,6 +229,14 @@ public static class UpdateService
                 await source.CopyToAsync(file, cts.Token);
             }
 
+            // The setup runs silently, so a file that is not exactly the published one is never kept.
+            if (!await MatchesDigestAsync(part, info, cancellationToken))
+            {
+                Diag.Info($"Update {info.Version} failed its checksum and was discarded.");
+                File.Delete(part);
+                return null;
+            }
+
             File.Move(part, staged, overwrite: true);
             ClearDownloadMark(staged);
             Diag.Info($"Update {info.Version} downloaded ({info.AssetName}).");
@@ -226,6 +246,38 @@ public static class UpdateService
         {
             Diag.Error("Update download failed", ex);
             return null;
+        }
+    }
+
+    /// <summary>True when the file has the SHA-256 the release publishes (or the release publishes none).</summary>
+    private static async Task<bool> MatchesDigestAsync(string path, UpdateInfo info, CancellationToken cancellationToken)
+    {
+        if (info.Sha256 is null)
+        {
+            return true;
+        }
+
+        await using var stream = File.OpenRead(path);
+        var hash = await System.Security.Cryptography.SHA256.HashDataAsync(stream, cancellationToken);
+        return Convert.ToHexStringLower(hash) == info.Sha256;
+    }
+
+    /// <summary>Earlier downloads are a hundred megabytes each and are never needed again.</summary>
+    private static void DeleteOldDownloads(string keep)
+    {
+        foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(keep)!))
+        {
+            if (!string.Equals(file, keep, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _ = ex;
+                }
+            }
         }
     }
 
@@ -306,9 +358,20 @@ public static class UpdateService
     /// </summary>
     public static string BuildApplyScript(int pid, string stagedFile, string sourceDir, string targetDir, string? relaunchExe, bool installer, string? cleanupDir)
     {
+        // cmd expands %NAME% even inside quotes, so a "%" in a path is doubled.
+        static string Cmd(string path) => path.Replace("%", "%%");
+        stagedFile = Cmd(stagedFile);
+        sourceDir = Cmd(sourceDir);
+        targetDir = Cmd(targetDir);
+        relaunchExe = relaunchExe is null ? null : Cmd(relaunchExe);
+        cleanupDir = cleanupDir is null ? null : Cmd(cleanupDir);
+
         var lines = new List<string>
         {
             "@echo off",
+            // The script is UTF-8; without this, cmd reads it in the OEM code page and a user name with accents
+            // (C:\Users\Niccolò) breaks every path, so the update never installs.
+            "chcp 65001 >nul",
             "rem Hearthlens update helper: waits for the app to close, then installs the downloaded update.",
             ":wait",
             $"tasklist /FI \"PID eq {pid}\" /NH 2>nul | find \"{pid}\" >nul",

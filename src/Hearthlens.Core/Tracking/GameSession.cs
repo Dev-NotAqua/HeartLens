@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Hearthlens.Core.Battlegrounds;
 using Hearthlens.Core.Cards;
@@ -23,6 +22,12 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
     private readonly ConstructedTracker _constructed = new();
     private readonly BattlegroundsTracker _battlegrounds = new();
     private readonly object _statsGate = new();
+
+    // The watchdog can replace a wedged log watcher while its thread is still in here. This lock keeps the old and the
+    // new thread from ever working on the parser at the same time.
+    private readonly object _pipelineGate = new();
+    private readonly MemoryPoller _memoryPoller;
+    private int _gameGeneration;
 
     private volatile CardDb _cards = CardDb.Empty;
     private PowerParser? _parser;
@@ -52,7 +57,7 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
 
     private bool _hearthstoneRunning;
     private DateTime _nextProcessCheck;
-    private DateTime _nextMemoryPoll;
+    private DateTime _nextParseErrorNote;
     private DateTime _nextConfigCheck;
     private IReadOnlyList<string> _logConfigMissing = Array.Empty<string>();
     private bool _dirty = true;
@@ -63,6 +68,7 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
     {
         _history = history;
         _memory = memory;
+        _memoryPoller = new MemoryPoller(memory);
         _history.Changed += () =>
         {
             lock (_statsGate)
@@ -136,6 +142,15 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
 
     public void OnSessionStarted(string sessionDir, DateTime sessionStart, bool attachedMidSession)
     {
+        lock (_pipelineGate)
+        {
+            OnSessionStartedCore(sessionDir, sessionStart, attachedMidSession);
+        }
+    }
+
+    private void OnSessionStartedCore(string sessionDir, DateTime sessionStart, bool attachedMidSession)
+    {
+        _gameGeneration++;
         _parser?.AbandonCurrentGame();
         _parser = new PowerParser(DateOnly.FromDateTime(sessionStart));
         _parser.AddListener(_constructed);
@@ -152,6 +167,15 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
     /// </summary>
     public void OnResync()
     {
+        lock (_pipelineGate)
+        {
+            OnResyncCore();
+        }
+    }
+
+    private void OnResyncCore()
+    {
+        _gameGeneration++;
         _parser?.ResetGame();
         _scene = "UNKNOWN";
         _dirty = true;
@@ -159,13 +183,36 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
 
     public void OnLines(string fileName, IReadOnlyList<string> lines, bool catchingUp)
     {
+        lock (_pipelineGate)
+        {
+            OnLinesCore(fileName, lines, catchingUp);
+        }
+    }
+
+    private void OnLinesCore(string fileName, IReadOnlyList<string> lines, bool catchingUp)
+    {
         _catchingUp = catchingUp;
         switch (fileName)
         {
             case "Power.log":
                 foreach (var line in lines)
                 {
-                    _parser?.Feed(line);
+                    // One line the parser does not expect (a new client format) must cost that line only. Before, the
+                    // exception dropped the rest of the batch, the game state went wrong and the overlay looked frozen.
+                    try
+                    {
+                        _parser?.Feed(line);
+                    }
+                    catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException
+                                                   or InvalidOperationException or IndexOutOfRangeException
+                                                   or KeyNotFoundException or NullReferenceException)
+                    {
+                        if (DateTime.UtcNow >= _nextParseErrorNote)
+                        {
+                            _nextParseErrorNote = DateTime.UtcNow.AddMinutes(1);
+                            Diag.Error($"Skipped a Power.log line the parser could not read: {line[..Math.Min(line.Length, 200)]}", ex);
+                        }
+                    }
                 }
 
                 _parser?.Flush();
@@ -185,6 +232,14 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
 
     public void OnTick()
     {
+        lock (_pipelineGate)
+        {
+            OnTickCore();
+        }
+    }
+
+    private void OnTickCore()
+    {
         var now = DateTime.UtcNow;
         if (now >= _nextProcessCheck)
         {
@@ -203,10 +258,16 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
             _logConfigMissing = LogConfig.MissingSections(InstallDirectory);
         }
 
-        if (_hearthstoneRunning && now >= _nextMemoryPoll)
+        // The memory is read on its own thread; this thread only says what it needs and applies what came back.
+        _memoryPoller.Post(_hearthstoneRunning ? BuildMemoryRequest() : null);
+        if (_memoryPoller.Take() is { } reading)
         {
-            _nextMemoryPoll = now.AddSeconds(_awaitingRatingKey is null ? 3 : 1);
-            PollMemory();
+            ApplyMemory(reading);
+        }
+
+        if (_awaitingRatingKey is not null && now > _awaitingRatingUntil)
+        {
+            _awaitingRatingKey = null;
         }
 
         if (_dirty && now - _lastPublish >= PublishInterval)
@@ -221,6 +282,7 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
 
     public void OnGameStarted(GameState game)
     {
+        _gameGeneration++;
         _recorded = false;
         _ranksRead = false;
         _racesRead = false;
@@ -297,7 +359,11 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
                 _awaitingRatingKey = record.Key;
                 _awaitingDuos = duos;
                 _awaitingRatingUntil = DateTime.UtcNow.AddSeconds(120);
-                _nextMemoryPoll = DateTime.UtcNow;
+                if (_hearthstoneRunning)
+                {
+                    _memoryPoller.Post(BuildMemoryRequest());
+                    _memoryPoller.Wake();
+                }
             }
         }
 
@@ -309,56 +375,47 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         _dirty = true;
     }
 
-    private void PollMemory()
+    private MemoryRequest BuildMemoryRequest()
     {
-        var started = Stopwatch.GetTimestamp();
-        try
-        {
-            PollMemoryCore();
-        }
-        finally
-        {
-            // A slow scan delays the log reader (both run on the tracking thread), so a scan that took unusually
-            // long backs off instead of running again right away.
-            var elapsed = (Stopwatch.GetTimestamp() - started) * 1000 / Stopwatch.Frequency;
-            if (elapsed > 1000)
-            {
-                Diag.Info($"Memory scan took {elapsed:N0} ms — slowing it down to keep the log reader responsive");
-                _nextMemoryPoll = DateTime.UtcNow.AddSeconds(10);
-            }
-        }
+        var game = _parser?.Game;
+        var inGame = game is { IsComplete: false };
+        var battlegrounds = inGame && game!.IsBattlegrounds;
+        return new MemoryRequest(
+            _gameGeneration,
+            inGame,
+            battlegrounds,
+            ReadRating: !inGame || battlegrounds || _scene == "BACON",
+            // Lobby tribes are set before hero selection, which is when the hero advisor needs them.
+            WantRaces: battlegrounds && !_racesRead,
+            WantRanks: inGame && game!.IsConstructedLike && !_ranksRead && game.Turn >= 1,
+            _awaitingRatingKey);
     }
 
-    private void PollMemoryCore()
+    /// <summary>Applies a memory reading on the tracking thread. Values read for an earlier game are dropped.</summary>
+    private void ApplyMemory(MemoryReading reading)
     {
-        if (!_memory.EnsureAttached())
+        var request = reading.Request;
+        if (_awaitingRatingKey is not null && request.AwaitingRatingKey == _awaitingRatingKey)
+        {
+            ApplyPostGameRating(reading.PostGameRating, reading.Rating);
+        }
+
+        if (request.ReadRating && reading.Rating is { } rating && rating != _rating)
+        {
+            _rating = rating;
+            _sessionStartRating ??= rating.Solo > 0 ? rating.Solo : null;
+            _dirty = true;
+        }
+
+        var game = _parser?.Game;
+        if (game is null || request.Generation != _gameGeneration)
         {
             return;
         }
 
-        var game = _parser?.Game;
-        var inGame = game is { IsComplete: false };
-
-        if (_awaitingRatingKey is not null)
+        if (request.WantRaces && !_racesRead)
         {
-            CheckPostGameRating();
-        }
-
-        if (!inGame || game!.IsBattlegrounds || _scene == "BACON")
-        {
-            var rating = _memory.GetBattlegroundsRating();
-            if (rating is not null && rating != _rating)
-            {
-                _rating = rating;
-                _sessionStartRating ??= rating.Solo > 0 ? rating.Solo : null;
-                _dirty = true;
-            }
-        }
-
-        // Lobby tribes are set before hero selection, which is when the hero advisor needs them.
-        if (inGame && game!.IsBattlegrounds && !_racesRead)
-        {
-            var raceIds = _memory.GetBattlegroundsRaces();
+            var raceIds = reading.Races;
             if (raceIds is { Count: >= 4 })
             {
                 _racesRead = true;
@@ -371,20 +428,15 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         }
 
         // The buttons are the authority for shop costs: they carry hero-power and trinket discounts.
-        if (inGame && game!.IsBattlegrounds)
+        if (request.InGame && request.Battlegrounds && reading.ButtonCosts != _battlegrounds.LiveButtonCosts)
         {
-            var buttonCosts = _memory.GetBattlegroundsButtonCosts();
-            if (buttonCosts != _battlegrounds.LiveButtonCosts)
-            {
-                _battlegrounds.LiveButtonCosts = buttonCosts;
-                _dirty = true;
-            }
+            _battlegrounds.LiveButtonCosts = reading.ButtonCosts;
+            _dirty = true;
         }
 
-        if (inGame && game!.IsConstructedLike && !_ranksRead && game.Turn >= 1)
+        if (request.WantRanks && !_ranksRead)
         {
-            var players = _memory.GetMatchPlayers();
-            if (players is { } p)
+            if (reading.Players is { } p)
             {
                 _ranksRead = true;
                 _constructed.LocalRank = PickRank(p.Local, game.FormatType);
@@ -394,13 +446,12 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         }
     }
 
-    private void CheckPostGameRating()
+    private void ApplyPostGameRating(int? postGameRating, BattlegroundsRating? current)
     {
         var before = _ratingAtGameStart is { } r ? (_awaitingDuos ? r.Duos : r.Solo) : 0;
-        int? after = _memory.GetPostGameBattlegroundsRating();
+        int? after = postGameRating;
         if (after is null)
         {
-            var current = _memory.GetBattlegroundsRating();
             var value = current is null ? 0 : _awaitingDuos ? current.Duos : current.Solo;
             if (value > 0 && value != before)
             {

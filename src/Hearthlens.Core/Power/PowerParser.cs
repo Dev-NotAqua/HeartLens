@@ -280,7 +280,19 @@ public sealed partial class PowerParser
 
         if (body.StartsWith("GameEntity EntityID=", StringComparison.Ordinal) && Game is { } g1)
         {
-            var id = int.Parse(body.AsSpan("GameEntity EntityID=".Length), CultureInfo.InvariantCulture);
+            // Only the leading digits: text the client may append after the id must not throw.
+            var digits = body.AsSpan("GameEntity EntityID=".Length);
+            var end = 0;
+            while (end < digits.Length && char.IsAsciiDigit(digits[end]))
+            {
+                end++;
+            }
+
+            if (!int.TryParse(digits[..end], NumberStyles.None, CultureInfo.InvariantCulture, out var id))
+            {
+                return;
+            }
+
             g1.GameEntityId = id;
             var entity = g1.GetOrCreate(id);
             entity.Name = "GameEntity";

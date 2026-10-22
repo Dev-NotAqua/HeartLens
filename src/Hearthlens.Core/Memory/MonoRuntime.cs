@@ -14,6 +14,9 @@ public sealed class MonoRuntime
     private readonly Dictionary<ulong, MonoClass> _classes = new();
     private readonly object _gate = new();
 
+    /// <summary>Stale objects can point anywhere; the class cache is dropped before it grows without end.</summary>
+    private const int MaxCachedClasses = 50_000;
+
     private MonoRuntime(ProcessMemory memory, ulong image)
     {
         Memory = memory;
@@ -96,13 +99,27 @@ public sealed class MonoRuntime
 
         lock (_gate)
         {
-            if (!_classes.TryGetValue(address, out var cls))
+            if (_classes.TryGetValue(address, out var cached))
             {
-                cls = new MonoClass(this, address);
-                _classes[address] = cls;
+                return cached;
+            }
+        }
+
+        // A stale object points at garbage instead of a class: such an address is neither used nor remembered.
+        var cls = new MonoClass(this, address);
+        if (!cls.LooksValid)
+        {
+            return null;
+        }
+
+        lock (_gate)
+        {
+            if (_classes.Count >= MaxCachedClasses)
+            {
+                _classes.Clear();
             }
 
-            return cls;
+            return _classes.TryAdd(address, cls) ? cls : _classes[address];
         }
     }
 
@@ -266,6 +283,9 @@ public sealed class MonoField
 
 public sealed class MonoClass
 {
+    /// <summary>Real class chains are a few levels deep; garbage parents can loop forever.</summary>
+    private const int MaxHierarchyDepth = 32;
+
     private readonly MonoRuntime _runtime;
     private IReadOnlyList<MonoField>? _fields;
     private readonly Dictionary<string, MonoField?> _lookup = new(StringComparer.Ordinal);
@@ -290,12 +310,35 @@ public sealed class MonoClass
 
     internal MonoClassKind Kind { get; }
 
+    /// <summary>Real classes have a known kind and a printable name; garbage memory almost never does.</summary>
+    internal bool LooksValid =>
+        Kind is >= MonoClassKind.Def and <= MonoClassKind.Pointer
+        && Name.Length is > 0 and < 256 && Name != "?" && Name.All(c => c is > ' ' and <= '~');
+
     public MonoClass? Parent => _runtime.ClassAt(_runtime.Memory.ReadPtr(Address + MonoOffsets.ClassParent));
 
     /// <summary>For array classes: size in bytes of one element.</summary>
     public int ElementSize => _runtime.Memory.ReadInt32(Address + MonoOffsets.ClassSizes);
 
-    public IReadOnlyList<MonoField> Fields => _fields ??= ReadFields();
+    public IReadOnlyList<MonoField> Fields
+    {
+        get
+        {
+            if (_fields is { } fields)
+            {
+                return fields;
+            }
+
+            // A failed or cut-short read is tried again next time instead of hiding the fields for good.
+            var read = ReadFields();
+            if (read.Count > 0 && !ProcessMemory.BudgetExhausted)
+            {
+                _fields = read;
+            }
+
+            return read;
+        }
+    }
 
     public MonoField? FindField(string name)
     {
@@ -307,19 +350,25 @@ public sealed class MonoClass
             }
 
             MonoField? found = null;
-            for (var cls = this; cls is not null && found is null; cls = cls.Parent)
+            var depth = 0;
+            for (var cls = this; cls is not null && found is null && depth++ < MaxHierarchyDepth; cls = cls.Parent)
             {
                 found = cls.Fields.FirstOrDefault(f => f.Name == name);
             }
 
-            _lookup[name] = found;
+            if (found is not null || !ProcessMemory.BudgetExhausted)
+            {
+                _lookup[name] = found;
+            }
+
             return found;
         }
     }
 
     public IEnumerable<MonoField> AllFields()
     {
-        for (var cls = this; cls is not null; cls = cls.Parent)
+        var depth = 0;
+        for (var cls = this; cls is not null && depth++ < MaxHierarchyDepth; cls = cls.Parent)
         {
             foreach (var field in cls.Fields)
             {
@@ -384,7 +433,10 @@ public sealed class MonoClass
             // Generic instances share the generic type definition's field metadata.
             var genericClass = memory.ReadPtr(Address + MonoOffsets.ClassGenericClass);
             var definition = _runtime.ClassAt(memory.ReadPtr(genericClass));
-            return definition?.Fields ?? Array.Empty<MonoField>();
+            // A generic instance is never its own definition: anything else is garbage and would recurse forever.
+            return definition is null || definition == this || definition.Kind == MonoClassKind.GInst
+                ? Array.Empty<MonoField>()
+                : definition.Fields;
         }
 
         if (Kind is not (MonoClassKind.Def or MonoClassKind.Gtd))
@@ -514,7 +566,7 @@ public readonly struct MonoObject
     {
         var items = Array("_items");
         var size = Math.Min(Int("_size"), items.Length);
-        for (var i = 0; i < size; i++)
+        for (var i = 0; i < size && !ProcessMemory.BudgetExhausted; i++)
         {
             yield return items.ObjectAt(i);
         }
@@ -524,7 +576,7 @@ public readonly struct MonoObject
     public IReadOnlyList<int> IntListItems()
     {
         var items = Array("_items");
-        var size = Math.Min(Int("_size"), items.Length);
+        var size = Math.Min(Math.Min(Int("_size"), items.Length), 4096);
         var result = new int[Math.Max(size, 0)];
         for (var i = 0; i < size; i++)
         {
@@ -538,7 +590,7 @@ public readonly struct MonoObject
     public IEnumerable<MonoObject> MapValues()
     {
         var values = Array("valueSlots");
-        for (var i = 0; i < values.Length; i++)
+        for (var i = 0; i < values.Length && !ProcessMemory.BudgetExhausted; i++)
         {
             var value = values.ObjectAt(i);
             if (!value.IsNull)
@@ -559,7 +611,7 @@ public readonly struct MonoObject
             size = 24;
         }
 
-        for (var i = 0; i < count; i++)
+        for (var i = 0; i < count && !ProcessMemory.BudgetExhausted; i++)
         {
             var value = entries.ObjectAtRaw((ulong)(i * size) + 16);
             if (!value.IsNull)

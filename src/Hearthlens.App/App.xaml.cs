@@ -60,6 +60,7 @@ public partial class App : Application
     private long _lastPending = -1;
     private DateTime _stallSince;
     private DateTime _lastRecovery;
+    private DateTime _lastRestart;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -535,10 +536,25 @@ public partial class App : Application
             return;
         }
 
-        if (_watcher.LastPollAgeMs > 10_000)
+        if (_watcher.LastProgressAgeMs > 15_000)
         {
-            Diag.Info($"Log watcher stopped polling for {_watcher.LastPollAgeMs / 1000}s; restarting it.");
-            RestartWatcher();
+            // A long replay delivers batches and keeps the clock moving, so only a pass stuck in one place gets here.
+            // At most one restart a minute: restarting a watcher that is still busy only adds work.
+            if (DateTime.UtcNow - _lastRestart >= TimeSpan.FromSeconds(60))
+            {
+                _lastRestart = DateTime.UtcNow;
+                Diag.Info($"Log watcher stuck for {_watcher.LastProgressAgeMs / 1000}s while {_watcher.Stage}; restarting it.");
+                RestartWatcher();
+            }
+
+            return;
+        }
+
+        if (_watcher.LastPollAgeMs > 2_000)
+        {
+            // A pass is still running (a replay or a big batch): that is busy, not stalled. Replaying the game now
+            // would only pile more work on a slow PC.
+            _stallSince = default;
             return;
         }
 

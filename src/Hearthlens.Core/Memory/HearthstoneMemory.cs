@@ -50,6 +50,15 @@ public sealed class HearthstoneMemory : IDisposable
     private ProcessMemory? _memory;
     private MonoRuntime? _runtime;
     private DateTime _nextAttachAttempt = DateTime.MinValue;
+    private bool _attaching;
+    private int _attachFailures;
+
+    // One scan reads a few thousand values; attaching walks the whole class table once.
+    private const int ScanReadBudget = 50_000;
+    private static readonly TimeSpan ScanTimeBudget = TimeSpan.FromSeconds(1.5);
+    private const int AttachReadBudget = 3_000_000;
+    private static readonly TimeSpan AttachTimeBudget = TimeSpan.FromSeconds(30);
+    private DateTime _nextBudgetNote = DateTime.MinValue;
     private readonly Dictionary<string, ulong> _netCacheObjects = new(StringComparer.Ordinal);
     private DateTime _netCacheRefreshAt = DateTime.MinValue;
 
@@ -89,40 +98,80 @@ public sealed class HearthstoneMemory : IDisposable
                 return false;
             }
 
-            if (DateTime.UtcNow < _nextAttachAttempt)
+            if (_attaching || DateTime.UtcNow < _nextAttachAttempt)
             {
                 return false;
             }
 
-            _nextAttachAttempt = DateTime.UtcNow.AddSeconds(5);
-            var process = Process.GetProcessesByName("Hearthstone").FirstOrDefault();
-            if (process is null)
+            _attaching = true;
+        }
+
+        // Attaching reads the game's whole class table. It runs outside the lock, so IsAttached (asked on the log
+        // thread for every snapshot) never waits for it.
+        (ProcessMemory? Memory, MonoRuntime? Runtime, string Status, bool Found) result;
+        try
+        {
+            result = Attach();
+        }
+        catch (Exception ex)
+        {
+            result = (null, null, "Attach failed: " + ex.Message, true);
+        }
+
+        lock (_gate)
+        {
+            _attaching = false;
+            Status = result.Status;
+            if (result.Runtime is null)
             {
-                Status = "Hearthstone not running";
+                result.Memory?.Dispose();
+                // A game that is running but cannot be read (an update moved things, a security tool blocks the
+                // reads) is tried less and less often instead of every few seconds.
+                _attachFailures = result.Found ? _attachFailures + 1 : 0;
+                _nextAttachAttempt = DateTime.UtcNow.AddSeconds(Math.Clamp(5 * _attachFailures, 5, 60));
                 return false;
             }
 
-            using (process)
-            {
-                var memory = ProcessMemory.Open(process.Id);
-                if (memory is null)
-                {
-                    Status = "Cannot open Hearthstone process (run as the same user)";
-                    return false;
-                }
+            _attachFailures = 0;
+            _memory = result.Memory;
+            _runtime = result.Runtime;
+            return true;
+        }
+    }
 
+    private static (ProcessMemory? Memory, MonoRuntime? Runtime, string Status, bool Found) Attach()
+    {
+        var processes = Process.GetProcessesByName("Hearthstone");
+        try
+        {
+            if (processes.Length == 0)
+            {
+                return (null, null, "Hearthstone not running", false);
+            }
+
+            var memory = ProcessMemory.Open(processes[0].Id);
+            if (memory is null)
+            {
+                return (null, null, "Cannot open Hearthstone process (run as the same user)", true);
+            }
+
+            using (ProcessMemory.Budget(AttachReadBudget, AttachTimeBudget))
+            {
                 var runtime = MonoRuntime.Attach(memory, out var error);
-                if (runtime is null)
+                if (runtime is null || ProcessMemory.BudgetExhausted)
                 {
                     memory.Dispose();
-                    Status = error;
-                    return false;
+                    return (null, null, runtime is null ? error : "Attaching took too long, retrying", true);
                 }
 
-                _memory = memory;
-                _runtime = runtime;
-                Status = $"Attached · {runtime.ClassCount:N0} classes";
-                return true;
+                return (memory, runtime, $"Attached · {runtime.ClassCount:N0} classes", true);
+            }
+        }
+        finally
+        {
+            foreach (var process in processes)
+            {
+                process.Dispose();
             }
         }
     }
@@ -157,6 +206,14 @@ public sealed class HearthstoneMemory : IDisposable
     /// object we need is remembered and only looked up again every few minutes.
     /// </summary>
     private MonoObject CachedNetCacheObject(MonoRuntime rt, string className)
+    {
+        lock (_netCacheObjects)
+        {
+            return CachedNetCacheObjectCore(rt, className);
+        }
+    }
+
+    private MonoObject CachedNetCacheObjectCore(MonoRuntime rt, string className)
     {
         var now = DateTime.UtcNow;
         if (now >= _netCacheRefreshAt)
@@ -416,7 +473,23 @@ public sealed class HearthstoneMemory : IDisposable
 
         try
         {
-            return read(runtime);
+            using (ProcessMemory.Budget(ScanReadBudget, ScanTimeBudget))
+            {
+                var result = read(runtime);
+                if (!ProcessMemory.BudgetExhausted)
+                {
+                    return result;
+                }
+            }
+
+            // The scan was cut short (usually objects freed mid-scan): its half-read values are not used.
+            if (DateTime.UtcNow >= _nextBudgetNote)
+            {
+                _nextBudgetNote = DateTime.UtcNow.AddMinutes(1);
+                Diag.Info("A memory scan ran out of its read budget and was skipped");
+            }
+
+            return default;
         }
         catch (Exception ex)
         {
@@ -430,7 +503,6 @@ public sealed class HearthstoneMemory : IDisposable
         _runtime = null;
         _memory?.Dispose();
         _memory = null;
-        _netCacheObjects.Clear();
         _netCacheRefreshAt = DateTime.MinValue;
     }
 

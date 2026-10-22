@@ -57,6 +57,7 @@ public sealed class BattlegroundsTracker : IPowerListener
 
     /// <summary>Number of the newest fight simulation; older results are dropped when they arrive late.</summary>
     private int _simulationGeneration;
+    private CancellationTokenSource? _simulationCancel;
 
     /// <summary>The accurate odds, once the background simulation has them.</summary>
     private volatile CombatOdds? _refinedOdds;
@@ -563,6 +564,10 @@ public sealed class BattlegroundsTracker : IPowerListener
     private void StartSimulation(SimSide ours, SimSide theirs, bool? oursFirst, SimOptions options)
     {
         var generation = Interlocked.Increment(ref _simulationGeneration);
+        // A newer fight (or a replay of the game) makes the running simulation useless: stop it instead of letting
+        // several of them fight over a slow CPU.
+        var cancel = new CancellationTokenSource();
+        Interlocked.Exchange(ref _simulationCancel, cancel)?.Cancel();
         _refinedOdds = null;
         _refinedGeneration = -1;
         _simulatedCombatIndex = _combats.Count;
@@ -585,7 +590,7 @@ public sealed class BattlegroundsTracker : IPowerListener
         {
             try
             {
-                var odds = CombatSimulator.Run(ours, theirs, oursFirst, options);
+                var odds = CombatSimulator.Run(ours, theirs, oursFirst, options with { Cancel = cancel.Token });
                 if (Volatile.Read(ref _simulationGeneration) == generation)
                 {
                     _refinedOdds = odds;
