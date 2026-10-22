@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Windows packages, buildable on Windows (Git Bash), Linux or macOS with the .NET 10 SDK and NSIS (makensis):
 #   dist/Hearthlens-Setup-<version>-win-x64.exe        setup wizard for the Windows app
+#   dist/Hearthlens-Portable-<version>-win-x64.zip     the Windows app as a zip: no setup, data kept next to it
 #   dist/Hearthlens-Preview-<version>-win-x64.zip      portable build of the cross-platform app, to try on Windows
 set -euo pipefail
 
@@ -40,6 +41,17 @@ SETUP="$DIST/Hearthlens-Setup-$VERSION-win-x64.exe"
 makensis -V2 -DVERSION="$VERSION" -DSOURCE_DIR="$WORK/app" -DOUT_FILE="$SETUP" \
   -DUNINSTALL_LIST="$WORK/uninstall-files.nsh" "$ROOT/installer/windows/hearthlens.nsi"
 echo "wrote $SETUP"
+
+echo "== Packing the portable Windows app"
+rm -rf "$WORK/portable"
+mkdir -p "$WORK/portable"
+cp -r "$WORK/app" "$WORK/portable/Hearthlens"
+# portable.txt makes Hearthlens keep its settings and history in a "data" folder next to Hearthlens.exe.
+printf 'Portable Hearthlens: settings and match history are kept in the "data" folder next to Hearthlens.exe.\r\nIt tells you when a new version is out but does not update itself.\r\n' > "$WORK/portable/Hearthlens/portable.txt"
+PORTABLE="$DIST/Hearthlens-Portable-$VERSION-win-x64.zip"
+rm -f "$PORTABLE"
+(cd "$WORK/portable" && zip -qr -9 "$PORTABLE" Hearthlens)
+echo "wrote $PORTABLE"
 
 echo "== Publishing the cross-platform app preview (win-x64)"
 dotnet publish "$ROOT/src/Hearthlens.Desktop/Hearthlens.Desktop.csproj" -c Release -r win-x64 --self-contained true \

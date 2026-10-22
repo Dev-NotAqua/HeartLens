@@ -3,6 +3,7 @@
 | System | File | How to install |
 |---|---|---|
 | **Windows 10/11** | `Hearthlens-Setup-<version>-win-x64.exe` | Run the setup wizard. It adds a desktop and Start menu shortcut, installs without administrator rights, and can be removed from **Settings → Apps**. |
+| Windows, portable | `Hearthlens-Portable-<version>-win-x64.zip` | Unzip anywhere and run `Hearthlens.exe`. Settings and history stay in the `data` folder next to it. It tells you about new versions but does not update itself. |
 | Windows (try the new cross-platform app) | `Hearthlens-Preview-<version>-win-x64.zip` | Unzip anywhere and run `Hearthlens.exe`. |
 | **macOS** (Apple silicon: M1/M2/M3/M4) | `Hearthlens-<version>-macOS-arm64.pkg` | Open the package and follow the wizard. Adds Hearthlens to Applications and a Desktop shortcut. |
 | **macOS** (Intel) | `Hearthlens-<version>-macOS-x64.pkg` | Same as above. |

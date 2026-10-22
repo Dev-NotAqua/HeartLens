@@ -3,12 +3,18 @@ namespace Hearthlens.Core;
 public static class AppPaths
 {
     /// <summary>
+    /// The portable zip ships a portable.txt next to the app: all data then lives in a "data" folder beside it.
+    /// Declared before <see cref="Root"/>, which reads it.
+    /// </summary>
+    public static bool IsPortable { get; } = File.Exists(Path.Combine(AppContext.BaseDirectory, "portable.txt"));
+
+    /// <summary>
     /// Data folder: %APPDATA%\Hearthlens on Windows, ~/Library/Application Support/Hearthlens on macOS,
     /// ~/.local/share/Hearthlens on Linux, the app's private files on Android. HEARTHLENS_DATA overrides it.
     /// </summary>
     public static string Root { get; } = Ensure(Environment.GetEnvironmentVariable("HEARTHLENS_DATA") is { Length: > 0 } custom
         ? custom
-        : Path.Combine(DefaultParent(), "Hearthlens"));
+        : IsPortable ? Path.Combine(AppContext.BaseDirectory, "data") : Path.Combine(DefaultParent(), "Hearthlens"));
 
     public static string Cache { get; } = Ensure(Path.Combine(Root, "cache"));
 

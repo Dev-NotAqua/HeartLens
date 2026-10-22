@@ -61,7 +61,7 @@ jobs:
         env:
           V: ${{ steps.v.outputs.version }}
         run: |
-          for f in "Hearthlens-Setup-$V-win-x64.exe" "Hearthlens-Preview-$V-win-x64.zip" \
+          for f in "Hearthlens-Setup-$V-win-x64.exe" "Hearthlens-Portable-$V-win-x64.zip" "Hearthlens-Preview-$V-win-x64.zip" \
                    "hearthlens_${V}_amd64.deb" "hearthlens_${V}_arm64.deb" \
                    "hearthlens-$V-1.x86_64.rpm" "hearthlens-$V-1.aarch64.rpm" \
                    "Hearthlens-$V-linux-x64.tar.gz" "Hearthlens-$V-linux-arm64.tar.gz" \
