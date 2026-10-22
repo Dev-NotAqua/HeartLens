@@ -146,6 +146,17 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
         Diag.Info($"Log session {Path.GetFileName(sessionDir)} (mid-session: {attachedMidSession})");
     }
 
+    /// <summary>
+    /// The watcher is replaying the current game from its start: drop the tracked copy without recording it as
+    /// finished. The replayed CREATE_GAME line rebuilds the parser, tracker and view from scratch.
+    /// </summary>
+    public void OnResync()
+    {
+        _parser?.ResetGame();
+        _scene = "UNKNOWN";
+        _dirty = true;
+    }
+
     public void OnLines(string fileName, IReadOnlyList<string> lines, bool catchingUp)
     {
         _catchingUp = catchingUp;

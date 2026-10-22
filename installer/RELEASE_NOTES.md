@@ -23,6 +23,26 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Nothing can leave the overlay frozen on an old turn any more.** If tracking stops following the game — the overlay keeps showing the board from an earlier round — press **Ctrl+Shift+R**, or choose **Hard refresh (re-read the current game)** from the tray menu. Hearthlens replays the current game from Hearthstone's log and rebuilds the board, turn, tavern tier, odds and game plan at the round you are actually on. It also re-shows the overlay if it had been hidden and puts it back on top of the game.
+
+**Hearthlens now notices a stall by itself.** A watchdog checks the log pipeline every two seconds: if the reader thread ever dies, it is restarted; if the game's log keeps growing while nothing is being read, the current game is replayed automatically. The freeze you had to fix by hand repairs itself.
+
+**Windows 10 overlay hardening**
+- The overlay re-asserts itself as the topmost window every few seconds, so another topmost window (a media overlay, a capture tool, the game itself) can no longer silently push it behind Hearthstone.
+- New tray option **Software overlay rendering**: some Windows 10 GPUs and drivers never draw the transparent overlay in hardware, so it is invisible while the app works. Turn this on and restart Hearthlens.
+- Pressing **Ctrl+Shift+H** (hide overlay) now shows a tray balloon telling you how to bring it back, so a hidden overlay is never a mystery.
+
+**Smaller and lighter:** attaching to a session that has been running for hours no longer loads the whole Power.log into memory. The last game is found by scanning backwards in blocks, which matters on a PC with little RAM.
+
+**Fixes**
+- Combat result: damage is no longer erased by a later heal or armor gain, so a fight you lost cannot become a tie in the history.
+- A fight whose boards could not be captured no longer inherits the previous fight's survivor counts and shows the wrong win/loss.
+- The dashboard's **ALL TIME** tile now counts every game (it stopped at 400 before).
+
+**If the overlay never appears on a Windows 10 PC:** in Hearthstone set *Options → Graphics → Display Mode* to **Windowed (Fullscreen)**, then turn on **Software overlay rendering** in the Hearthlens tray menu and restart the app. True fullscreen hands the screen to the game exclusively, which no overlay can draw over.
+
+## What was new in 0.5.0
+
 **Hearthlens updates itself now.** Downloading a new setup by hand is over: shortly after it starts, and every six hours after that, Hearthlens looks at GitHub for a newer release, fetches the file your system needs, and installs it **the next time you close Hearthlens**. Nothing pops up mid-game — the update waits until the app is closed, so a running overlay is never interrupted, and your match history, settings and overlay layout stay exactly as they are.
 
 - Windows: the new setup runs silently while Hearthlens is closed. A gold **Update ready — restart** chip appears in the top bar of the dashboard when you would rather install right away: one click closes the app, installs and comes back in the new version.

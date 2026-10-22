@@ -193,6 +193,18 @@ public sealed class HistoryStore
         Changed?.Invoke();
     }
 
+    /// <summary>Total number of recorded games (the dashboard's ALL TIME tile counts the whole history).</summary>
+    public int GameCount()
+    {
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM games;";
+            return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+        }
+    }
+
     public IReadOnlyList<GameRecord> Recent(int limit = 200, string? modeFilter = null)
     {
         var where = modeFilter switch

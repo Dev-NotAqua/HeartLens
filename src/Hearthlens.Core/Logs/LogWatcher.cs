@@ -7,6 +7,7 @@ public enum TailStart
 {
     Beginning,
     LastGame,
+    End,
 }
 
 /// <summary>Incrementally reads complete lines appended to one log file.</summary>
@@ -30,7 +31,38 @@ public sealed class LogTail
     {
         _path = Path.Combine(sessionDir, _fileName);
         _remainder = Array.Empty<byte>();
-        _position = start == TailStart.LastGame && File.Exists(_path) ? FindLastGameOffset(_path) : 0;
+        _position = start switch
+        {
+            TailStart.LastGame when File.Exists(_path) => FindLastGameOffset(_path),
+            TailStart.End when File.Exists(_path) => new FileInfo(_path).Length,
+            _ => 0,
+        };
+    }
+
+    /// <summary>Bytes appended to the file since the last read; 0 when the tail is caught up.</summary>
+    public long PendingBytes
+    {
+        get
+        {
+            try
+            {
+                if (_path is null)
+                {
+                    return 0;
+                }
+
+                var info = new FileInfo(_path);
+                return info.Exists ? Math.Max(0, info.Length - _position) : 0;
+            }
+            catch (IOException)
+            {
+                return 0;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return 0;
+            }
+        }
     }
 
     public List<string> ReadNewLines(int maxBytes = 8 * 1024 * 1024)
@@ -87,26 +119,54 @@ public sealed class LogTail
         return lines;
     }
 
+    /// <summary>
+    /// Offset of the line holding the last CREATE_GAME, scanning backwards in 1 MB blocks so a long session's
+    /// log is never loaded into memory in one piece (a mid-game log can be hundreds of megabytes).
+    /// </summary>
     private static long FindLastGameOffset(string path)
     {
         try
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            var data = new byte[stream.Length];
-            stream.ReadExactly(data);
-            var index = data.AsSpan().LastIndexOf(CreateGameMarker);
-            if (index < 0)
+            var length = stream.Length;
+            const int chunkSize = 1024 * 1024;
+            var position = length;
+            while (position > 0)
             {
-                return data.Length;
+                var size = (int)Math.Min(chunkSize, position);
+                var start = position - size;
+                // Read a little past the block so a marker split by the boundary is still seen whole.
+                var count = (int)Math.Min(size + CreateGameMarker.Length - 1, length - start);
+                var chunk = new byte[count];
+                stream.Seek(start, SeekOrigin.Begin);
+                stream.ReadExactly(chunk);
+
+                var index = chunk.AsSpan().LastIndexOf(CreateGameMarker);
+                if (index >= 0)
+                {
+                    return LineStart(stream, start + index);
+                }
+
+                position = start;
             }
 
-            var lineStart = data.AsSpan(0, index).LastIndexOf((byte)'\n');
-            return lineStart + 1;
+            return length;
         }
         catch (IOException)
         {
             return 0;
         }
+    }
+
+    /// <summary>Start of the line that contains <paramref name="offset"/>.</summary>
+    private static long LineStart(FileStream stream, long offset)
+    {
+        var from = Math.Max(0, offset - 64 * 1024);
+        var buffer = new byte[offset - from];
+        stream.Seek(from, SeekOrigin.Begin);
+        stream.ReadExactly(buffer);
+        var index = buffer.AsSpan().LastIndexOf((byte)'\n');
+        return index < 0 ? from : from + index + 1;
     }
 }
 
@@ -120,6 +180,12 @@ public interface ILogConsumer
 
     /// <summary>Called after each polling pass.</summary>
     void OnTick();
+
+    /// <summary>
+    /// The watcher is about to replay the current game from its start (hard refresh). The tracked state is rebuilt
+    /// from the replayed lines, so it must be dropped here without recording the game as finished.
+    /// </summary>
+    void OnResync() { }
 }
 
 /// <summary>Polls the active Hearthstone log session folder and streams new lines to a consumer.</summary>
@@ -139,6 +205,9 @@ public sealed class LogWatcher : IDisposable
     private string? _session;
     private DateTime _nextSessionCheck = DateTime.MinValue;
     private bool _firstSession = true;
+    private int _resync;
+    private long _lastPollTicks = Environment.TickCount64;
+    private long _pendingBytes;
 
     public LogWatcher(ILogConsumer consumer, Func<string?> installDir)
     {
@@ -148,31 +217,62 @@ public sealed class LogWatcher : IDisposable
 
     public string? CurrentSession => _session;
 
+    /// <summary>Milliseconds since the last polling pass finished (a dead or wedged watcher stops growing this).</summary>
+    public long LastPollAgeMs => Environment.TickCount64 - Volatile.Read(ref _lastPollTicks);
+
+    /// <summary>Bytes the game's logs have that the watcher has not delivered yet.</summary>
+    public long PendingBytes => Volatile.Read(ref _pendingBytes);
+
+    /// <summary>
+    /// Makes the next pass re-read the log. With <paramref name="replayCurrentGame"/> the current game is replayed
+    /// from its CREATE_GAME line, which rebuilds the whole board and turn (the recovery for a frozen overlay); without
+    /// it every file just jumps to its end.
+    /// </summary>
+    public void RequestResync(bool replayCurrentGame) => Interlocked.Exchange(ref _resync, replayCurrentGame ? 1 : 2);
+
     public void Start()
     {
+        Volatile.Write(ref _lastPollTicks, Environment.TickCount64);
         _thread = new Thread(Run) { IsBackground = true, Name = "Hearthlens log watcher" };
         _thread.Start();
     }
 
     private void Run()
     {
-        while (!_cts.IsCancellationRequested)
+        try
         {
-            try
+            while (!_cts.IsCancellationRequested)
             {
-                Poll();
-            }
-            catch (Exception ex)
-            {
-                Diag.Error("Log watcher pass failed", ex);
-            }
+                try
+                {
+                    Poll();
+                }
+                catch (Exception ex)
+                {
+                    Diag.Error("Log watcher pass failed", ex);
+                }
+                finally
+                {
+                    Volatile.Write(ref _lastPollTicks, Environment.TickCount64);
+                }
 
-            _cts.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(100));
+                _cts.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(100));
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // The watchdog restarted the watcher while this pass was still running: this thread is done.
         }
     }
 
     private void Poll()
     {
+        var resync = Interlocked.Exchange(ref _resync, 0);
+        if (resync != 0)
+        {
+            Resync(replayCurrentGame: resync == 1);
+        }
+
         if (DateTime.UtcNow >= _nextSessionCheck)
         {
             _nextSessionCheck = DateTime.UtcNow.AddSeconds(2);
@@ -197,6 +297,7 @@ public sealed class LogWatcher : IDisposable
 
         if (_session is null)
         {
+            Volatile.Write(ref _pendingBytes, 0);
             _consumer.OnTick();
             return;
         }
@@ -210,7 +311,46 @@ public sealed class LogWatcher : IDisposable
             }
         }
 
+        var pending = 0L;
+        foreach (var tail in _tails)
+        {
+            pending += tail.PendingBytes;
+        }
+
+        Volatile.Write(ref _pendingBytes, pending);
         _consumer.OnTick();
+    }
+
+    /// <summary>Re-attaches to the session folder and replays what is needed (see <see cref="RequestResync"/>).</summary>
+    private void Resync(bool replayCurrentGame)
+    {
+        var install = _installDir();
+        var latest = install is null ? null : HearthstoneInstall.LatestLogSession(install);
+        if (latest is null)
+        {
+            return;
+        }
+
+        _session = latest;
+        _firstSession = false;
+        _nextSessionCheck = DateTime.UtcNow.AddSeconds(2);
+        foreach (var tail in _tails)
+        {
+            if (replayCurrentGame && tail.FileName == "Power.log")
+            {
+                tail.Reset(latest, TailStart.LastGame);
+            }
+            else
+            {
+                tail.Reset(latest, TailStart.End);
+            }
+        }
+
+        _consumer.OnResync();
+        CatchUp(historical: true);
+        Diag.Info(replayCurrentGame
+            ? $"Tracking resynced: replaying the current game from {Path.GetFileName(latest)}"
+            : $"Tracking resynced: jumped to the end of {Path.GetFileName(latest)}");
     }
 
     private void CatchUp(bool historical)

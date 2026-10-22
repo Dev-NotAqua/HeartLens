@@ -41,6 +41,12 @@ public sealed class AppSettings
 
     public bool OverlayEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Draw the overlay with software rendering. Some Windows 10 GPUs and drivers never compose the transparent
+    /// layered window in hardware, so the overlay is invisible; this is the workaround (needs a restart).
+    /// </summary>
+    public bool OverlaySoftwareRendering { get; set; }
+
     public bool ShowDeckTracker { get; set; } = true;
 
     public bool ShowOpponentTracker { get; set; } = true;

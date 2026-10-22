@@ -305,6 +305,7 @@ public sealed class MainViewModel : Observable
             var all = _history.Recent(5000, mode);
             return (
                 Recent: recent,
+                Total: _history.GameCount(),
                 Bg: all.Where(g => g.Placement > 0).ToList(),
                 Rating: _history.RatingHistory(mode, 200),
                 Distribution: _history.PlacementDistribution(mode),
@@ -315,7 +316,7 @@ public sealed class MainViewModel : Observable
                 Session: bgGames);
         }).ConfigureAwait(true);
 
-        HistoryCount = data.Recent.Count;
+        HistoryCount = data.Total;
         Recent = data.Recent.Take(8).Select(Row).ToList();
         HistoryRows = data.Filtered.Take(300).Select(Row).ToList();
         RatingPoints = data.Rating;

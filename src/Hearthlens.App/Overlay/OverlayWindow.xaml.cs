@@ -37,6 +37,7 @@ public partial class OverlayWindow : Window
     private IntPtr _hwnd;
     private IntPtr _hearthstone;
     private DateTime _nextWindowLookup;
+    private DateTime _nextTopmost;
     private Native.RECT _lastRect;
     private bool _clickThrough = true;
     private bool _shown;
@@ -93,6 +94,19 @@ public partial class OverlayWindow : Window
     /// <summary>Off-screen render mode: never follow or cover the game window.</summary>
     public bool Offscreen { get; set; }
 
+    /// <summary>Puts the overlay back on top and forces the next tick to reposition it onto the game window.</summary>
+    public void ReassertTopmost()
+    {
+        if (!IsLoaded || Offscreen)
+        {
+            return;
+        }
+
+        _lastRect = default;
+        _nextTopmost = DateTime.MinValue;
+        _timer.Start();
+    }
+
     /// <summary>
     /// Reads the hero card id under the mouse on the Battlegrounds leaderboard from the game (null when none).
     /// Called off the UI thread; when it yields nothing the overlay falls back to leaderboard geometry.
@@ -147,12 +161,21 @@ public partial class OverlayWindow : Window
         {
             Root.Visibility = Visibility.Visible;
             _shown = true;
+            _lastRect = default; // reposition even if the game window did not move
         }
 
         if (!r.Equals(_lastRect))
         {
             _lastRect = r;
+            _nextTopmost = now.AddSeconds(3);
             Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, r.Left, r.Top, r.Width, r.Height, Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW);
+        }
+        else if (now >= _nextTopmost)
+        {
+            // Another topmost window (a media overlay, an anti-cheat, the game itself) can take the top of the
+            // Z-order; re-assert it so the overlay cannot silently disappear behind the game.
+            _nextTopmost = now.AddSeconds(3);
+            Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
         }
 
         _dpi = VisualTreeHelper.GetDpi(this).DpiScaleY;

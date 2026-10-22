@@ -109,6 +109,19 @@ public sealed partial class PowerParser
         FlushChoices();
     }
 
+    /// <summary>
+    /// Drops the current game without ending it. Used when the same game is replayed from its CREATE_GAME line
+    /// (hard refresh), so the replayed lines rebuild the state instead of being mixed with the old one.
+    /// </summary>
+    public void ResetGame()
+    {
+        Flush();
+        Game = null;
+        _tagTarget = null;
+        _choiceType = null;
+        _choiceOptions.Clear();
+    }
+
     /// <summary>Ends the current game if it never reached STATE=COMPLETE (log ended / client closed).</summary>
     public void AbandonCurrentGame()
     {

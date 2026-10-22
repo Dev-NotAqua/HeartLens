@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Hearthlens.App.Infrastructure;
 using Hearthlens.App.Main;
@@ -24,6 +25,7 @@ public partial class App : Application
 {
     private const int HotkeyId = 0x484C;
     private const int LayoutHotkeyId = 0x484D;
+    private const int RefreshHotkeyId = 0x484E;
 
     private Mutex? _mutex;
     private AppSettings _settings = new();
@@ -53,6 +55,11 @@ public partial class App : Application
     private string? _renderDir;
     private BattlegroundsMeta? _meta;
     private UpdateInfo? _stagedUpdate;
+    private DispatcherTimer? _watchdog;
+    private Forms.ToolStripMenuItem? _traySoftwareItem;
+    private long _lastPending = -1;
+    private DateTime _stallSince;
+    private DateTime _lastRecovery;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -85,6 +92,12 @@ public partial class App : Application
         };
 
         _settings = AppSettings.Load();
+        if (_settings.OverlaySoftwareRendering)
+        {
+            // Some Windows 10 GPUs and drivers never compose the transparent layered window in hardware,
+            // so the overlay is invisible; software rendering is the known workaround.
+            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+        }
         _http = new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression = DecompressionMethods.All,
@@ -152,11 +165,13 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _watchdog?.Stop();
         _watcher?.Dispose();
         if (_hotkeySource is not null)
         {
             Native.UnregisterHotKey(_hotkeySource.Handle, HotkeyId);
             Native.UnregisterHotKey(_hotkeySource.Handle, LayoutHotkeyId);
+            Native.UnregisterHotKey(_hotkeySource.Handle, RefreshHotkeyId);
         }
 
         if (_tray is not null)
@@ -230,6 +245,9 @@ public partial class App : Application
 
             _watcher = new LogWatcher(_session, () => _installDir);
             _watcher.Start();
+            _watchdog = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _watchdog.Tick += (_, _) => WatchPipeline();
+            _watchdog.Start();
             _mainViewModel.Busy = string.Empty;
 
             if (logConfigChanged && HearthstoneInstall.IsRunning())
@@ -436,6 +454,12 @@ public partial class App : Application
         _trayOverlayItem = new Forms.ToolStripMenuItem("Overlay", null, (_, _) => ToggleOverlaySetting()) { Checked = _settings.OverlayEnabled };
         menu.Items.Add(_trayOverlayItem);
         menu.Items.Add("Arrange overlay panels", null, (_, _) => _overlayViewModel.LayoutEditing = !_overlayViewModel.LayoutEditing);
+        menu.Items.Add("Hard refresh (re-read the current game)", null, (_, _) => HardRefresh("tray menu"));
+        _traySoftwareItem = new Forms.ToolStripMenuItem("Software overlay rendering (restart)", null, (_, _) => ToggleSoftwareRendering())
+        {
+            Checked = _settings.OverlaySoftwareRendering,
+        };
+        menu.Items.Add(_traySoftwareItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit", null, (_, _) => Quit());
         foreach (Forms.ToolStripItem item in menu.Items)
@@ -476,6 +500,105 @@ public partial class App : Application
         OnSettingsChanged();
     }
 
+    /// <summary>
+    /// Re-reads the log and rebuilds the tracked game: the manual recovery for an overlay frozen on an old turn.
+    /// It also un-hides a suppressed overlay and re-asserts topmost, so a vanished overlay comes back with it.
+    /// </summary>
+    private void HardRefresh(string reason, bool quiet = false)
+    {
+        if (_watcher is null)
+        {
+            return;
+        }
+
+        Diag.Info($"Hard refresh ({reason})");
+        _watcher.RequestResync(replayCurrentGame: true);
+        _overlay.Suppressed = false;
+        _overlay.ReassertTopmost();
+        _lastPending = -1;
+        _stallSince = default;
+        if (!quiet)
+        {
+            Notify("Hearthlens refreshed", "Re-read the current game from Hearthstone's log.");
+        }
+    }
+
+    /// <summary>
+    /// Watches the log pipeline itself. A watcher that stops polling was killed by an error on a background
+    /// thread; a log that keeps growing while nothing is delivered means the parser is wedged. Either way the
+    /// overlay would stay frozen, so the pipeline is restarted or the current game is replayed.
+    /// </summary>
+    private void WatchPipeline()
+    {
+        if (_watcher is null)
+        {
+            return;
+        }
+
+        if (_watcher.LastPollAgeMs > 10_000)
+        {
+            Diag.Info($"Log watcher stopped polling for {_watcher.LastPollAgeMs / 1000}s; restarting it.");
+            RestartWatcher();
+            return;
+        }
+
+        var pending = _watcher.PendingBytes;
+        if (pending <= 0 || pending < _lastPending)
+        {
+            // Caught up, or still draining a backlog (progress) — not a stall.
+            _stallSince = default;
+            _lastPending = pending;
+            return;
+        }
+
+        _lastPending = pending;
+        if (_stallSince == default)
+        {
+            _stallSince = DateTime.UtcNow;
+            return;
+        }
+
+        if (DateTime.UtcNow - _stallSince < TimeSpan.FromSeconds(12) || DateTime.UtcNow - _lastRecovery < TimeSpan.FromSeconds(30))
+        {
+            return;
+        }
+
+        _lastRecovery = DateTime.UtcNow;
+        Diag.Info($"Log pipeline stalled with {pending} unread bytes; re-reading the current game.");
+        HardRefresh("automatic recovery", quiet: true);
+    }
+
+    private void RestartWatcher()
+    {
+        try
+        {
+            _watcher?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Diag.Error("Log watcher restart failed", ex);
+        }
+
+        _watcher = new LogWatcher(_session, () => _installDir);
+        _watcher.Start();
+        _lastPending = -1;
+        _stallSince = default;
+    }
+
+    private void ToggleSoftwareRendering()
+    {
+        _settings.OverlaySoftwareRendering = !_settings.OverlaySoftwareRendering;
+        if (_traySoftwareItem is not null)
+        {
+            _traySoftwareItem.Checked = _settings.OverlaySoftwareRendering;
+        }
+
+        _settings.Save();
+        Notify("Overlay renderer", _settings.OverlaySoftwareRendering
+            ? "Software rendering is on; restart Hearthlens to apply it."
+            : "Hardware rendering is on; restart Hearthlens to apply it.");
+    }
+
     private void Quit()
     {
         _main.CloseForReal();
@@ -492,6 +615,13 @@ public partial class App : Application
             if (msg == Native.WM_HOTKEY && wParam.ToInt32() == HotkeyId)
             {
                 _overlay.Suppressed = !_overlay.Suppressed;
+                Notify(_overlay.Suppressed ? "Overlay hidden" : "Overlay shown",
+                    _overlay.Suppressed ? "Press Ctrl+Shift+H to show it again." : "Following Hearthstone again.");
+                handled = true;
+            }
+            else if (msg == Native.WM_HOTKEY && wParam.ToInt32() == RefreshHotkeyId)
+            {
+                HardRefresh("Ctrl+Shift+R");
                 handled = true;
             }
             else if (msg == Native.WM_HOTKEY && wParam.ToInt32() == LayoutHotkeyId)
@@ -510,6 +640,11 @@ public partial class App : Application
         if (!Native.RegisterHotKey(handle, LayoutHotkeyId, Native.MOD_CONTROL | Native.MOD_SHIFT | Native.MOD_NOREPEAT, 0x4C))
         {
             Diag.Info("Ctrl+Shift+L is taken by another app; layout hotkey disabled.");
+        }
+
+        if (!Native.RegisterHotKey(handle, RefreshHotkeyId, Native.MOD_CONTROL | Native.MOD_SHIFT | Native.MOD_NOREPEAT, 0x52))
+        {
+            Diag.Info("Ctrl+Shift+R is taken by another app; hard refresh hotkey disabled.");
         }
     }
 

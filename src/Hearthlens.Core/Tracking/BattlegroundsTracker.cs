@@ -465,6 +465,8 @@ public sealed class BattlegroundsTracker : IPowerListener
         _removedBy.Clear();
         _combatOdds = null;
         _pendingDamage = -1;
+        _localAlive = 0;
+        _opponentAlive = 0;
         _combatOpponent = game.OpponentPlayerEntity?.GetInt(GameTag.CurrentCombatPlayerId) ?? 0;
         _localHealthAtCombat = Durability(game.LocalHero);
         _opponentHealthAtCombat = Durability(LeaderboardHero(game, _combatOpponent));
@@ -482,8 +484,10 @@ public sealed class BattlegroundsTracker : IPowerListener
         }
 
         var combat = _combats[_pendingDamage];
-        var taken = Math.Max(0, _localHealthAtCombat - Durability(game.LocalHero));
-        var dealt = Math.Max(0, _opponentHealthAtCombat - Durability(LeaderboardHero(game, combat.OpponentPlayerId)));
+        // Damage and healing both move hero health after the fight: keep the largest damage seen, so a later
+        // heal (or armor gain) cannot erase it or flip a decided win/loss into a tie.
+        var taken = Math.Max(combat.DamageTaken, Math.Max(0, _localHealthAtCombat - Durability(game.LocalHero)));
+        var dealt = Math.Max(combat.DamageDealt, Math.Max(0, _opponentHealthAtCombat - Durability(LeaderboardHero(game, combat.OpponentPlayerId))));
         var result = taken > 0 ? "Loss" : dealt > 0 ? "Win" : combat.Result;
         _combats[_pendingDamage] = combat with { DamageTaken = taken, DamageDealt = dealt, Result = result };
     }
