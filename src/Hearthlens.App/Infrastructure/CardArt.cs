@@ -42,6 +42,12 @@ public static class CardArt
     private static readonly Queue<string> MemoryOrder = new();
     private static readonly SemaphoreSlim Downloads = new(6);
 
+    /// <summary>
+    /// How many images are decoded at the same time. Decoding is the expensive part, and a burst (the comp panel
+    /// asks for dozens of cards at once) must not eat the whole machine.
+    /// </summary>
+    private static readonly SemaphoreSlim Decodes = new(4);
+
     public static HttpClient? Http { get; set; }
 
     public static string Locale { get; set; } = "enUS";
@@ -190,7 +196,10 @@ public static class CardArt
 
             if (File.Exists(file))
             {
-                image = Decode(file, kind);
+                // Decoding an image costs tens of milliseconds. It used to happen on the UI thread (the file was
+                // already on disk), so a burst of card art — the comp panel alone asks for dozens — froze the
+                // overlay for seconds while the tracker kept running in the background.
+                image = await DecodeAsync(file, kind).ConfigureAwait(false);
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or NotSupportedException)
@@ -209,6 +218,20 @@ public static class CardArt
         }
 
         return image;
+    }
+
+    /// <summary>Decodes an image off the UI thread, with a limit on how many run at once.</summary>
+    private static async Task<ImageSource?> DecodeAsync(string file, ArtKind kind)
+    {
+        await Decodes.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await Task.Run(() => Decode(file, kind)).ConfigureAwait(false);
+        }
+        finally
+        {
+            Decodes.Release();
+        }
     }
 
     private static async Task<bool> TryDownloadAsync(HttpClient http, string url, string file, string dir)

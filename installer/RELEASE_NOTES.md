@@ -23,6 +23,12 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**The freeze on a slower PC was the card images.** When a card image was already on disk, Hearthlens decoded it **on the interface thread**: decoding one picture takes tens of milliseconds, and the comp panel alone asks for dozens of them at once. The window stopped repainting for seconds — the tracker was still running in the background, which is why the overlay looked stuck on an old turn while the log showed no error at all. Images are now decoded away from the interface thread, at most four at a time.
+
+That was the last piece of the freeze hunt: the other causes (the fight simulation on the log thread, the 85 MB statistics file, the unbounded image cache, the memory reader) are already fixed in 0.7.0.
+
+## What was new in 0.7.0
+
 **The overlay can no longer freeze mid-game on a slower PC.** Three things were blocking the tracker, and none of them show up on a fast machine:
 
 - The fight simulation ran on the same thread that reads Hearthstone's log. On a slow PC, simulating two big boards takes seconds — the log was not read during that time, so the overlay stopped updating in the middle of a fight. A quick estimate now appears right away and the accurate one is computed in the background.
