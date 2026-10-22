@@ -6,7 +6,7 @@
 #   dist/Hearthlens-<version>-macOS-<arch>.pkg   setup wizard that also adds a Desktop shortcut
 set -euo pipefail
 
-VERSION="${1:-0.7.5}"
+VERSION="${1:-0.7.6}"
 shift || true
 ARCHS=("${@:-arm64 x64}")
 read -r -a ARCHS <<< "${ARCHS[*]}"
