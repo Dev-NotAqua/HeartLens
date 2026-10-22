@@ -23,11 +23,37 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**The overlay can no longer freeze mid-game on a slower PC.** Three things were blocking the tracker, and none of them show up on a fast machine:
+
+- The fight simulation ran on the same thread that reads Hearthstone's log. On a slow PC, simulating two big boards takes seconds — the log was not read during that time, so the overlay stopped updating in the middle of a fight. A quick estimate now appears right away and the accurate one is computed in the background.
+- The community statistics file (85 MB) was parsed into a JSON document, which costs several hundred megabytes of RAM. On a small PC that is a freeze, then swapping. The file is now streamed and only the fields that are used are read.
+- Card images were cached without a limit. A 256 px card is a quarter of a megabyte, so a long game filled the memory and the system started to swap. The cache now keeps 160 images and drops the oldest.
+
+**Log reading got lighter.** The log is read in 256 KB blocks through one reused buffer instead of allocating a fresh multi-megabyte array on every pass — that churn is exactly what makes a low-memory PC stutter.
+
+**The memory reader does far less work.** It walked the whole cache of server objects on every poll, and that map grows during a session. The address it needs is now remembered, and a scan that takes longer than a second backs off and writes it to the log.
+
+**A restarted watcher no longer feeds the tracker twice.** When the watchdog replaces a stuck reader, the old thread stops delivering lines before it wakes up.
+
+**More accurate advice**
+
+- **Freeze** only when the card really cannot be bought now. It names the card, why it is worth keeping (completes a triple, core card, pair, or simply too strong to reroll away) and how much more gold is needed. Nothing is claimed when the gold is unknown.
+- A **pair is bought** instead of being rolled away: a pair leads to a triple, and a triple discovers a higher tier.
+- Core cards, add-ons, golden cards and the last copy of a pair are **never sold** to make room. When the board is full of cards worth keeping, the advice is to hold instead of selling your own plan.
+- **Rolling** is never advised while a triple, core card or pair is on offer.
+- **"Hold this turn"** now says what to save for: the tier upgrade and its cost, a full board worth keeping, or the health that makes leveling too risky.
+- The **Dark Gift** hint stays quiet when the gold is unknown and says what it costs.
+- **Comps no longer suggest cards that are not in this patch.** Cards that are not in the current tavern pool (and Duos-only cards in a solo game) are hidden, and a comp with no playable card left is not offered at all.
+- The tavern curve is corrected: tier 2 by turn 3, tier 3 by turn 5, tier 4 by turn 7, tier 5 by turn 10, tier 6 after that.
+
+## What was new in 0.6.0
+
 **Nothing can leave the overlay frozen on an old turn any more.** If tracking stops following the game — the overlay keeps showing the board from an earlier round — press **Ctrl+Shift+R**, or choose **Hard refresh (re-read the current game)** from the tray menu. Hearthlens replays the current game from Hearthstone's log and rebuilds the board, turn, tavern tier, odds and game plan at the round you are actually on. It also re-shows the overlay if it had been hidden and puts it back on top of the game.
 
 **Hearthlens now notices a stall by itself.** A watchdog checks the log pipeline every two seconds: if the reader thread ever dies, it is restarted; if the game's log keeps growing while nothing is being read, the current game is replayed automatically. The freeze you had to fix by hand repairs itself.
 
 **Windows 10 overlay hardening**
+
 - The overlay re-asserts itself as the topmost window every few seconds, so another topmost window (a media overlay, a capture tool, the game itself) can no longer silently push it behind Hearthstone.
 - New tray option **Software overlay rendering**: some Windows 10 GPUs and drivers never draw the transparent overlay in hardware, so it is invisible while the app works. Turn this on and restart Hearthlens.
 - Pressing **Ctrl+Shift+H** (hide overlay) now shows a tray balloon telling you how to bring it back, so a hidden overlay is never a mystery.
@@ -35,6 +61,7 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 **Smaller and lighter:** attaching to a session that has been running for hours no longer loads the whole Power.log into memory. The last game is found by scanning backwards in blocks, which matters on a PC with little RAM.
 
 **Fixes**
+
 - Combat result: damage is no longer erased by a later heal or armor gain, so a fight you lost cannot become a tie in the history.
 - A fight whose boards could not be captured no longer inherits the previous fight's survivor counts and shows the wrong win/loss.
 - The dashboard's **ALL TIME** tile now counts every game (it stopped at 400 before).

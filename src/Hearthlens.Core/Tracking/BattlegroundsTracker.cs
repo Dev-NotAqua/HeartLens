@@ -53,7 +53,19 @@ public sealed class BattlegroundsTracker : IPowerListener
     private IReadOnlyList<Entity> _trinketOffer = Array.Empty<Entity>();
     private IReadOnlyList<Entity> _discoverOffer = Array.Empty<Entity>();
     private Entity? _discoverSource;
-    private CombatOdds? _combatOdds;
+    private volatile CombatOdds? _combatOdds;
+
+    /// <summary>Number of the newest fight simulation; older results are dropped when they arrive late.</summary>
+    private int _simulationGeneration;
+
+    /// <summary>The accurate odds, once the background simulation has them.</summary>
+    private volatile CombatOdds? _refinedOdds;
+
+    /// <summary>Which simulation the refined odds belong to.</summary>
+    private int _refinedGeneration = -1;
+
+    /// <summary>Index of the combat the running simulation belongs to.</summary>
+    private int _simulatedCombatIndex = -1;
 
     // Player-level cards whose effects could take part in a fight (only registered effects are used).
     private static readonly string[] ExtraCardTypes = ["HERO_POWER", "BATTLEGROUND_TRINKET", "BATTLEGROUND_QUEST_REWARD"];
@@ -77,7 +89,15 @@ public sealed class BattlegroundsTracker : IPowerListener
     /// after 200 ms (at least 500 fights). Keyword-only boards need ~20–60 ms; a full 7v7 board full of effects
     /// ~100–160 ms once the code is warm, more on the first fight after start-up.
     /// </summary>
-    public SimOptions SimOptions { get; set; } = new() { TimeBudget = TimeSpan.FromMilliseconds(200) };
+    public SimOptions SimOptions { get; set; } = new()
+    {
+        TimeBudget = TimeSpan.FromMilliseconds(200),
+
+        // A live simulation must not hog the CPU while the game is running: the fight is only an estimate, so a
+        // few hundred runs are enough and a slow PC stops early instead of stalling the game.
+        MinRuns = 200,
+        Runs = 2000,
+    };
 
     public Func<string, HeroStats?>? HeroStatsProvider { get; set; }
 
@@ -255,6 +275,7 @@ public sealed class BattlegroundsTracker : IPowerListener
 
     public BattlegroundsView BuildView(GameState game)
     {
+        ApplyRefinedOdds();
         EndStaleCombat(game);
         // Combat as the player sees it: from the server resolving it until the client finishes playing it.
         // If the client never sent the closing BOARD_VISUAL_STATE line (build-dependent), the latch is released
@@ -464,6 +485,7 @@ public sealed class BattlegroundsTracker : IPowerListener
         _boardsSnapshotted = false;
         _removedBy.Clear();
         _combatOdds = null;
+        Interlocked.Increment(ref _simulationGeneration);
         _pendingDamage = -1;
         _localAlive = 0;
         _opponentAlive = 0;
@@ -505,12 +527,76 @@ public sealed class BattlegroundsTracker : IPowerListener
         bool? oursFirst = attacker is null ? null : attacker.Controller == game.LocalPlayerId;
         var options = SimOptions with { Effects = Effects, FirstAttackerEntityId = attacker?.Id ?? 0 };
         LastCapture = new CombatCapture(ours, theirs, oursFirst, options.FirstAttackerEntityId);
-        _combatOdds = CombatSimulator.Run(ours, theirs, oursFirst, options);
+        StartSimulation(ours, theirs, oursFirst, options);
         if (!_boardsSnapshotted)
         {
             // After start-of-combat attacks the history keeps the boards from before them (as they were shown).
             SnapshotBoards(game);
         }
+    }
+
+    /// <summary>
+    /// Takes the accurate odds from the background simulation. Runs on the tracking thread, so the combat list is
+    /// only ever written here.
+    /// </summary>
+    private void ApplyRefinedOdds()
+    {
+        var refined = _refinedOdds;
+        if (refined is null || _refinedGeneration != _simulationGeneration)
+        {
+            return;
+        }
+
+        _refinedOdds = null;
+        _combatOdds = refined;
+        if (_simulatedCombatIndex >= 0 && _simulatedCombatIndex < _combats.Count)
+        {
+            _combats[_simulatedCombatIndex] = _combats[_simulatedCombatIndex] with { Odds = refined };
+        }
+    }
+
+    /// <summary>
+    /// Estimates the fight. A quick estimate is calculated right away (the odds must be on screen while the fight
+    /// runs) and the accurate one is simulated in the background: a full simulation of two big boards takes seconds
+    /// on a slow PC, and doing that inline blocked the log reader, so the overlay stopped following the game.
+    /// </summary>
+    private void StartSimulation(SimSide ours, SimSide theirs, bool? oursFirst, SimOptions options)
+    {
+        var generation = Interlocked.Increment(ref _simulationGeneration);
+        _refinedOdds = null;
+        _refinedGeneration = -1;
+        _simulatedCombatIndex = _combats.Count;
+
+        try
+        {
+            _combatOdds = CombatSimulator.Run(ours, theirs, oursFirst, options with
+            {
+                Runs = 150,
+                MinRuns = 0,
+                TimeBudget = TimeSpan.FromMilliseconds(40),
+            });
+        }
+        catch (Exception ex)
+        {
+            Diag.Error("Combat simulation failed", ex);
+        }
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var odds = CombatSimulator.Run(ours, theirs, oursFirst, options);
+                if (Volatile.Read(ref _simulationGeneration) == generation)
+                {
+                    _refinedOdds = odds;
+                    _refinedGeneration = generation;
+                }
+            }
+            catch (Exception ex)
+            {
+                Diag.Error("Combat simulation failed", ex);
+            }
+        });
     }
 
     /// <summary>Records both boards for history (the opponent's last seen board, our final board).</summary>

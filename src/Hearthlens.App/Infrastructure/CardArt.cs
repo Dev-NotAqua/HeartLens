@@ -27,8 +27,19 @@ public enum ArtKind
 /// </summary>
 public static class CardArt
 {
+    /// <summary>
+    /// How many card images stay in memory. A 256 px bitmap is about a quarter of a megabyte, so an unbounded
+    /// cache grows with every card the game shows and pushes a small PC into swapping — the app then appears
+    /// frozen. The oldest images are dropped first.
+    /// </summary>
+    private const int MaxCachedImages = 160;
+
+    /// <summary>How many finished load tasks are remembered; they only keep the image reachable.</summary>
+    private const int MaxPendingTasks = 2000;
+
     private static readonly ConcurrentDictionary<string, ImageSource> Memory = new();
     private static readonly ConcurrentDictionary<string, Task<ImageSource?>> Pending = new();
+    private static readonly Queue<string> MemoryOrder = new();
     private static readonly SemaphoreSlim Downloads = new(6);
 
     public static HttpClient? Http { get; set; }
@@ -105,8 +116,48 @@ public static class CardArt
 
     private static string Key(ArtKind kind, string cardId) => $"{kind}:{cardId}";
 
-    public static Task<ImageSource?> GetAsync(ArtKind kind, string cardId) =>
-        Pending.GetOrAdd(Key(kind, cardId), _ => LoadAsync(kind, cardId));
+    public static Task<ImageSource?> GetAsync(ArtKind kind, string cardId)
+    {
+        var key = Key(kind, cardId);
+        TrimPending();
+        return Pending.GetOrAdd(key, _ => LoadAsync(kind, cardId));
+    }
+
+    /// <summary>Keeps the task dictionary from growing for every card the session ever shows.</summary>
+    private static void TrimPending()
+    {
+        if (Pending.Count <= MaxPendingTasks)
+        {
+            return;
+        }
+
+        foreach (var entry in Pending)
+        {
+            if (entry.Value.IsCompletedSuccessfully)
+            {
+                Pending.TryRemove(entry.Key, out _);
+            }
+
+            if (Pending.Count <= MaxPendingTasks)
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>Caches the image and drops the oldest ones when the cache is full.</summary>
+    private static void Remember(string key, ImageSource image)
+    {
+        Memory[key] = image;
+        lock (MemoryOrder)
+        {
+            MemoryOrder.Enqueue(key);
+            while (MemoryOrder.Count > MaxCachedImages)
+            {
+                Memory.TryRemove(MemoryOrder.Dequeue(), out _);
+            }
+        }
+    }
 
     private static async Task<ImageSource?> LoadAsync(ArtKind kind, string cardId)
     {
@@ -154,7 +205,7 @@ public static class CardArt
         }
         else
         {
-            Memory[Key(kind, cardId)] = image;
+            Remember(Key(kind, cardId), image);
         }
 
         return image;

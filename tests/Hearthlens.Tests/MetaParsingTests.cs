@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Hearthlens.Core;
 using Hearthlens.Core.Battlegrounds;
 using Xunit;
 
@@ -93,5 +94,37 @@ public sealed class MetaParsingTests
         Assert.Equal(["BEAST"], comp.Tribes);
         Assert.Equal(4.1, comp.PlacementAtMmr[25], 3);
         Assert.Equal(3.9, comp.HeroPlacement["HERO_GOOD"].Placement, 3);
+    }
+
+    /// <summary>
+    /// The comp file is tens of megabytes and is read without building a document. The streamed result must be
+    /// exactly the result the document parser produces.
+    /// </summary>
+    [Fact]
+    public void Streamed_comp_parser_matches_the_document_parser()
+    {
+        var file = Path.Combine(AppPaths.Cache, "meta", "comp-stats.json");
+        if (!File.Exists(file))
+        {
+            return;
+        }
+
+        using var doc = JsonDocument.Parse(File.ReadAllBytes(file));
+        var fromDocument = BattlegroundsMeta.ParseComps(doc.RootElement, null).ToList();
+        var fromStream = BattlegroundsMeta.ParseCompsFile(file, null);
+
+        Assert.NotEmpty(fromDocument);
+        Assert.Equal(fromDocument.Count, fromStream.Count);
+        for (var i = 0; i < fromDocument.Count; i++)
+        {
+            Assert.Equal(fromDocument[i].Id, fromStream[i].Id);
+            Assert.Equal(fromDocument[i].AveragePlacement, fromStream[i].AveragePlacement, 6);
+            Assert.Equal(fromDocument[i].PlacementAtMmr.Count, fromStream[i].PlacementAtMmr.Count);
+            Assert.Equal(fromDocument[i].HeroPlacement.Count, fromStream[i].HeroPlacement.Count);
+            foreach (var (mmr, placement) in fromDocument[i].PlacementAtMmr)
+            {
+                Assert.Equal(placement, fromStream[i].PlacementAtMmr[mmr], 6);
+            }
+        }
     }
 }

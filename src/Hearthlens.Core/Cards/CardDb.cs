@@ -69,6 +69,21 @@ public sealed class CardDb
         : !string.IsNullOrEmpty(fallback) ? fallback
         : cardId ?? string.Empty;
 
+    /// <summary>
+    /// True when the card is in the current patch's Battlegrounds tavern pool (a pool minion or a tavern spell with
+    /// a tier). Unknown cards count as available, so nothing is hidden while the card feeds have not loaded.
+    /// </summary>
+    public bool InBattlegroundsPool(string? cardId)
+    {
+        if (BattlegroundsMinions.Count == 0 && BattlegroundsSpells.Count == 0)
+        {
+            return true;
+        }
+
+        return Get(cardId) is { TechLevel: > 0 } card
+            && (card.IsBattlegroundsPoolMinion || card.IsBattlegroundsPoolSpell);
+    }
+
     /// <summary>Loads from cache, refreshing from the network when stale. Never throws.</summary>
     public static async Task<CardDb> LoadAsync(string locale, HttpClient http, CancellationToken cancellationToken = default)
     {

@@ -55,7 +55,10 @@ public sealed class BattlegroundsAdvisor
         var bracket = meta.BracketFor(rating);
         var lobbyKnown = view.Races.Count >= 4;
         var lobbyIds = view.Races.Select(r => RaceIds.GetValueOrDefault(r)).Where(id => id > 0).ToHashSet();
-        var viable = meta.Comps.Where(c => !lobbyKnown || c.Tribes.All(view.Races.Contains)).ToList();
+        var viable = meta.Comps
+            .Where(c => !lobbyKnown || c.Tribes.All(view.Races.Contains))
+            .Where(c => Playable(c, cards, view.IsDuos))
+            .ToList();
 
         var options = RankHeroes(view, cards, meta, bracket, lobbyKnown, lobbyIds, viable);
 
@@ -64,6 +67,7 @@ public sealed class BattlegroundsAdvisor
         IReadOnlyList<ShopPick> discover = Array.Empty<ShopPick>();
         IReadOnlyList<string> pairs = Array.Empty<string>();
         ShopPlan? plan = null;
+        CompAdvice? target = null;
         if (view.HeroCardId is { } hero)
         {
             var owned = OwnedCards(view, cards);
@@ -75,7 +79,7 @@ public sealed class BattlegroundsAdvisor
             _autoTargetHero = hero;
             _autoTargetTurn = view.Turn;
             comps = RankComps(view, viable, cards.BaseHeroId(hero), bracket, owned, cards, lobbyKnown);
-            var target = comps.FirstOrDefault(c => c.IsTarget);
+            target = comps.FirstOrDefault(c => c.IsTarget);
             shop = ScoreOffer(view, view.Shop.Select(m => new Offer(m.CardId, m.Name, m.TechLevel, m.CardType, m.Cost)).ToList(),
                 target, owned, cards, meta, bracket, dataWeight: 50);
             discover = ScoreOffer(view, view.DiscoverOptions.Select(d => new Offer(d.CardId, d.Name, d.TechLevel, d.CardType, 0)).ToList(),
@@ -94,7 +98,7 @@ public sealed class BattlegroundsAdvisor
             TrinketOptions = RankTrinkets(view.TrinketOptions, meta, bracket),
             DarkGiftAdvice = DarkGiftTip(view, shop),
             DiscoverAdvice = discover,
-            FreezeAdvice = FreezeTip(view, shop),
+            FreezeAdvice = FreezeTip(view, shop, target),
             Pairs = pairs,
             ShopPlan = plan,
             MetaSource = $"{BattlegroundsMeta.Attribution} · {percentile} · {meta.Updated:dd MMM HH:mm}",
@@ -154,17 +158,59 @@ public sealed class BattlegroundsAdvisor
         return ranked.Select(t => t with { Recommended = t.CardId == best }).ToList();
     }
 
-    /// <summary>A key card is in the tavern but there is no gold left to buy it this turn.</summary>
-    private static string FreezeTip(BattlegroundsView view, IReadOnlyList<ShopPick> shop)
+    /// <summary>
+    /// A key card is in the tavern and this turn's gold cannot pay for it: freezing keeps the shop for next turn.
+    /// A triple, a core card or a second copy always qualifies, and so does a card strong enough that rerolling it
+    /// away is a loss. Advice needs known gold and an open tavern — with gold unknown nothing is claimed.
+    /// </summary>
+    private static string FreezeTip(BattlegroundsView view, IReadOnlyList<ShopPick> shop, CompAdvice? target)
     {
-        if (view.InCombat || view.Gold >= MinionCost || view.DiscoverOptions.Count > 0)
+        if (view.InCombat || view.IsHeroSelection || view.Gold <= 0 || view.DiscoverOptions.Count > 0
+            || view.TrinketOptions.Count > 0)
         {
             return string.Empty;
         }
 
-        var keep = shop.Where(p => p.Score >= 60).Select(p => p.Name).Distinct().Take(2).ToList();
-        return keep.Count == 0 ? string.Empty : $"Freeze: keep {string.Join(" and ", keep)} for next turn";
+        var keep = shop
+            .Where(p => IsWorthFreezing(p) && view.Gold < Math.Max(MinionCost, p.Cost))
+            .OrderByDescending(p => p.Score)
+            .ThenBy(p => p.Cost)
+            .Take(2)
+            .ToList();
+        if (keep.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var first = keep[0];
+        var why = first.Reason.Contains("Triple", StringComparison.Ordinal)
+            ? "completes a triple"
+            : first.Reason.Contains("Core", StringComparison.Ordinal)
+                ? target is null ? "is a core card" : $"is core for {target.Name}"
+                : first.Reason.Contains("Pair", StringComparison.Ordinal)
+                    ? "gives you a pair"
+                    : "is too strong to reroll away";
+        var names = string.Join(" and ", keep.Select(p => p.Name));
+        var missing = Math.Max(first.Cost, MinionCost) - view.Gold;
+        return $"Freeze: keep {names} — {why}; {missing} more gold next turn";
     }
+
+    private static bool IsWorthFreezing(ShopPick pick) =>
+        pick.Score >= StrongShopScore
+        || pick.Reason.Contains("Triple", StringComparison.Ordinal)
+        || pick.Reason.Contains("Core", StringComparison.Ordinal)
+        || pick.Reason.Contains("Pair", StringComparison.Ordinal);
+
+    /// <summary>
+    /// A comp is worth showing when at least one of its cards is in this patch's pool (and, outside Duos, is not a
+    /// Duos-exclusive card). Comps built only from cards the patch rotated out cannot be played.
+    /// </summary>
+    private static bool Playable(MetaComp comp, CardDb cards, bool duos) =>
+        comp.Cards.Count == 0 || comp.Cards.Any(card => Available(card.CardId, cards, duos));
+
+    private static bool Available(string cardId, CardDb cards, bool duos) =>
+        cards.InBattlegroundsPool(cardId)
+        && (duos || cards.Get(cardId)?.IsBattlegroundsDuosExclusive != true);
 
     /// <summary>
     /// The Dark Gift button discovers a minion carrying a Dark Gift. It beats a filler buy, but a shop
@@ -172,21 +218,21 @@ public sealed class BattlegroundsAdvisor
     /// </summary>
     private static string DarkGiftTip(BattlegroundsView view, IReadOnlyList<ShopPick> shop)
     {
-        if (!view.DarkGiftReady || view.InCombat)
+        if (!view.DarkGiftReady || view.InCombat || view.Gold <= 0)
         {
             return string.Empty;
         }
 
         var cost = view.DarkGiftCost > 0 ? view.DarkGiftCost : 3;
-        if (view.Gold > 0 && view.Gold < cost)
+        if (view.Gold < cost)
         {
             return string.Empty;
         }
 
         var best = shop.FirstOrDefault(p => p.Best);
         return best is { Score: >= 60 }
-            ? $"Dark Gift: buy {best.Name} first, then discover if gold is left"
-            : $"Dark Gift: worth using now ({cost} gold) — beats the shop";
+            ? $"Dark Gift: buy {best.Name} first, then discover with the rest"
+            : $"Dark Gift: spend {cost} gold — a gifted minion beats this shop";
     }
 
     private static double HeroCompPlacement(MetaComp comp, string baseHeroId, int bracket)
@@ -270,6 +316,7 @@ public sealed class BattlegroundsAdvisor
                 x.Comp.HeroPlacement.TryGetValue(baseHero, out var h) && h.DataPoints >= 40 ? h.Placement : null,
                 x.Comp.Tribes,
                 x.Comp.Cards
+                    .Where(card => Available(card.CardId, cards, view.IsDuos))
                     .Select(card => new CompCard(card.CardId, cards.NameOf(card.CardId), card.Status, cards.Get(card.CardId)?.TechLevel ?? 0, owned.ContainsKey(card.CardId)))
                     .OrderBy(card => card.Status switch { "CORE" => 0, "ADDON" => 1, _ => 2 }).ThenBy(card => card.TechLevel)
                     .ToList(),
@@ -282,6 +329,7 @@ public sealed class BattlegroundsAdvisor
                 Why = WhyComp(x.Comp, x.OwnedCore, x.Comp.Id == PinnedCompId, CompMode, lobbyKnown, owned, baseHero),
                 LookFor = x.Comp.Cards
                     .Where(card => card.Status == "CORE" && !owned.ContainsKey(card.CardId))
+                    .Where(card => Available(card.CardId, cards, view.IsDuos))
                     .Select(card => (Name: cards.NameOf(card.CardId), Tier: cards.Get(card.CardId)?.TechLevel ?? 0))
                     .Where(card => card.Name.Length > 0 && card.Tier > 0 && card.Tier <= Math.Max(view.TechLevel, 1) + 1)
                     .OrderBy(card => card.Tier)
@@ -552,12 +600,17 @@ public sealed class BattlegroundsAdvisor
 
         bool CanLevelNow() => levelCost is { } cost && cost <= gold;
 
+        // A full board can only take a minion when a minion that is not part of the plan can be sold.
+        bool CanMakeRoom() => !boardFull || sold || WorstBoardMinion(view, target, cards) is not null;
+
         bool CanBuyNow() => best is not null
+            && CanMakeRoom()
             && (gold >= PriceOf(best)
                 || (NeedsBoardSpace(best) && boardFull && !sold && gold + SellRefund >= PriceOf(best)));
 
         // Do not recommend a roll that cannot also pay for the card it is meant to find.
         bool CanRollThenBuy() => best is not null
+            && CanMakeRoom()
             && (gold >= view.RerollCost + PriceOf(best)
                 || (NeedsBoardSpace(best) && boardFull && !sold && gold + SellRefund >= view.RerollCost + PriceOf(best)));
 
@@ -592,6 +645,10 @@ public sealed class BattlegroundsAdvisor
             if (boardFull && !sold && NeedsBoardSpace(best))
             {
                 AddSell();
+                if (!sold)
+                {
+                    return; // every minion on the board is worth keeping
+                }
             }
 
             var price = PriceOf(best);
@@ -673,7 +730,7 @@ public sealed class BattlegroundsAdvisor
             return BuildPlan(steps);
         }
 
-        if (weakShop && CanRollThenBuy())
+        if (weakShop && CanRollThenBuy() && !IsPriorityPick(best, target))
         {
             AddRoll();
             return BuildPlan(steps);
@@ -694,18 +751,40 @@ public sealed class BattlegroundsAdvisor
         steps.Add(new ShopStep(
             ShopAction.Save,
             "Hold this turn",
-            levelCost is { } holdCost && gold < holdCost
-                ? $"Only {gold} gold; the upgrade costs {holdCost}"
-                : "No strong buy this turn",
+            HoldDetail(view, gold, levelCost, boardFull),
             0,
             gold));
         return BuildPlan(steps);
     }
 
-    private static bool IsPriorityPick(ShopPick pick, CompAdvice? target) =>
-        pick.Reason.Contains("Triple", StringComparison.Ordinal)
-        || pick.Reason.Contains("Core", StringComparison.Ordinal)
-        || target?.Cards.Any(c => c.CardId == pick.CardId && c.Status == "CORE") == true;
+    /// <summary>Why the planner keeps the gold: the next upgrade, a full board worth keeping, or bad odds to level.</summary>
+    private static string HoldDetail(BattlegroundsView view, int gold, int? levelCost, bool boardFull)
+    {
+        if (levelCost is { } cost && gold < cost)
+        {
+            return $"Save your {gold} gold — tier {view.TechLevel + 1} costs {cost}";
+        }
+
+        if (boardFull)
+        {
+            return "Board is full and every minion is worth keeping — hold or roll";
+        }
+
+        return SafeToLevel(view)
+            ? "No card is worth its gold this turn"
+            : $"Too risky to level on {view.Health + view.Armor} health — keep the gold for next turn";
+    }
+
+    /// <summary>
+    /// Cards the plan buys before it considers leveling or rerolling: a triple or a core card at any time, and a
+    /// pair, because a triple it completes discovers a higher-tier minion.
+    /// </summary>
+    private static bool IsPriorityPick(ShopPick? pick, CompAdvice? target) =>
+        pick is not null
+        && (pick.Reason.Contains("Triple", StringComparison.Ordinal)
+            || pick.Reason.Contains("Core", StringComparison.Ordinal)
+            || pick.Reason.Contains("Pair", StringComparison.Ordinal)
+            || target?.Cards.Any(c => c.CardId == pick.CardId && c.Status == "CORE") == true);
 
     private static string BuyDetail(ShopPick pick, CompAdvice? target) =>
         pick.IsSpell
@@ -787,8 +866,9 @@ public sealed class BattlegroundsAdvisor
     }
 
     /// <summary>
-    /// Weakest board minion to sell when a buy needs space. Cores, addons, pairs, goldens and keyword bodies
-    /// are protected first so the planner does not cannibalize its own comp to make room for a marginal card.
+    /// Weakest board minion to sell when a buy needs space. Core and add-on cards of the target comp, goldens and
+    /// pairs are never sold — the planner must not cannibalize its own comp to make room for a marginal card.
+    /// Returns null when every minion is worth keeping.
     /// </summary>
     private static (string CardId, string Name, int Slot)? WorstBoardMinion(
         BattlegroundsView view, CompAdvice? target, CardDb cards)
@@ -799,36 +879,31 @@ public sealed class BattlegroundsAdvisor
         }
 
         var owned = OwnedCards(view, cards);
-        var worstIndex = 0;
+        var worstIndex = -1;
         var worstScore = int.MaxValue;
         for (var i = 0; i < view.Board.Count; i++)
         {
             var minion = view.Board[i];
             var normal = NormalId(minion.CardId, cards);
             var comp = target?.Cards.FirstOrDefault(c => c.CardId == normal);
-            var score = minion.Attack + minion.Health + (minion.TechLevel * 3);
-            score += comp?.Status switch
+            // Only the last copy of a pair is protected: with three or more copies one can be sold and the pair
+            // still stands.
+            if (comp is { Status: "CORE" or "ADDON" } || minion.Golden || owned.GetValueOrDefault(normal) == 2)
             {
-                "CORE" => 100,
-                "ADDON" => 35,
-                _ => 0,
-            };
-            if (owned.GetValueOrDefault(normal) >= 2)
-            {
-                score += 40;
+                continue;
             }
 
-            if (minion.Golden)
-            {
-                score += 25;
-            }
-
-            score += minion.Keywords.Count * 5;
+            var score = minion.Attack + minion.Health + (minion.TechLevel * 3) + (minion.Keywords.Count * 5);
             if (score < worstScore)
             {
                 worstScore = score;
                 worstIndex = i;
             }
+        }
+
+        if (worstIndex < 0)
+        {
+            return null;
         }
 
         var chosen = view.Board[worstIndex];

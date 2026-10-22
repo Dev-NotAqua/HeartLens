@@ -234,11 +234,13 @@ public sealed class BattlegroundsMeta
 
             var comps = new List<MetaComp>();
             using (var strategies = await FetchAsync(http, "hearthstone/data/battlegrounds-strategies/bgs-comps-strategies.gz.json", "comp-strategies.json", cancellationToken).ConfigureAwait(false))
-            using (var compStats = await FetchAsync(http, "api/bgs/comp-stats/last-patch/overview-from-hourly.gz.json", "comp-stats.json", cancellationToken).ConfigureAwait(false))
             {
-                if (compStats is not null)
+                var compStatsFile = await CacheFileAsync(http, "api/bgs/comp-stats/last-patch/overview-from-hourly.gz.json", "comp-stats.json", cancellationToken).ConfigureAwait(false);
+                if (compStatsFile is not null)
                 {
-                    Guard("comps", () => comps.AddRange(ParseComps(compStats.RootElement, strategies?.RootElement)));
+                    // The comp file is tens of megabytes. It is streamed instead of parsed into a document, which
+                    // would need several hundred megabytes of memory and stalls the app on a small PC.
+                    Guard("comps", () => comps.AddRange(ParseCompsFile(compStatsFile, strategies?.RootElement)));
                 }
             }
 
@@ -342,24 +344,7 @@ public sealed class BattlegroundsMeta
 
     internal static IEnumerable<MetaComp> ParseComps(JsonElement stats, JsonElement? strategies)
     {
-        var strategyById = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
-        if (strategies is { ValueKind: JsonValueKind.Array } list)
-        {
-            foreach (var s in list.EnumerateArray())
-            {
-                if (s.ValueKind != JsonValueKind.Object)
-                {
-                    continue;
-                }
-
-                var id = (GetString(s, "compId")).Trim();
-                if (id.Length > 0)
-                {
-                    strategyById[id] = s;
-                }
-            }
-        }
-
+        var strategyById = StrategyIndex(strategies);
         if (!stats.TryGetProperty("compStats", out var compList) || compList.ValueKind != JsonValueKind.Array)
         {
             yield break;
@@ -373,7 +358,8 @@ public sealed class BattlegroundsMeta
             }
 
             var id = GetString(comp, "archetype");
-            if (id.Length == 0 || GetInt(comp, "dataPoints") < 500)
+            var dataPoints = GetInt(comp, "dataPoints");
+            if (id.Length == 0 || dataPoints < 500)
             {
                 continue;
             }
@@ -403,64 +389,286 @@ public sealed class BattlegroundsMeta
                 }
             }
 
-            var cards = new List<MetaCompCard>();
-            string name = Prettify(id), power = string.Empty, difficulty = string.Empty;
-            string? when = null, tip = null;
-            var tribes = new List<string>();
-            if (strategyById.TryGetValue(id, out var strategy))
-            {
-                name = GetString(strategy, "name") is { Length: > 0 } n ? n : name;
-                power = GetString(strategy, "powerLevel");
-                difficulty = GetString(strategy, "difficulty");
-                if (strategy.TryGetProperty("cards", out var cardList) && cardList.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var card in cardList.EnumerateArray())
-                    {
-                        if (card.ValueKind != JsonValueKind.Object)
-                        {
-                            continue;
-                        }
-
-                        cards.Add(new MetaCompCard(GetString(card, "cardId"), GetString(card, "status") is { Length: > 0 } st ? st : "ADDON"));
-                    }
-                }
-
-                if (strategy.TryGetProperty("tips", out var tips) && tips.ValueKind == JsonValueKind.Array)
-                {
-                    var english = tips.EnumerateArray().FirstOrDefault(t => t.ValueKind == JsonValueKind.Object && GetString(t, "language") == "enUS");
-                    if (english.ValueKind == JsonValueKind.Object)
-                    {
-                        tip = GetString(english, "tip") is { Length: > 0 } tv ? tv : null;
-                        when = GetString(english, "whenToCommit") is { Length: > 0 } wv ? wv : null;
-                    }
-                }
-
-                if (strategy.TryGetProperty("forcedTribes", out var forced) && forced.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var f in forced.EnumerateArray())
-                    {
-                        if (f.ValueKind == JsonValueKind.Number && Cards.Races.ById.TryGetValue(f.GetInt32(), out var race))
-                        {
-                            tribes.Add(race);
-                        }
-                        else if (f.ValueKind == JsonValueKind.String && f.GetString() is { Length: > 0 } raceName)
-                        {
-                            tribes.Add(raceName);
-                        }
-                    }
-                }
-            }
-
-            var prefix = id.Split('_')[0];
-            if (tribes.Count == 0 && PrefixTribes.TryGetValue(prefix, out var prefixTribe))
-            {
-                tribes.Add(prefixTribe);
-            }
-
-            yield return new MetaComp(
-                id, name, power, difficulty, tribes, cards, when, tip,
-                GetDouble(comp, "averagePlacement"), atMmr, heroPlacement);
+            yield return BuildComp(id, GetDouble(comp, "averagePlacement"), atMmr, heroPlacement, strategyById);
         }
+    }
+
+    /// <summary>
+    /// Reads the comp statistics straight from the file. The file is tens of megabytes; a document would cost
+    /// several hundred megabytes of memory and stall the app on a small PC, so only the fields the advisor uses
+    /// are read and everything else is skipped.
+    /// </summary>
+    internal static List<MetaComp> ParseCompsFile(string path, JsonElement? strategies)
+    {
+        var strategyById = StrategyIndex(strategies);
+        var result = new List<MetaComp>();
+        var bytes = File.ReadAllBytes(path);
+        var reader = new Utf8JsonReader(bytes);
+        while (reader.Read())
+        {
+            if (reader.TokenType != JsonTokenType.PropertyName || reader.GetString() != "compStats")
+            {
+                continue;
+            }
+
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
+            {
+                break;
+            }
+
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            {
+                var comp = ReadCompStats(ref reader, strategyById);
+                if (comp is not null)
+                {
+                    result.Add(comp);
+                }
+            }
+
+            break;
+        }
+
+        return result;
+    }
+
+    private static MetaComp? ReadCompStats(ref Utf8JsonReader reader, Dictionary<string, JsonElement> strategyById)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            reader.Skip();
+            return null;
+        }
+
+        var id = string.Empty;
+        var dataPoints = 0;
+        var average = 0d;
+        var atMmr = new Dictionary<int, double>();
+        var heroPlacement = new Dictionary<string, (int, double)>(StringComparer.Ordinal);
+
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            if (reader.TokenType != JsonTokenType.PropertyName)
+            {
+                continue;
+            }
+
+            var property = reader.GetString();
+            if (!reader.Read())
+            {
+                break;
+            }
+
+            switch (property)
+            {
+                case "archetype":
+                    id = reader.TokenType == JsonTokenType.String ? reader.GetString() ?? string.Empty : string.Empty;
+                    break;
+                case "dataPoints":
+                    dataPoints = reader.TryGetInt32(out var points) ? points : 0;
+                    break;
+                case "averagePlacement":
+                    average = reader.TokenType == JsonTokenType.Number ? reader.GetDouble() : 0;
+                    break;
+                case "averagePlacementAtMmr":
+                    ReadPlacementAtMmr(ref reader, atMmr);
+                    break;
+                case "heroStats":
+                    ReadHeroStats(ref reader, heroPlacement);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        return id.Length == 0 || dataPoints < 500
+            ? null
+            : BuildComp(id, average, atMmr, heroPlacement, strategyById);
+    }
+
+    private static void ReadPlacementAtMmr(ref Utf8JsonReader reader, Dictionary<int, double> atMmr)
+    {
+        if (reader.TokenType != JsonTokenType.StartArray)
+        {
+            reader.Skip();
+            return;
+        }
+
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                reader.Skip();
+                continue;
+            }
+
+            var mmr = -1;
+            var points = 0;
+            var placement = 0d;
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            {
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    continue;
+                }
+
+                var name = reader.GetString();
+                if (!reader.Read())
+                {
+                    break;
+                }
+
+                switch (name)
+                {
+                    case "mmr": mmr = reader.TryGetInt32(out var m) ? m : -1; break;
+                    case "dataPoints": points = reader.TryGetInt32(out var p) ? p : 0; break;
+                    case "placement": placement = reader.TokenType == JsonTokenType.Number ? reader.GetDouble() : 0; break;
+                    default: reader.Skip(); break;
+                }
+            }
+
+            if (mmr >= 0 && points >= 200)
+            {
+                atMmr[mmr] = placement;
+            }
+        }
+    }
+
+    private static void ReadHeroStats(ref Utf8JsonReader reader, Dictionary<string, (int, double)> heroPlacement)
+    {
+        if (reader.TokenType != JsonTokenType.StartArray)
+        {
+            reader.Skip();
+            return;
+        }
+
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                reader.Skip();
+                continue;
+            }
+
+            var heroId = string.Empty;
+            var points = 0;
+            var average = 0d;
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            {
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    continue;
+                }
+
+                var name = reader.GetString();
+                if (!reader.Read())
+                {
+                    break;
+                }
+
+                switch (name)
+                {
+                    case "heroCardId": heroId = reader.TokenType == JsonTokenType.String ? reader.GetString() ?? string.Empty : string.Empty; break;
+                    case "dataPoints": points = reader.TryGetInt32(out var p) ? p : 0; break;
+                    case "averagePlacement": average = reader.TokenType == JsonTokenType.Number ? reader.GetDouble() : 0; break;
+                    default: reader.Skip(); break;
+                }
+            }
+
+            if (heroId.Length > 0)
+            {
+                heroPlacement[heroId] = (points, average);
+            }
+        }
+    }
+
+    private static Dictionary<string, JsonElement> StrategyIndex(JsonElement? strategies)
+    {
+        var index = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        if (strategies is not { ValueKind: JsonValueKind.Array } list)
+        {
+            return index;
+        }
+
+        foreach (var s in list.EnumerateArray())
+        {
+            if (s.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var id = (GetString(s, "compId")).Trim();
+            if (id.Length > 0)
+            {
+                index[id] = s;
+            }
+        }
+
+        return index;
+    }
+
+    private static MetaComp BuildComp(
+        string id,
+        double averagePlacement,
+        Dictionary<int, double> atMmr,
+        Dictionary<string, (int, double)> heroPlacement,
+        Dictionary<string, JsonElement> strategyById)
+    {
+        var cards = new List<MetaCompCard>();
+        string name = Prettify(id), power = string.Empty, difficulty = string.Empty;
+        string? when = null, tip = null;
+        var tribes = new List<string>();
+        if (strategyById.TryGetValue(id, out var strategy))
+        {
+            name = GetString(strategy, "name") is { Length: > 0 } n ? n : name;
+            power = GetString(strategy, "powerLevel");
+            difficulty = GetString(strategy, "difficulty");
+            if (strategy.TryGetProperty("cards", out var cardList) && cardList.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var card in cardList.EnumerateArray())
+                {
+                    if (card.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    cards.Add(new MetaCompCard(GetString(card, "cardId"), GetString(card, "status") is { Length: > 0 } st ? st : "ADDON"));
+                }
+            }
+
+            if (strategy.TryGetProperty("tips", out var tips) && tips.ValueKind == JsonValueKind.Array)
+            {
+                var english = tips.EnumerateArray().FirstOrDefault(t => t.ValueKind == JsonValueKind.Object && GetString(t, "language") == "enUS");
+                if (english.ValueKind == JsonValueKind.Object)
+                {
+                    tip = GetString(english, "tip") is { Length: > 0 } tv ? tv : null;
+                    when = GetString(english, "whenToCommit") is { Length: > 0 } wv ? wv : null;
+                }
+            }
+
+            if (strategy.TryGetProperty("forcedTribes", out var forced) && forced.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var f in forced.EnumerateArray())
+                {
+                    if (f.ValueKind == JsonValueKind.Number && Cards.Races.ById.TryGetValue(f.GetInt32(), out var race))
+                    {
+                        tribes.Add(race);
+                    }
+                    else if (f.ValueKind == JsonValueKind.String && f.GetString() is { Length: > 0 } raceName)
+                    {
+                        tribes.Add(raceName);
+                    }
+                }
+            }
+        }
+
+        var prefix = id.Split('_')[0];
+        if (tribes.Count == 0 && PrefixTribes.TryGetValue(prefix, out var prefixTribe))
+        {
+            tribes.Add(prefixTribe);
+        }
+
+        return new MetaComp(id, name, power, difficulty, tribes, cards, when, tip, averagePlacement, atMmr, heroPlacement);
     }
 
     internal static Dictionary<string, MetaTrinket> ParseTrinkets(JsonElement root)
@@ -562,7 +770,11 @@ public sealed class BattlegroundsMeta
         string.Join(' ', archetype.Split('_', StringSplitOptions.RemoveEmptyEntries)
             .Select(w => w == "apm" ? "APM" : char.ToUpperInvariant(w[0]) + w[1..]));
 
-    private static async Task<JsonDocument?> FetchAsync(HttpClient http, string path, string cacheName, CancellationToken cancellationToken)
+    /// <summary>
+    /// Makes sure the file is in the cache and returns its path. The download is streamed straight to disk, so a
+    /// large file is never held in memory twice, and a response that is not JSON never replaces a good cache file.
+    /// </summary>
+    private static async Task<string?> CacheFileAsync(HttpClient http, string path, string cacheName, CancellationToken cancellationToken)
     {
         var dir = Directory.CreateDirectory(Path.Combine(AppPaths.Cache, "meta")).FullName;
         var file = Path.Combine(dir, cacheName);
@@ -572,25 +784,71 @@ public sealed class BattlegroundsMeta
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, Root + path);
-                using var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-                    // Parse before replacing the cache: an error page or truncated body must not poison it.
-                    var parsed = JsonDocument.Parse(bytes);
                     var temp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                    await File.WriteAllBytesAsync(temp, bytes, cancellationToken).ConfigureAwait(false);
-                    File.Move(temp, file, overwrite: true);
-                    return parsed;
+                    await using (var target = File.Create(temp))
+                    {
+                        await response.Content.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    if (LooksLikeJson(temp))
+                    {
+                        File.Move(temp, file, overwrite: true);
+                    }
+                    else
+                    {
+                        File.Delete(temp);
+                    }
                 }
             }
-            catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or JsonException)
+            catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
             {
                 Diag.Error($"Meta download failed ({path})", ex);
             }
         }
 
-        if (!File.Exists(file))
+        return File.Exists(file) ? file : null;
+    }
+
+    /// <summary>Guards against an error page replacing a good cache file.</summary>
+    private static bool LooksLikeJson(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            if (info.Length < 64)
+            {
+                return false;
+            }
+
+            using var stream = File.OpenRead(path);
+            var head = new byte[64];
+            var read = stream.Read(head, 0, head.Length);
+            for (var i = 0; i < read; i++)
+            {
+                var c = (char)head[i];
+                if (char.IsWhiteSpace(c))
+                {
+                    continue;
+                }
+
+                return c == '{' || c == '[';
+            }
+
+            return false;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<JsonDocument?> FetchAsync(HttpClient http, string path, string cacheName, CancellationToken cancellationToken)
+    {
+        var file = await CacheFileAsync(http, path, cacheName, cancellationToken).ConfigureAwait(false);
+        if (file is null)
         {
             return null;
         }

@@ -248,8 +248,7 @@ public sealed class ShopPlanTests
 
     [Fact]
     public void No_advice_while_in_combat_or_before_gold_is_known()
-    {
-        var (advisor, cards) = Advisor();
+    {        var (advisor, cards) = Advisor();
 
         var combat = advisor.Enrich(
             View(gold: 9, inCombat: true, shop: [Minion("FILLER_T4", 4)], upgradeCost: 9),
@@ -264,7 +263,111 @@ public sealed class ShopPlanTests
         Assert.Null(noGold.ShopPlan);
     }
 
-    private static (BattlegroundsAdvisor Advisor, CardDb Cards) Advisor(string? pin = "beasts")
+    [Fact]
+    public void Freeze_keeps_a_triple_the_player_cannot_afford_yet()
+    {
+        var (advisor, cards) = Advisor();
+
+        var view = advisor.Enrich(
+            View(
+                gold: 1,
+                board: [Minion("BEAST_T2", 2), Minion("BEAST_T2", 2)],
+                shop: [Minion("BEAST_T2", 2)],
+                upgradeCost: 8),
+            null,
+            cards);
+
+        Assert.Contains("triple", view.FreezeAdvice);
+        Assert.Contains("BEAST_T2", view.FreezeAdvice);
+    }
+
+    [Fact]
+    public void No_freeze_advice_when_the_card_can_be_bought_or_the_gold_is_unknown()
+    {
+        var (advisor, cards) = Advisor();
+
+        var affordable = advisor.Enrich(
+            View(
+                gold: 9,
+                board: [Minion("BEAST_T2", 2), Minion("BEAST_T2", 2)],
+                shop: [Minion("BEAST_T2", 2)],
+                upgradeCost: 8),
+            null,
+            cards);
+        var unknown = advisor.Enrich(
+            View(
+                gold: 0,
+                board: [Minion("BEAST_T2", 2), Minion("BEAST_T2", 2)],
+                shop: [Minion("BEAST_T2", 2)],
+                upgradeCost: 8),
+            null,
+            cards);
+
+        Assert.Equal(string.Empty, affordable.FreezeAdvice);
+        Assert.Equal(string.Empty, unknown.FreezeAdvice);
+    }
+
+    [Fact]
+    public void A_pair_is_bought_instead_of_rolling_the_tavern()
+    {
+        var (advisor, cards) = Advisor(pin: null);
+
+        var view = advisor.Enrich(
+            View(
+                turn: 6,
+                techLevel: 3,
+                gold: 4,
+                board: [Minion("FILLER_T4", 4)],
+                shop: [Minion("FILLER_T4", 4)],
+                upgradeCost: 8),
+            null,
+            cards);
+
+        var plan = Assert.IsType<ShopPlan>(view.ShopPlan);
+        Assert.Equal(ShopAction.Buy, plan.Action);
+        Assert.Contains("pair", plan.Reason);
+    }
+
+    [Fact]
+    public void A_core_card_is_never_sold_to_make_room_for_a_filler()
+    {
+        var (advisor, cards) = Advisor();
+
+        var view = advisor.Enrich(
+            View(
+                gold: 3,
+                board:
+                [
+                    Minion("BEAST_T2", 2), Minion("BEAST_T2", 2), Minion("BEAST_T2", 2), Minion("BEAST_T2", 2),
+                    Minion("BEAST_T2", 2), Minion("BEAST_T2", 2), Minion("BEAST_T2", 2),
+                ],
+                shop: [Minion("FILLER_T4", 4)],
+                upgradeCost: 11),
+            null,
+            cards);
+
+        var plan = Assert.IsType<ShopPlan>(view.ShopPlan);
+        Assert.Equal(ShopAction.Save, plan.Action);
+        Assert.DoesNotContain(plan.Steps, step => step.Action == ShopAction.Sell);
+    }
+
+    [Fact]
+    public void Comp_cards_that_are_not_in_the_current_pool_are_hidden()
+    {
+        var (advisor, cards) = Advisor("beasts", ("GHOST_T3", "CORE"));
+
+        var view = advisor.Enrich(
+            View(gold: 9, shop: [Minion("BEAST_T2", 2)], upgradeCost: 9),
+            null,
+            cards);
+
+        var comp = view.Comps.Single(c => c.IsTarget);
+        Assert.DoesNotContain(comp.Cards, card => card.CardId == "GHOST_T3");
+        Assert.Contains(comp.Cards, card => card.CardId == "BEAST_T2");
+        Assert.DoesNotContain("GHOST_T3", comp.LookFor);
+    }
+
+    private static (BattlegroundsAdvisor Advisor, CardDb Cards) Advisor(string? pin = "beasts", params (string CardId, string Status)[] extraCompCards)
     {
         const string json = """
             [
@@ -284,7 +387,7 @@ public sealed class ShopPlanTests
         var meta = new BattlegroundsMeta(
             new Dictionary<int, IReadOnlyDictionary<string, MetaHero>> { [100] = new Dictionary<string, MetaHero>() },
             [],
-            [Comp("beasts", "Beasts", "BEAST", 4.0, ("BEAST_T2", "CORE"), ("BEAST_T5", "CORE"), ("BEAST_ADDON", "ADDON"))],
+            [Comp("beasts", "Beasts", "BEAST", 4.0, [("BEAST_T2", "CORE"), ("BEAST_T5", "CORE"), ("BEAST_ADDON", "ADDON")], extraCompCards)],
             new Dictionary<string, MetaTrinket>(),
             new Dictionary<int, IReadOnlyDictionary<string, MetaCard>>(),
             new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
@@ -294,13 +397,16 @@ public sealed class ShopPlanTests
     }
 
     private static MetaComp Comp(
-        string id, string name, string tribe, double placement, params (string CardId, string Status)[] cards) => new(
+        string id, string name, string tribe, double placement, params (string CardId, string Status)[] cards) => Comp(id, name, tribe, placement, cards, []);
+
+    private static MetaComp Comp(
+        string id, string name, string tribe, double placement, (string CardId, string Status)[] cards, (string CardId, string Status)[] extra) => new(
         id,
         name,
         "A",
         "Easy",
         [tribe],
-        cards.Select(c => new MetaCompCard(c.CardId, c.Status)).ToList(),
+        cards.Concat(extra).Select(c => new MetaCompCard(c.CardId, c.Status)).ToList(),
         null,
         null,
         placement,

@@ -50,6 +50,8 @@ public sealed class HearthstoneMemory : IDisposable
     private ProcessMemory? _memory;
     private MonoRuntime? _runtime;
     private DateTime _nextAttachAttempt = DateTime.MinValue;
+    private readonly Dictionary<string, ulong> _netCacheObjects = new(StringComparer.Ordinal);
+    private DateTime _netCacheRefreshAt = DateTime.MinValue;
 
     public bool IsAttached
     {
@@ -138,7 +140,7 @@ public sealed class HearthstoneMemory : IDisposable
 
     public BattlegroundsRating? GetBattlegroundsRating() => Safe(rt =>
     {
-        var info = FindNetCacheObject(rt, "NetCacheBaconRatingInfo");
+        var info = CachedNetCacheObject(rt, "NetCacheBaconRatingInfo");
         if (info.IsNull)
         {
             return null;
@@ -148,6 +150,40 @@ public sealed class HearthstoneMemory : IDisposable
         var duos = info.Int("<DuosRating>k__BackingField", -1);
         return solo <= 0 && duos <= 0 ? null : new BattlegroundsRating(solo, duos);
     });
+
+    /// <summary>
+    /// The NetCache map holds every object the server sent. Walking it costs thousands of small reads and the map
+    /// grows during a session, which is slow enough on a weak PC to stall the log reader. The address of the
+    /// object we need is remembered and only looked up again every few minutes.
+    /// </summary>
+    private MonoObject CachedNetCacheObject(MonoRuntime rt, string className)
+    {
+        var now = DateTime.UtcNow;
+        if (now >= _netCacheRefreshAt)
+        {
+            _netCacheRefreshAt = now.AddMinutes(3);
+            _netCacheObjects.Clear();
+        }
+
+        if (_netCacheObjects.TryGetValue(className, out var address) && address != 0)
+        {
+            var cached = rt.Object(address);
+            if (cached.ClassName == className)
+            {
+                return cached;
+            }
+        }
+
+        var found = FindNetCacheObject(rt, className);
+        if (found.IsNull)
+        {
+            _netCacheObjects.Remove(className);
+            return default;
+        }
+
+        _netCacheObjects[className] = found.Address;
+        return found;
+    }
 
     /// <summary>Rating shown on the post-game screen once the server has sent it, else null.</summary>
     public int? GetPostGameBattlegroundsRating() => Safe<int?>(rt =>
@@ -394,6 +430,8 @@ public sealed class HearthstoneMemory : IDisposable
         _runtime = null;
         _memory?.Dispose();
         _memory = null;
+        _netCacheObjects.Clear();
+        _netCacheRefreshAt = DateTime.MinValue;
     }
 
     public void Dispose()

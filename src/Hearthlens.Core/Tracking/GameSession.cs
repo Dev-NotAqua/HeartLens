@@ -311,6 +311,26 @@ public sealed partial class GameSession : ILogConsumer, IPowerListener
 
     private void PollMemory()
     {
+        var started = Stopwatch.GetTimestamp();
+        try
+        {
+            PollMemoryCore();
+        }
+        finally
+        {
+            // A slow scan delays the log reader (both run on the tracking thread), so a scan that took unusually
+            // long backs off instead of running again right away.
+            var elapsed = (Stopwatch.GetTimestamp() - started) * 1000 / Stopwatch.Frequency;
+            if (elapsed > 1000)
+            {
+                Diag.Info($"Memory scan took {elapsed:N0} ms — slowing it down to keep the log reader responsive");
+                _nextMemoryPoll = DateTime.UtcNow.AddSeconds(10);
+            }
+        }
+    }
+
+    private void PollMemoryCore()
+    {
         if (!_memory.EnsureAttached())
         {
             return;

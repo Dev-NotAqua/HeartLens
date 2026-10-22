@@ -19,6 +19,13 @@ public sealed class LogTail
     private string? _path;
     private long _position;
     private byte[] _remainder = Array.Empty<byte>();
+    private byte[] _buffer = new byte[ReadChunkSize];
+
+    /// <summary>
+    /// How much is read per chunk. The buffer is reused, so a busy log does not put a fresh multi-megabyte array
+    /// on the large object heap for every poll — that churn is what makes a low-memory PC stutter.
+    /// </summary>
+    private const int ReadChunkSize = 256 * 1024;
 
     public LogTail(string fileName)
     {
@@ -82,32 +89,56 @@ public sealed class LogTail
                 _remainder = Array.Empty<byte>();
             }
 
-            var available = (int)Math.Min(stream.Length - _position, maxBytes);
+            var available = stream.Length - _position;
             if (available <= 0)
             {
                 return lines;
             }
 
-            var buffer = new byte[_remainder.Length + available];
-            _remainder.CopyTo(buffer, 0);
+            var toRead = (int)Math.Min(available, maxBytes);
             stream.Seek(_position, SeekOrigin.Begin);
-            stream.ReadExactly(buffer, _remainder.Length, available);
-            _position += available;
 
-            var start = 0;
-            for (var i = 0; i < buffer.Length; i++)
+            // The carry holds the bytes of an incomplete last line from the previous pass.
+            var carry = _remainder.Length;
+            EnsureBuffer(ReadChunkSize + carry);
+            _remainder.CopyTo(_buffer, 0);
+
+            var read = 0;
+            while (read < toRead)
             {
-                if (buffer[i] != (byte)'\n')
+                var want = Math.Min(ReadChunkSize, toRead - read);
+                EnsureBuffer(carry + want);
+                var got = stream.Read(_buffer, carry, want);
+                if (got <= 0)
                 {
-                    continue;
+                    break;
                 }
 
-                var end = i > start && buffer[i - 1] == (byte)'\r' ? i - 1 : i;
-                lines.Add(Encoding.UTF8.GetString(buffer, start, end - start));
-                start = i + 1;
+                carry += got;
+                read += got;
+
+                var lineStart = 0;
+                for (var i = 0; i < carry; i++)
+                {
+                    if (_buffer[i] != (byte)'\n')
+                    {
+                        continue;
+                    }
+
+                    var end = i > lineStart && _buffer[i - 1] == (byte)'\r' ? i - 1 : i;
+                    lines.Add(Encoding.UTF8.GetString(_buffer, lineStart, end - lineStart));
+                    lineStart = i + 1;
+                }
+
+                if (lineStart > 0)
+                {
+                    Buffer.BlockCopy(_buffer, lineStart, _buffer, 0, carry - lineStart);
+                    carry -= lineStart;
+                }
             }
 
-            _remainder = buffer[start..];
+            _position += read;
+            _remainder = carry > 0 ? _buffer[..carry] : Array.Empty<byte>();
         }
         catch (IOException)
         {
@@ -117,6 +148,18 @@ public sealed class LogTail
         }
 
         return lines;
+    }
+
+    private void EnsureBuffer(int size)
+    {
+        if (_buffer.Length >= size)
+        {
+            return;
+        }
+
+        var grown = new byte[Math.Max(size, _buffer.Length * 2)];
+        Array.Copy(_buffer, grown, _buffer.Length);
+        _buffer = grown;
     }
 
     /// <summary>
@@ -208,6 +251,7 @@ public sealed class LogWatcher : IDisposable
     private int _resync;
     private long _lastPollTicks = Environment.TickCount64;
     private long _pendingBytes;
+    private volatile bool _stopped;
 
     public LogWatcher(ILogConsumer consumer, Func<string?> installDir)
     {
@@ -267,6 +311,11 @@ public sealed class LogWatcher : IDisposable
 
     private void Poll()
     {
+        if (_stopped)
+        {
+            return;
+        }
+
         var resync = Interlocked.Exchange(ref _resync, 0);
         if (resync != 0)
         {
@@ -305,6 +354,12 @@ public sealed class LogWatcher : IDisposable
         foreach (var tail in _tails)
         {
             var lines = tail.ReadNewLines();
+            if (_stopped)
+            {
+                // The watcher was replaced while this pass ran: the old thread must not feed the consumer twice.
+                return;
+            }
+
             if (lines.Count > 0)
             {
                 _consumer.OnLines(tail.FileName, lines, catchingUp: false);
@@ -360,6 +415,11 @@ public sealed class LogWatcher : IDisposable
             List<string> lines;
             while ((lines = tail.ReadNewLines()).Count > 0)
             {
+                if (_stopped)
+                {
+                    return;
+                }
+
                 _consumer.OnLines(tail.FileName, lines, catchingUp: historical);
             }
         }
@@ -367,6 +427,9 @@ public sealed class LogWatcher : IDisposable
 
     public void Dispose()
     {
+        // Stop delivering first: a thread that was wedged (and is restarted by the watchdog) must not feed the
+        // consumer a second time when it wakes up.
+        _stopped = true;
         _cts.Cancel();
         _thread?.Join(TimeSpan.FromSeconds(1));
         _cts.Dispose();
