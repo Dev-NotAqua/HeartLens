@@ -44,7 +44,7 @@ public sealed record PoolGame(string GameId, string Mode, int Bracket, IReadOnly
 public static class PoolClient
 {
     /// <summary>Address of the deployed pool (see server/pool/README.md). Empty keeps the pool off.</summary>
-    public const string DefaultEndpoint = "";
+    public const string DefaultEndpoint = "https://hearthlens-pool.nebula-auth-relay.workers.dev";
 
     /// <summary>Heroes need this many shared games before their numbers are shown.</summary>
     public const int MinGames = 20;

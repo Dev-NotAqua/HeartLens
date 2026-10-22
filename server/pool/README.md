@@ -23,7 +23,8 @@ npx wrangler d1 execute hearthlens-pool --remote --file=schema.sql
 npx wrangler deploy
 ```
 
-`deploy` prints the address, for example `https://hearthlens-pool.<you>.workers.dev`. Put it in
+`deploy` prints the address, for example `https://hearthlens-pool.<you>.workers.dev`. The live pool is at
+`https://hearthlens-pool.nebula-auth-relay.workers.dev`. Put it in
 `PoolClient.DefaultEndpoint` (src/Hearthlens.Core/Pool/PoolClient.cs) and release the app.
 
 ## API

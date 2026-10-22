@@ -9,7 +9,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Hearthlens.Desktop</RootNamespace>
     <AssemblyName>Hearthlens</AssemblyName>
-    <Version>0.8.0</Version>
+    <Version>0.8.1</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\Hearthlens.UI\Assets\hearthlens.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>

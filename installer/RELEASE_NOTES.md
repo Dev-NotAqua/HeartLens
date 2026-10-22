@@ -24,6 +24,15 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Stats pool is live.** Hearthlens now builds its own hero tier list from games that players choose to share.
+
+- A banner on the main window asks once whether to share your Battlegrounds results. Nothing is sent unless you click **Share results**. A switch in **Settings** changes your answer at any time.
+- A shared game holds only the hero you picked, the heroes you were offered, your placement, solo or duos, and your rating rounded down to 500. No name, BattleTag or account, and IP addresses are not stored.
+- The server code is in the repository under `server/pool`.
+- The Heroes tier list and the hero pick ratings in the overlay appear once a hero has 20 shared games.
+
+## What was new in 0.8.0
+
 **Portable Windows version.** New download: `Hearthlens-Portable-0.8.0-win-x64.zip`. Unzip it anywhere, even on a USB stick, and run `Hearthlens.exe`. Nothing is installed: settings and history stay in the `data` folder next to it. It tells you when a new version is out but does not update itself.
 
 **Stats pool, ready to switch on.** Hearthlens is getting its own hero tier list, built from games that players choose to share. Nothing is shared without asking:
