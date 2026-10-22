@@ -147,7 +147,7 @@ public sealed partial class MainViewModel : Observable
 
     public string DataFolder => AppPaths.Root;
 
-    public string Attribution => BattlegroundsMeta.Attribution + " · Card data & art: HearthstoneJSON";
+    public string Attribution => CardDb.Attribution;
 
     // ---- live status ----------------------------------------------------------------------
     private bool _hearthstoneRunning;

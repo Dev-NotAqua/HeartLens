@@ -54,8 +54,6 @@ public partial class App : Application
     private DeckAggregate? _deckStats;
     private MatchupAggregate? _matchupStats;
     private string? _renderDir;
-    private ConstructedMeta? _constructedMeta;
-    private int _constructedMetaRequest;
     private BattlegroundsMeta? _meta;
     private UpdateInfo? _stagedUpdate;
     private DispatcherTimer? _watchdog;
@@ -351,42 +349,30 @@ public partial class App : Application
         Quit();
     }
 
-    private async Task LoadMetaAsync()
+    /// <summary>
+    /// Community stats are no longer downloaded (they came from Firestone's servers without permission).
+    /// Deletes the copies older versions cached.
+    /// </summary>
+    private Task LoadMetaAsync()
     {
         try
         {
-            var meta = await BattlegroundsMeta.LoadAsync(_http);
-            if (meta is not null)
+            var cached = Path.Combine(AppPaths.Cache, "meta");
+            if (Directory.Exists(cached))
             {
-                _meta = meta;
-                _session.SetMeta(meta);
-                _mainViewModel.SetMeta(meta);
+                Directory.Delete(cached, recursive: true);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Diag.Error("Community stats unavailable", ex);
+            Diag.Error("Old community stats cache not removed", ex);
         }
+
+        return Task.CompletedTask;
     }
 
-    private async Task LoadConstructedMetaAsync()
-    {
-        // Filters can change while a download runs; only the latest request may update the page.
-        var request = ++_constructedMetaRequest;
-        try
-        {
-            var meta = await ConstructedMeta.LoadAsync(_http, _settings.MetaFormat, _settings.MetaRank, _settings.MetaPeriod);
-            if (request == _constructedMetaRequest)
-            {
-                _constructedMeta = meta ?? _constructedMeta;
-                _mainViewModel.SetConstructedMeta(meta);
-            }
-        }
-        catch (Exception ex)
-        {
-            Diag.Error("Constructed stats unavailable", ex);
-        }
-    }
+    // The Constructed meta tabs are hidden until a source with permission exists.
+    private Task LoadConstructedMetaAsync() => Task.CompletedTask;
 
     private async Task ImportLogsAsync(bool force)
     {

@@ -215,9 +215,9 @@
                         <TextBlock Text="Modes" Style="{StaticResource Label}" />
                     </Grid>
                     <RadioButton x:Name="NavBattlegrounds" Style="{StaticResource NavItem}" Content="Battlegrounds" Tag="&#xF0787;" GroupName="Nav" Checked="OnNavigate"
-                                 ToolTip="Hero, comp, trinket and card tier lists, plus your Battlegrounds results" />
+                                 ToolTip="Your Battlegrounds results, heroes and rating" />
                     <RadioButton x:Name="NavConstructed" Style="{StaticResource NavItem}" Content="Constructed" Tag="&#xF063A;" GroupName="Nav" Checked="OnNavigate"
-                                 ToolTip="Your decks, matchups and the meta tier list" />
+                                 ToolTip="Your decks and matchups" />
 
                     <Grid Style="{StaticResource NavGroup}">
                         <Grid.ColumnDefinitions>
@@ -383,7 +383,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Battlegrounds" Style="{StaticResource Display}" />
                                     <StackPanel Style="{StaticResource PageSubtitle}">
-                                        <TextBlock Text="Your results and what is strong right now, from Firestone community data." Style="{StaticResource Caption}" FontSize="14"
+                                        <TextBlock Text="Your results, heroes and rating from your own games." Style="{StaticResource Caption}" FontSize="14"
                                                    VerticalAlignment="Center" />
                                     </StackPanel>
                                 </StackPanel>
@@ -405,11 +405,11 @@
                                 </DockPanel>
                             </Border>
 
-                            <c:Ornament Text="Tier lists" Icon="&#xF11D0;" Size="15" Margin="0,0,0,14" />
+                            <c:Ornament Text="Your heroes" Icon="&#xF11D0;" Size="15" Margin="0,0,0,14" />
                             <Grid Margin="0,0,0,14">
-                                <Border HorizontalAlignment="Left" Style="{StaticResource SegmentBar}">
+                                <Border HorizontalAlignment="Left" Style="{StaticResource SegmentBar}" Visibility="Collapsed">
                                     <StackPanel Orientation="Horizontal">
-                                        <RadioButton x:Name="TabHeroes" Style="{StaticResource Tab}" Content="Heroes" GroupName="BgTab" IsChecked="True" Checked="OnBgTab"
+                                        <RadioButton x:Name="TabHeroes" Style="{StaticResource Tab}" Content="Heroes" GroupName="BgTab" Checked="OnBgTab"
                                                      ToolTip="Heroes ranked by average final placement" />
                                         <RadioButton x:Name="TabComps" Style="{StaticResource Tab}" Content="Comps" GroupName="BgTab" Checked="OnBgTab"
                                                      ToolTip="Board archetypes ranked by average final placement" />
@@ -417,11 +417,11 @@
                                                      ToolTip="Trinkets ranked by the average placement of players who picked them" />
                                         <RadioButton x:Name="TabCards" Style="{StaticResource Tab}" Content="Cards" GroupName="BgTab" Checked="OnBgTab"
                                                      ToolTip="Minions and tavern spells, ranked inside each tier" />
-                                        <RadioButton x:Name="TabMine" Style="{StaticResource Tab}" Content="My heroes" GroupName="BgTab" Checked="OnBgTab"
+                                        <RadioButton x:Name="TabMine" Style="{StaticResource Tab}" Content="My heroes" GroupName="BgTab" IsChecked="True" Checked="OnBgTab"
                                                      ToolTip="Your own results per hero" />
                                     </StackPanel>
                                 </Border>
-                                <Border x:Name="BracketPicker" HorizontalAlignment="Right" Style="{StaticResource SegmentBar}"
+                                <Border x:Name="BracketPicker" HorizontalAlignment="Right" Style="{StaticResource SegmentBar}" Visibility="Collapsed"
                                         ToolTip="Use stats from players at this rating. Smaller groups are more precise for high ratings but have fewer games.">
                                     <StackPanel Orientation="Horizontal">
                                         <RadioButton Style="{StaticResource Segment}" Content="All" GroupName="Bracket" IsChecked="True" Command="{Binding SetBracket}" CommandParameter="100" />
@@ -434,7 +434,7 @@
                             </Grid>
 
                             <!-- Hero tier list -->
-                            <Border x:Name="HeroTierCard" Style="{StaticResource Card}">
+                            <Border x:Name="HeroTierCard" Style="{StaticResource Card}" Visibility="Collapsed">
                                 <StackPanel>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -671,7 +671,7 @@
                             </Border>
 
                             <!-- My heroes -->
-                            <Border x:Name="MyHeroesCard" Style="{StaticResource Card}" Visibility="Collapsed">
+                            <Border x:Name="MyHeroesCard" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -731,12 +731,12 @@
                         <StackPanel Margin="40,0,40,120">
                             <TextBlock Text="Constructed" Style="{StaticResource Display}" />
                             <StackPanel Style="{StaticResource PageSubtitle}">
-                                <TextBlock Text="Your decks and matchups, plus the current meta from Firestone community data." Style="{StaticResource Caption}" FontSize="14" VerticalAlignment="Center" />
+                                <TextBlock Text="Deck win rates and matchups from your tracked games." Style="{StaticResource Caption}" FontSize="14" VerticalAlignment="Center" />
                             </StackPanel>
 
                             <ItemsControl ItemsSource="{Binding ConstructedTiles}" ItemTemplate="{StaticResource StatTileTemplate}" ItemsPanel="{StaticResource TilesPanel}" Margin="0,0,-14,16" />
 
-                            <Grid Margin="0,0,0,14">
+                            <Grid Margin="0,0,0,14" Visibility="Collapsed">
                                 <Border HorizontalAlignment="Left" VerticalAlignment="Top" Style="{StaticResource SegmentBar}">
                                     <StackPanel Orientation="Horizontal">
                                         <RadioButton x:Name="TabMyDecks" Style="{StaticResource Tab}" Content="Your decks" GroupName="CtTab" IsChecked="True" Checked="OnCtTab"

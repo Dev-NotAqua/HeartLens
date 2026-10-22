@@ -237,22 +237,26 @@ public sealed class AppHost : IDisposable
         }
     }
 
-    public async Task LoadMetaAsync()
+    /// <summary>
+    /// Community stats are no longer downloaded (they came from Firestone's servers without permission).
+    /// Deletes the copies older versions cached.
+    /// </summary>
+    public Task LoadMetaAsync()
     {
         try
         {
-            var meta = await BattlegroundsMeta.LoadAsync(Http);
-            if (meta is not null)
+            var cached = Path.Combine(AppPaths.Cache, "meta");
+            if (Directory.Exists(cached))
             {
-                Meta = meta;
-                Session.SetMeta(meta);
-                Main.SetMeta(meta);
+                Directory.Delete(cached, recursive: true);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Diag.Error("Community stats unavailable", ex);
+            Diag.Error("Old community stats cache not removed", ex);
         }
+
+        return Task.CompletedTask;
     }
 
     public async Task ImportLogsAsync(bool force)

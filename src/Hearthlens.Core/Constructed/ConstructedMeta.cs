@@ -96,28 +96,6 @@ public sealed class ConstructedMeta
     public static string Label(IReadOnlyList<MetaOption> options, string? key) =>
         options.FirstOrDefault(o => string.Equals(o.Key, key, StringComparison.Ordinal))?.Label ?? options[0].Label;
 
-    public static async Task<ConstructedMeta?> LoadAsync(HttpClient http, string? format, string? rank, string? period, CancellationToken cancellationToken = default)
-    {
-        // Only known keys reach the URL and the cache file name.
-        format = Key(Formats, format);
-        rank = Key(Ranks, rank ?? "all");
-        period = Key(Periods, period ?? "past-7");
-        var tail = $"{format}/{rank}/{period}/overview-from-hourly.gz.json";
-        var tag = $"{format}-{rank}-{period}";
-
-        var archetypeTask = BattlegroundsMeta.CacheFileAsync(http, "api/constructed/stats/archetypes/" + tail, $"constructed-archetypes-{tag}.json", cancellationToken);
-        var deckTask = BattlegroundsMeta.CacheFileAsync(http, "api/constructed/stats/decks/" + tail, $"constructed-decks-{tag}.json", cancellationToken);
-        await Task.WhenAll(archetypeTask, deckTask).ConfigureAwait(false);
-        if (archetypeTask.Result is null && deckTask.Result is null)
-        {
-            return null;
-        }
-
-        using var archetypes = await ReadAsync(archetypeTask.Result, cancellationToken).ConfigureAwait(false);
-        using var decks = await ReadAsync(deckTask.Result, cancellationToken).ConfigureAwait(false);
-        return Parse(format, rank, period, archetypes?.RootElement, decks?.RootElement);
-    }
-
     /// <summary>Archetypes of one class (a class key such as "priest" or "PRIEST"), most played first.</summary>
     public IEnumerable<MetaArchetype> ForClass(string? heroClass) =>
         Archetypes.Where(a => string.Equals(a.Class, heroClass, StringComparison.OrdinalIgnoreCase));
@@ -357,25 +335,6 @@ public sealed class ConstructedMeta
             _ => char.ToUpperInvariant(w[0]) + w[1..],
         });
         return string.Join(' ', words);
-    }
-
-    private static async Task<JsonDocument?> ReadAsync(string? file, CancellationToken cancellationToken)
-    {
-        if (file is null)
-        {
-            return null;
-        }
-
-        try
-        {
-            await using var stream = File.OpenRead(file);
-            return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is JsonException or IOException)
-        {
-            Diag.Error($"Constructed stats unreadable ({Path.GetFileName(file)})", ex);
-            return null;
-        }
     }
 
     private static string GetString(JsonElement e, string name) =>

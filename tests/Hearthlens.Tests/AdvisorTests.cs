@@ -27,8 +27,8 @@ public sealed class AdvisorTests(ITestOutputHelper output)
             return;
         }
 
-        using var http = new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All });
-        var meta = await BattlegroundsMeta.LoadAsync(http);
+        // Community stats are no longer downloaded, so these live checks have no data to run on.
+        var meta = await Task.FromResult<BattlegroundsMeta?>(null);
         if (meta is null)
         {
             return;

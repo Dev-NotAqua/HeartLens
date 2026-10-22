@@ -23,6 +23,19 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Community stats removed.** Hearthlens no longer downloads Battlegrounds or Constructed stats from Firestone's servers. That data was used without asking for permission, and being public does not make it free to reuse. Copies cached by older versions are deleted the first time 0.7.9 starts.
+
+What stays:
+
+- Combat odds, from Hearthlens' own simulator.
+- The lobby panel: everyone's HP, last fight and the last board you saw from them.
+- Your own heroes, placements, rating chart and match history.
+- Your Constructed decks, win rates and matchups.
+- Card data and art from HearthstoneJSON and hsbg.cards.
+
+Gone for now: the hero, comp, trinket and card tier lists, the pick ratings in the overlay, the game plan comps and the Constructed meta tabs.
+
+## What was new in 0.7.8
 **Smoother and cleaner.**
 
 - The sidebar's selection now slides to the page you pick.
