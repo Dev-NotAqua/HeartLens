@@ -24,6 +24,18 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Portable Windows version.** New download: `Hearthlens-Portable-0.8.0-win-x64.zip`. Unzip it anywhere, even on a USB stick, and run `Hearthlens.exe`. Nothing is installed: settings and history stay in the `data` folder next to it. It tells you when a new version is out but does not update itself.
+
+**Stats pool, ready to switch on.** Hearthlens is getting its own hero tier list, built from games that players choose to share. Nothing is shared without asking:
+
+- When the pool goes live, a banner asks once whether to share your Battlegrounds results. A switch in **Settings** changes your answer at any time.
+- A shared game holds only the hero you picked, the heroes you were offered, your placement and your rating rounded to 500. No name, BattleTag or account.
+- The Heroes tier list and the hero pick ratings in the overlay come back once a hero has 20 shared games.
+
+The pool is not online yet, so this version sends nothing.
+
+## What was new in 0.7.9
+
 **Community stats removed.** Hearthlens no longer downloads Battlegrounds or Constructed stats from Firestone's servers. That data was used without asking for permission, and being public does not make it free to reuse. Copies cached by older versions are deleted the first time 0.7.9 starts.
 
 What stays:
@@ -37,6 +49,7 @@ What stays:
 Gone for now: the hero, comp, trinket and card tier lists, the pick ratings in the overlay, the game plan comps and the Constructed meta tabs.
 
 ## What was new in 0.7.8
+
 **Smoother and cleaner.**
 
 - The sidebar's selection now slides to the page you pick.
@@ -51,6 +64,7 @@ Gone for now: the hero, comp, trinket and card tier lists, the pick ratings in t
 - The Constructed page and its sidebar item mention the meta stats.
 
 ## What was new in 0.7.7
+
 **Meta stats for Constructed.** The Constructed page has two new tabs with Firestone's community stats, refreshed every few hours. Choose the format (Standard or Wild), the rank, the time period and the class.
 
 - **Meta tier list:** every archetype with its win rate, how it does going first and on the coin, and how much it is played. Sort by best win rate or most played. Click an archetype for its **mulligan guide** (the win rate when a card stays in your opening hand, and how often players keep it) and its best decklists.
@@ -67,9 +81,11 @@ Gone for now: the hero, comp, trinket and card tier lists, the pick ratings in t
 - Comps without a tribe no longer start with a stray dot.
 
 ## What was new in 0.7.6
+
 **Combat odds are back.** The win, tie and loss chances now stay on screen for the whole fight. Hearthstone writes the entire fight to its log about a second after it starts and then plays it for another half a minute; Hearthlens took the end of the log entry as the end of the fight, so the odds disappeared before the fight was even shown.
 
 ## What was new in 0.7.5
+
 **Pick your colours.** *Settings → Theme* has seven ready-made themes: Tavern (the gold you know), Frost, Fel, Arcane, Ember, Tide and Shadow. Click one and the app and the in-game overlay switch right away. **Make your own** sets the accent colour, the background colour and how strongly the background is tinted, with a live preview. Wins, losses, tiers and card rarities keep their usual colours in every theme.
 
 **Your last hero behind every page.** The art of the hero you played last fades in behind the page titles.
