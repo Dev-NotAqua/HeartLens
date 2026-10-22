@@ -15,11 +15,22 @@
 Every installer adds a desktop shortcut and can be uninstalled cleanly; your match history is kept unless you choose to delete it. (The AppImage and the Windows preview zip are portable: nothing to install or uninstall.)
 `SHA256SUMS.txt` lists the checksums of all files.
 
+**You only have to do this once.** Hearthlens 0.5.0 and newer keep themselves up to date: they check GitHub in the background and install the new version when you close the app. *Before that first update, install 0.5.0 by hand — 0.4.0 and older do not know how to update themselves.*
+
 **macOS note:** Hearthlens is not notarized by Apple. If macOS says it cannot be opened, right-click it, choose **Open**, then **Open** again (only the first time).
 
 **Phones and tablets:** there is no mobile version yet. iPhone and iPad do not allow apps to read Hearthstone's data or draw over it, so iOS is not possible. On Android 11 and later, reading Hearthstone's logs needs extra setup (Shizuku or root); an Android version is planned.
 
 ## What's in this version
+
+**Hearthlens updates itself now.** Downloading a new setup by hand is over: shortly after it starts, and every six hours after that, Hearthlens looks at GitHub for a newer release, fetches the file your system needs, and installs it **the next time you close Hearthlens**. Nothing pops up mid-game — the update waits until the app is closed, so a running overlay is never interrupted, and your match history, settings and overlay layout stay exactly as they are.
+
+- Windows: the new setup runs silently while Hearthlens is closed. A gold **Update ready — restart** chip appears in the top bar of the dashboard when you would rather install right away: one click closes the app, installs and comes back in the new version.
+- macOS and Linux: the matching package is downloaded for you and one click hands it to your system's installer (no hunting through the releases page).
+- Updates can be turned off: *Settings → **Install updates automatically***.
+- One-time step: if you are on 0.4.0 or older, install 0.5.0 by hand once — older versions do not know about updates yet. From here on, every release arrives on its own.
+
+## What was new in 0.4.0
 
 **Tavern spells.** Spells are now part of the advice: the game plan prices them at their real cost, the shop panel marks the best spell to buy (spells need no board space), and the best pick is marked for spells too.
 

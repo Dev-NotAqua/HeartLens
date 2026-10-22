@@ -15,6 +15,7 @@ using Hearthlens.Core.Hearthstone;
 using Hearthlens.Core.Logs;
 using Hearthlens.Core.Memory;
 using Hearthlens.Core.Tracking;
+using Hearthlens.Core.Updates;
 using Forms = System.Windows.Forms;
 
 namespace Hearthlens.App;
@@ -51,6 +52,7 @@ public partial class App : Application
     private MatchupAggregate? _matchupStats;
     private string? _renderDir;
     private BattlegroundsMeta? _meta;
+    private UpdateInfo? _stagedUpdate;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -99,6 +101,7 @@ public partial class App : Application
         _session = new GameSession(_history, _memory);
 
         _mainViewModel = new MainViewModel(_history, _settings);
+        _mainViewModel.UpdateRequested += OnInstallUpdateRequested;
         _overlayViewModel = new OverlayViewModel();
         _session.SetCompMode(_settings.CompMode, _settings.ChosenCompId);
         _overlayViewModel.PinRequested += OnPinRequested;
@@ -144,6 +147,7 @@ public partial class App : Application
         }
 
         _ = InitializeAsync();
+        StartUpdateChecks();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -162,6 +166,11 @@ public partial class App : Application
         }
 
         _memory?.Dispose();
+        if (_stagedUpdate is not null && UpdateService.ApplyStaged(_stagedUpdate, relaunch: false))
+        {
+            _stagedUpdate = null;
+        }
+
         _settings.Save();
         _mutex?.Dispose();
         base.OnExit(e);
@@ -236,6 +245,55 @@ public partial class App : Application
             Diag.Error("Startup failed", ex);
             _mainViewModel.Busy = "Startup problem — see hearthlens.log in the data folder.";
         }
+    }
+
+    /// <summary>
+    /// Looks for a newer release shortly after startup and every six hours after that. A downloaded update installs by
+    /// itself when the app closes, so keeping Hearthlens current never needs a download or a setup run by hand.
+    /// </summary>
+    private void StartUpdateChecks()
+    {
+        if (!_settings.AutoUpdate)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(20));
+            while (true)
+            {
+                try
+                {
+                    var info = await UpdateService.CheckAsync(_http);
+                    if (info is not null && await UpdateService.DownloadAsync(_http, info) is not null)
+                    {
+                        _stagedUpdate = info;
+                        _ = Dispatcher.BeginInvoke(() => _mainViewModel.SetUpdateReady(info.Version));
+                        Notify("Hearthlens update ready", $"{info.Version} is downloaded — it installs when you close Hearthlens.");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Diag.Error("Update check failed", ex);
+                }
+
+                await Task.Delay(TimeSpan.FromHours(6));
+            }
+        });
+    }
+
+    /// <summary>The "Update ready" chip: install the downloaded update now and start the new version.</summary>
+    private void OnInstallUpdateRequested()
+    {
+        if (_stagedUpdate is null || !UpdateService.ApplyStaged(_stagedUpdate, relaunch: true))
+        {
+            return;
+        }
+
+        _stagedUpdate = null;
+        Quit();
     }
 
     private async Task LoadMetaAsync()

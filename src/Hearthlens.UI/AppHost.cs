@@ -9,6 +9,7 @@ using Hearthlens.Core.Logs;
 using Hearthlens.Core.Memory;
 using Hearthlens.Core.Power;
 using Hearthlens.Core.Tracking;
+using Hearthlens.Core.Updates;
 using Hearthlens.UI.Infrastructure;
 using Hearthlens.UI.Main;
 using Hearthlens.UI.Overlay;
@@ -31,6 +32,7 @@ public sealed class AppHost : IDisposable
     private string? _deckStatsKey;
     private DeckAggregate? _deckStats;
     private MatchupAggregate? _matchupStats;
+    private UpdateInfo? _stagedUpdate;
 
     public AppHost(AppSettings settings)
     {
@@ -53,6 +55,7 @@ public sealed class AppHost : IDisposable
         Overlay = new OverlayViewModel();
         Session.SetCompMode(Settings.CompMode, Settings.ChosenCompId);
         Overlay.PinRequested += OnPinRequested;
+        Main.UpdateRequested += OnInstallUpdateRequested;
 
         _historyDebounce = Debouncer(TimeSpan.FromMilliseconds(600), () => _ = Main.RefreshAsync());
         _settingsDebounce = Debouncer(TimeSpan.FromMilliseconds(400), Settings.Save);
@@ -95,6 +98,9 @@ public sealed class AppHost : IDisposable
 
     /// <summary>Something the player should know (title, text), e.g. "restart Hearthstone"; shells show it as a notification.</summary>
     public event Action<string, string>? Notification;
+
+    /// <summary>The shell should close the app, e.g. because an update was just handed to its helper.</summary>
+    public event Action? ExitRequested;
 
     /// <summary>Applies the "start when you sign in" setting; set by the shell for its platform.</summary>
     public Action<bool>? ApplyAutostart { get; set; }
@@ -163,11 +169,71 @@ public sealed class AppHost : IDisposable
 
             await LoadMetaAsync();
             _metaRefresh.Start();
+            StartUpdateChecks();
         }
         catch (Exception ex)
         {
             Diag.Error("Startup failed", ex);
             Main.Busy = "Startup problem — see hearthlens.log in the data folder.";
+        }
+    }
+
+    /// <summary>
+    /// Looks for a newer release shortly after startup and every six hours after that. A downloaded Windows update
+    /// installs by itself when the app closes, so keeping Hearthlens current never needs a download or setup run by hand.
+    /// </summary>
+    private void StartUpdateChecks()
+    {
+        if (!Settings.AutoUpdate || OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(20));
+            while (true)
+            {
+                try
+                {
+                    var info = await UpdateService.CheckAsync(Http);
+                    if (info is not null && await UpdateService.DownloadAsync(Http, info) is not null)
+                    {
+                        _stagedUpdate = info;
+                        Dispatcher.UIThread.Post(() => Main.SetUpdateReady(info.Version));
+                        Notification?.Invoke("Hearthlens update ready", $"{info.Version} is downloaded — it installs when you close Hearthlens.");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Diag.Error("Update check failed", ex);
+                }
+
+                await Task.Delay(TimeSpan.FromHours(6));
+            }
+        });
+    }
+
+    /// <summary>The "Update ready" chip: install the downloaded update now. Windows restarts into the new version,
+    /// elsewhere the downloaded package is handed to the OS installer.</summary>
+    private void OnInstallUpdateRequested()
+    {
+        if (_stagedUpdate is null)
+        {
+            return;
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            UpdateService.OpenInstaller(UpdateService.StagedPath(_stagedUpdate));
+            return;
+        }
+
+        if (UpdateService.ApplyStaged(_stagedUpdate, relaunch: true))
+        {
+            _stagedUpdate = null;
+            ExitRequested?.Invoke();
         }
     }
 
@@ -373,6 +439,11 @@ public sealed class AppHost : IDisposable
         _metaRefresh.Stop();
         Memory.Dispose();
         Settings.Save();
+        if (_stagedUpdate is not null && UpdateService.ApplyStaged(_stagedUpdate, relaunch: false))
+        {
+            _stagedUpdate = null;
+        }
+
         Http.Dispose();
     }
 }

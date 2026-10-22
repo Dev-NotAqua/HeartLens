@@ -60,6 +60,7 @@ internal sealed class DesktopApp : HearthlensApp
         _host = new AppHost(settings) { ApplyAutostart = Autostart.Apply };
         _main = new MainWindow(_host);
         _host.Notification += (title, text) => _main.Notify(title, text);
+        _host.ExitRequested += Quit;
 
         _platform = OverlayPlatform.Create();
         if (_platform.Supported)

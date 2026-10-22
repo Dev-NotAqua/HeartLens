@@ -130,6 +130,12 @@ public sealed class AppSettings
 
     public bool StartWithWindows { get; set; }
 
+    /// <summary>
+    /// Look for a newer release on GitHub in the background, download it and install it when the app next closes.
+    /// This is what keeps installed copies up to date without downloading the setup wizard by hand again.
+    /// </summary>
+    public bool AutoUpdate { get; set; } = true;
+
     public bool HistoryImported { get; set; }
 
     public static AppSettings Load()

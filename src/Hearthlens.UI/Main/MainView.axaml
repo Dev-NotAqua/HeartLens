@@ -170,6 +170,8 @@
                 <!-- Top bar: status chips -->
                 <TextBlock Text="{Binding Busy}" Classes="caption" Margin="40,0,320,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,22,0">
+                    <Button Classes="ghost primary" Content="Update ready — restart" Command="{Binding InstallUpdate}" IsVisible="{Binding UpdateReady}"
+                            VerticalAlignment="Center" Margin="0,0,8,0" ToolTip.Tip="{Binding UpdateText}" />
                     <Border Classes="pill" Background="{StaticResource Surface3}" Padding="12,5" Margin="0,0,8,0"
                             ToolTip.Tip="Green when Hearthstone is running">
                         <StackPanel Orientation="Horizontal">
@@ -760,7 +762,9 @@
                             <StackPanel>
                                 <c:Ornament Text="App" Icon="&#xF0614;" Size="13" Margin="0,0,0,14" />
                                 <CheckBox Classes="switch" Content="Keep running in the tray when closed" IsChecked="{Binding Settings.MinimizeToTray}" Margin="0,0,0,14" />
-                                <CheckBox Classes="switch" Content="Start when you sign in" IsChecked="{Binding Settings.StartWithWindows}" Margin="0,0,0,14" />
+                                <CheckBox Classes="switch" Content="Install updates automatically" IsChecked="{Binding Settings.AutoUpdate}" Margin="0,0,0,14"
+                                      ToolTip.Tip="Hearthlens checks GitHub for a newer version and installs it when you close the app" />
+                            <CheckBox Classes="switch" Content="Start when you sign in" IsChecked="{Binding Settings.StartWithWindows}" Margin="0,0,0,14" />
                                 <CheckBox Classes="switch" Content="Start minimized" IsChecked="{Binding Settings.StartMinimized}" Margin="0,0,0,18" />
                                 <WrapPanel>
                                     <Button Classes="ghost" Content="Import past games from logs" Click="OnReimport" Margin="0,0,8,8"

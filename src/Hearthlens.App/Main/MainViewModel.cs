@@ -89,9 +89,40 @@ public sealed class MainViewModel : Observable
             CardTier = Convert.ToInt32(p, CultureInfo.InvariantCulture);
             RebuildMeta();
         });
+        InstallUpdate = new RelayCommand(() => UpdateRequested?.Invoke());
     }
 
     public RelayCommand SetCardTier { get; }
+
+    // ---- updates --------------------------------------------------------------------------
+
+    /// <summary>The player asked to install a downloaded update right away (the app installs it and restarts).</summary>
+    public event Action? UpdateRequested;
+
+    private bool _updateReady;
+    private string _updateText = string.Empty;
+
+    /// <summary>A newer version has been downloaded: it installs by itself when Hearthlens closes.</summary>
+    public bool UpdateReady
+    {
+        get => _updateReady;
+        private set => Set(ref _updateReady, value);
+    }
+
+    public string UpdateText
+    {
+        get => _updateText;
+        private set => Set(ref _updateText, value);
+    }
+
+    public RelayCommand InstallUpdate { get; }
+
+    /// <summary>Tells the dashboard that a downloaded update is waiting for the next restart.</summary>
+    public void SetUpdateReady(string version)
+    {
+        UpdateText = $"Version {version} is downloaded — it installs when you close Hearthlens.";
+        UpdateReady = true;
+    }
 
     /// <summary>"Good morning" / "Good afternoon" / "Good evening" for the page header.</summary>
     public string Greeting => DateTime.Now.Hour switch
