@@ -176,6 +176,8 @@
         <!-- Hero pick: compact badge centred above each hero portrait (slot = HDT hero pitch, 340 units) -->
         <DataTemplate x:Key="HeroPickTemplate" DataType="{x:Type o:HeroPickCard}">
             <Grid Width="340">
+                <Border x:Name="Halo" Width="268" HorizontalAlignment="Center" Margin="0,-6,0,-14" CornerRadius="18"
+                        Background="{StaticResource BestHalo}" IsHitTestVisible="False" Visibility="Collapsed" />
                 <Border x:Name="Card" Style="{StaticResource OverlayCard}" Background="{StaticResource OverlayPanelSolid}" HorizontalAlignment="Center"
                         Width="232" Padding="10,8" Margin="0,8,0,0">
                     <Grid>
@@ -203,7 +205,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="5"
+                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource PrimaryFill}" CornerRadius="5"
                         Padding="8,1" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
@@ -218,9 +220,10 @@
                         <Condition Binding="{Binding Recommended}" Value="True" />
                         <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
                     </MultiDataTrigger.Conditions>
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}" />
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource BestEdge}" />
                     <Setter TargetName="Card" Property="BorderThickness" Value="1.5" />
                     <Setter TargetName="Best" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="Halo" Property="Visibility" Value="Visible" />
                 </MultiDataTrigger>
                 <DataTrigger Binding="{Binding HasMeta}" Value="False">
                     <Setter TargetName="Card" Property="Opacity" Value="0.7" />
@@ -231,6 +234,8 @@
         <!-- Trinket pick: compact badge above each offered trinket (slot = HDT trinket pitch, 277 units) -->
         <DataTemplate x:Key="TrinketBadgeTemplate" DataType="{x:Type o:TrinketBadge}">
             <Grid Width="277">
+                <Border x:Name="Halo" Width="232" HorizontalAlignment="Center" Margin="0,-6,0,-14" CornerRadius="18"
+                        Background="{StaticResource BestHalo}" IsHitTestVisible="False" Visibility="Collapsed" />
                 <Border x:Name="Card" Style="{StaticResource OverlayCard}" Background="{StaticResource OverlayPanelSolid}" HorizontalAlignment="Center"
                         Width="196" Padding="9,7" Margin="0,8,0,0">
                     <Grid>
@@ -252,7 +257,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="5"
+                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource PrimaryFill}" CornerRadius="5"
                         Padding="8,1" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
@@ -267,9 +272,10 @@
                         <Condition Binding="{Binding Recommended}" Value="True" />
                         <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
                     </MultiDataTrigger.Conditions>
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}" />
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource BestEdge}" />
                     <Setter TargetName="Card" Property="BorderThickness" Value="1.5" />
                     <Setter TargetName="Best" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="Halo" Property="Visibility" Value="Visible" />
                 </MultiDataTrigger>
                 <DataTrigger Binding="{Binding HasMeta}" Value="False">
                     <Setter TargetName="Card" Property="Opacity" Value="0.7" />
@@ -349,7 +355,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Accent}" CornerRadius="5"
+                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource PrimaryFill}" CornerRadius="5"
                         Padding="8,1" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
@@ -386,7 +392,7 @@
                         <Condition Binding="{Binding Best}" Value="True" />
                         <Condition Binding="{Binding DataContext.ShowBestBadges, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
                     </MultiDataTrigger.Conditions>
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}" />
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource BestEdge}" />
                     <Setter TargetName="Card" Property="BorderThickness" Value="1.5" />
                     <Setter TargetName="Card" Property="Opacity" Value="1" />
                     <Setter TargetName="Cookie" Property="Fill" Value="{StaticResource Accent}" />

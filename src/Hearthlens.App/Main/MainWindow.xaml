@@ -5,7 +5,7 @@
         xmlns:c="clr-namespace:Hearthlens.App.Controls"
         xmlns:i="clr-namespace:Hearthlens.App.Infrastructure"
         Title="Hearthlens" Width="1260" Height="840" MinWidth="1040" MinHeight="660"
-        Background="{StaticResource Bg}" Foreground="{StaticResource Text}"
+        Background="{StaticResource WindowFill}" Foreground="{StaticResource Text}"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True" Style="{StaticResource AppWindow}"
         TextOptions.TextFormattingMode="Display" Icon="/Assets/hearthlens.ico">
     <WindowChrome.WindowChrome>
@@ -49,7 +49,16 @@
         </Style>
 
         <DataTemplate x:Key="StatTileTemplate" DataType="{x:Type m:StatTile}">
-            <Border Style="{StaticResource Card}" Margin="0,0,14,0" Padding="20,16" ToolTip="{Binding Detail}">
+            <Border Margin="0,0,14,0" Padding="20,16" ToolTip="{Binding Detail}">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource Card}">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentLine}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel>
                     <TextBlock Text="{Binding Label}" Style="{StaticResource Label}" />
                     <TextBlock x:Name="Value" Text="{Binding Value}" Style="{StaticResource Stat}" Margin="0,8,0,2" TextTrimming="CharacterEllipsis" />
@@ -117,7 +126,8 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="24,22,0,18">
                         <Image Source="/Assets/hearthlens.png" Width="42" Height="42" RenderOptions.BitmapScalingMode="HighQuality" />
-                        <TextBlock Text="Hearthlens" Style="{StaticResource H2}" FontSize="20" Margin="12,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Hearthlens" Style="{StaticResource H2}" FontSize="21" FontWeight="ExtraBold" Foreground="{StaticResource GildedText}"
+                                   Margin="12,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
 
                     <RadioButton x:Name="NavOverview" Style="{StaticResource NavItem}" Content="Home" Tag="&#xF02DC;" GroupName="Nav" IsChecked="True" Checked="OnNavigate"
@@ -157,7 +167,7 @@
             </DockPanel>
 
             <!-- ================= Content ================= -->
-            <Border Grid.Column="1" Background="{StaticResource Surface}" BorderBrush="{StaticResource PanelEdge}" BorderThickness="1" CornerRadius="16"
+            <Border Grid.Column="1" Background="{StaticResource ContentFill}" BorderBrush="{StaticResource ContentEdge}" BorderThickness="1" CornerRadius="16"
                     Margin="0,10,10,10" ClipToBounds="True">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -165,11 +175,15 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Soft decorative shapes: a faint warm glow -->
+                    <!-- A faint gilded seal in the top corner, behind the page title -->
                     <Canvas Grid.RowSpan="2" IsHitTestVisible="False">
-                        <c:Scallop Canvas.Right="70" Canvas.Top="70" Width="190" Height="190" Fill="{StaticResource Decor}" Lobes="9" Depth="0.12" Angle="12" />
-                        <c:Scallop Canvas.Right="250" Canvas.Top="20" Width="80" Height="80" Fill="{StaticResource Decor}" Lobes="4" Depth="0.3" Angle="20" />
-                        <c:Scallop Canvas.Left="420" Canvas.Top="330" Width="120" Height="120" Fill="{StaticResource Decor}" Lobes="12" Depth="0.08" />
+                        <Grid Canvas.Right="-140" Canvas.Top="-170" Width="480" Height="480">
+                            <Ellipse Stroke="{StaticResource DecorStrong}" StrokeThickness="1" />
+                            <Ellipse Margin="30" Stroke="{StaticResource Decor}" StrokeThickness="12" />
+                            <Ellipse Margin="62" Stroke="{StaticResource DecorStrong}" StrokeThickness="1.5" StrokeDashArray="1 5" />
+                            <Ellipse Margin="96" Stroke="{StaticResource DecorStrong}" StrokeThickness="1" />
+                            <Ellipse Margin="150" Stroke="{StaticResource Decor}" StrokeThickness="6" />
+                        </Grid>
                     </Canvas>
 
                     <!-- Top bar: status chips -->

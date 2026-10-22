@@ -102,6 +102,25 @@ public partial class MainWindow : Window
         PageConstructed.Visibility = NavConstructed.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PageHistory.Visibility = NavHistory.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PageSettings.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        Reveal(new FrameworkElement[] { PageOverview, PageBattlegrounds, PageConstructed, PageHistory, PageSettings }
+            .First(p => p.Visibility == Visibility.Visible));
+    }
+
+    /// <summary>The page that opens rises a few pixels and fades in; skipped when Windows animations are off.</summary>
+    private static void Reveal(FrameworkElement page)
+    {
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            return;
+        }
+
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+        var rise = new TranslateTransform(0, 12);
+        page.RenderTransform = rise;
+        rise.BeginAnimation(TranslateTransform.YProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(280)) { EasingFunction = ease });
+        page.BeginAnimation(UIElement.OpacityProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
     }
 
     private void OnBgTab(object sender, RoutedEventArgs e)
