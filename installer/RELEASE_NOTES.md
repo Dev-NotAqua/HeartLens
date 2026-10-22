@@ -23,6 +23,20 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Smoother and cleaner.**
+
+- The sidebar's selection now slides to the page you pick.
+- Pages and tabs fade in when you switch between them.
+- Buttons, tabs, sidebar items and list rows fade in and out on hover instead of snapping.
+- Page and sidebar animations follow Windows: turn off *Animation effects* in Windows settings and Hearthlens stops them too.
+
+**Small fixes**
+
+- Home shows your last Solo or Duos rating until Hearthstone reports a new one, instead of a dash.
+- Placement counts read "3 · 12%" instead of "3 12%".
+- The Constructed page and its sidebar item mention the meta stats.
+
+## What was new in 0.7.7
 **Meta stats for Constructed.** The Constructed page has two new tabs with Firestone's community stats, refreshed every few hours. Choose the format (Standard or Wild), the rank, the time period and the class.
 
 - **Meta tier list:** every archetype with its win rate, how it does going first and on the coin, and how much it is played. Sort by best win rate or most played. Click an archetype for its **mulligan guide** (the win rate when a card stays in your opening hand, and how often players keep it) and its best decklists.

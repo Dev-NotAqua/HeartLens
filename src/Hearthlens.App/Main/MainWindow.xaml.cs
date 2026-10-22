@@ -121,10 +121,39 @@ public partial class MainWindow : Window
         PageSettings.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         Reveal(new FrameworkElement[] { PageOverview, PageBattlegrounds, PageConstructed, PageHistory, PageSettings }
             .First(p => p.Visibility == Visibility.Visible));
+        PlacePill(animate: true);
+    }
+
+    private void OnSidebarSize(object sender, SizeChangedEventArgs e) => PlacePill(animate: false);
+
+    /// <summary>Moves the selection pill behind the checked sidebar item, with a light spring when animated.</summary>
+    private void PlacePill(bool animate)
+    {
+        var nav = new[] { NavOverview, NavBattlegrounds, NavConstructed, NavHistory, NavSettings }.FirstOrDefault(n => n.IsChecked == true);
+        if (nav is null || Sidebar is null || nav.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        var y = nav.TranslatePoint(new Point(0, 2), Sidebar).Y;
+        NavPill.Height = nav.ActualHeight - 4;
+        if (!animate || !SystemParameters.ClientAreaAnimation || NavPill.Opacity == 0)
+        {
+            NavPillShift.BeginAnimation(TranslateTransform.YProperty, null);
+            NavPillShift.Y = y;
+            NavPill.Opacity = 1;
+            return;
+        }
+
+        NavPillShift.BeginAnimation(TranslateTransform.YProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(y, TimeSpan.FromMilliseconds(340))
+            {
+                EasingFunction = new System.Windows.Media.Animation.BackEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut, Amplitude = 0.25 },
+            });
     }
 
     /// <summary>The page that opens rises a few pixels and fades in; skipped when Windows animations are off.</summary>
-    private static void Reveal(FrameworkElement page)
+    private static void Reveal(FrameworkElement page, double rise = 12)
     {
         if (!SystemParameters.ClientAreaAnimation)
         {
@@ -132,10 +161,10 @@ public partial class MainWindow : Window
         }
 
         var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
-        var rise = new TranslateTransform(0, 12);
-        page.RenderTransform = rise;
-        rise.BeginAnimation(TranslateTransform.YProperty,
-            new System.Windows.Media.Animation.DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(280)) { EasingFunction = ease });
+        var shift = new TranslateTransform(0, rise);
+        page.RenderTransform = shift;
+        shift.BeginAnimation(TranslateTransform.YProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(rise, 0, TimeSpan.FromMilliseconds(280)) { EasingFunction = ease });
         page.BeginAnimation(UIElement.OpacityProperty,
             new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
     }
@@ -153,6 +182,10 @@ public partial class MainWindow : Window
         CardStatsCard.Visibility = TabCards.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         MyHeroesCard.Visibility = TabMine.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         BracketPicker.Visibility = TabMine.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+        if (sender is RadioButton { IsChecked: true })
+        {
+            Reveal(new FrameworkElement[] { HeroTierCard, CompTierCard, TrinketTierCard, CardStatsCard, MyHeroesCard }.First(c => c.Visibility == Visibility.Visible), 8);
+        }
     }
 
     private void OnCtTab(object sender, RoutedEventArgs e)
@@ -168,6 +201,10 @@ public partial class MainWindow : Window
         MetaDecksPanel.Visibility = TabMetaDecks.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         MetaFilters.Visibility = meta ? Visibility.Visible : Visibility.Collapsed;
         MetaFormatPicker.Visibility = meta ? Visibility.Visible : Visibility.Collapsed;
+        if (sender is RadioButton { IsChecked: true })
+        {
+            Reveal(new FrameworkElement[] { MyDecksPanel, MetaTiersPanel, MetaDecksPanel }.First(c => c.Visibility == Visibility.Visible), 8);
+        }
     }
 
     /// <summary>Opens a Constructed tab: "Decks", "Tiers" or "Top" (used by the UI render check).</summary>

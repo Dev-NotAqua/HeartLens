@@ -334,6 +334,20 @@ public sealed partial class MainViewModel : Observable
         HistoryRows = data.Filtered.Take(300).Select(Row).ToList();
         RatingPoints = data.Rating;
 
+        // Before Hearthstone reports a rating this session, show the last one from history.
+        if (data.Rating.Count > 0)
+        {
+            var last = data.Rating[^1].Rating.ToString("N0", CultureInfo.CurrentCulture);
+            if (mode == "Duos" && DuosRating == "—")
+            {
+                DuosRating = last;
+            }
+            else if (mode != "Duos" && SoloRating == "—")
+            {
+                SoloRating = last;
+            }
+        }
+
         var top = mode == "Duos" ? 2 : 4;
         var max = Math.Max(1, data.Distribution.Max());
         var total = Math.Max(1, data.Distribution.Sum());
