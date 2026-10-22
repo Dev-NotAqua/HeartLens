@@ -795,6 +795,13 @@ public sealed class Fight
             return place.Position + 1;
         }
 
+        if (place.DeathAnchor is null)
+        {
+            // Nothing alive stood to its right when it died: append, so every further summon from this slot (and the
+            // reborn copy) lands right of the previous one. A fixed index would put each new summon left of the last.
+            return place.Side.Count;
+        }
+
         return place.DeathAnchor is { IsOnBoard: true } anchor && anchor.Side == place.Side
             ? anchor.Position
             : Math.Min(place.DeathIndex < 0 ? place.Side.Count : place.DeathIndex, place.Side.Count);
