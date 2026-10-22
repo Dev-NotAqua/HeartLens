@@ -21,11 +21,17 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
-- New logo.
-- Hearthlens now runs on **macOS and Linux** too, with the same dashboard and in-game overlay: it follows Hearthstone's window and lets clicks pass through to the game. On Linux it finds Hearthstone in Wine, Lutris, Bottles and Steam/Proton.
-- Your rating, ranks and lobby tribes are read from game memory on Windows only; on macOS and Linux those values stay empty and everything else works from the logs.
-- Narrow windows get a compact layout with icon-only navigation.
-- Combat odds are more accurate: the simulator no longer skips an opponent's minion when the minion to its left dies.
-- Card names show correctly even before card data has downloaded.
+**New look.** Hearthlens now wears Hearthstone's colours: dark wood browns, parchment text and gold. The selected page is a framed tile with a gold bar instead of a stretched oval, and buttons, chips and panels have a cleaner, framed shape.
+
+**You choose your picks.** Two new settings under *Settings → In-game overlay*:
+- *Pick suggestions*: **Mark the best** / **Stats only** / **Off**. *Stats only* (the default) shows the same numbers on every hero, trinket, tavern minion and Discover option and marks nothing as the best, so the choice is yours.
+- *Game plan comp*: **I choose** / **Automatic**. In *I choose* (the default) Hearthlens never picks a comp for you: click one in the game plan panel, and it is kept for your next games.
+
+**Much better combat odds.** The simulator now plays out minion effects: deathrattles (summons, buffs, damage, and effects that trigger them twice), Rally and other attack triggers, cleave and splash damage, avenge, "after a friendly minion dies", on-summon and damage triggers, and auras — 61 of the 65 Battlegrounds minions whose effects matter in combat. The "effects not simulated" note is now accurate and only counts cards whose effect is really missing. Reborn minions come back with the right stats and keywords.
+
+**Fixes**
+- Windows setup: on a PC that can't run Hearthlens (32-bit Windows, Windows older than 10, or an ARM PC without Windows 11) the setup now says so instead of installing an app that won't start.
+- Windows: long pages (Settings, Battlegrounds) no longer cut off their content above the bottom bar.
+- Linux: the ARM (aarch64) .rpm builds again, and .rpm packages no longer clash with other apps that bundle the same libraries.
 
 Community stats: Firestone (zerotoheroes.com). Card data and art: HearthstoneJSON. Not affiliated with Blizzard Entertainment.

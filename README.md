@@ -47,12 +47,12 @@ dotnet build src/Hearthlens.App/Hearthlens.App.csproj           # Windows app (a
 ### Installers
 
 ```sh
-installer/windows/build.sh 0.2.0            # needs NSIS (makensis): setup wizard + portable preview
-installer/linux/build.sh 0.2.0 x64          # .deb, .rpm, .tar.gz (and .AppImage with appimagetool)
-installer/macos/build.sh 0.2.0 arm64 x64    # .zip anywhere; .dmg and .pkg on a Mac
+installer/windows/build.sh 0.3.0            # needs NSIS (makensis): setup wizard + portable preview
+installer/linux/build.sh 0.3.0 x64          # .deb, .rpm, .tar.gz (and .AppImage with appimagetool)
+installer/macos/build.sh 0.3.0 arm64 x64    # .zip anywhere; .dmg and .pkg on a Mac
 ```
 
-Output goes to `dist/`. Pushing a tag such as `v0.2.0` runs `.github/workflows/release.yml`, which builds every
+Output goes to `dist/`. Pushing a tag such as `v0.3.0` runs `.github/workflows/release.yml`, which builds every
 installer (macOS ones on a Mac runner) and publishes them as a GitHub Release.
 
 ## Data and credits
