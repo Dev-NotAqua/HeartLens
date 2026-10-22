@@ -139,17 +139,28 @@ public sealed class CombatOddsTests(ITestOutputHelper output)
         var tracker = new BattlegroundsTracker { Cards = cards };
         parser.AddListener(tracker);
         int endings = 0, shown = 0;
+        var attacked = false;
         foreach (var line in ReadShared(log))
         {
-            // Just before the client finishes showing a fight, the odds must still be up.
+            if (line.Contains("GameState.DebugPrintPower", StringComparison.Ordinal) && line.Contains("BLOCK_START BlockType=ATTACK", StringComparison.Ordinal))
+            {
+                attacked = true;
+            }
+
+            // Just before the client finishes showing a fight with attacks, the odds must still be up.
             if (line.Contains("PowerTaskList.", StringComparison.Ordinal)
                 && line.Contains("tag=BOARD_VISUAL_STATE value=1", StringComparison.Ordinal)
-                && parser.Game is { IsBattlegrounds: true, LocalPlayerId: > 0, CombatOnScreen: true } game)
+                && parser.Game is { IsBattlegrounds: true, LocalPlayerId: > 0 } game)
             {
-                parser.Flush();
-                endings++;
-                var view = tracker.BuildView(game);
-                if (view is { InCombat: true, CombatOdds: not null }) shown++;
+                if (attacked)
+                {
+                    parser.Flush();
+                    endings++;
+                    var view = tracker.BuildView(game);
+                    if (view is { InCombat: true, CombatOdds: not null }) shown++;
+                }
+
+                attacked = false;
             }
 
             parser.Feed(line);

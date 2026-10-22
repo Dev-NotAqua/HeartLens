@@ -54,6 +54,9 @@ public sealed class GameState
     /// </summary>
     public long CombatOnScreenSince { get; internal set; }
 
+    /// <summary>True once the client's combat replay (PowerTaskList board state) has been seen in this game.</summary>
+    public bool CombatReplaySeen { get; internal set; }
+
     /// <summary>
     /// Power.log blocks enclosing the line being processed, outermost first. During <see cref="IPowerListener.OnBlockStart"/>
     /// and <see cref="IPowerListener.OnBlockEnd"/> it holds the blocks around the one starting or ending.

@@ -176,18 +176,25 @@ public sealed class BattlegroundsTracker : IPowerListener
             case GameTag.BoardVisualState when entity.Id == game.GameEntityId:
                 if (value == "2")
                 {
+                    if (!game.CombatOnScreen)
+                    {
+                        game.CombatOnScreenSince = Environment.TickCount64;
+                    }
+
                     game.CombatOnScreen = true;
                     BeginCombat(game);
+                    break;
                 }
-                else if (value == "1")
+
+                // The server writes the whole fight, ending with this line, about a second after it starts; the client
+                // then plays it for another 30 seconds or so. The client's replay (PowerParser) says when it is over
+                // on screen, so the odds stay up while the fight plays. Without a replay this line is all there is.
+                if (value == "1" && !game.CombatReplaySeen)
                 {
                     game.CombatOnScreen = false;
-                    if (_inCombat)
-                    {
-                        EndCombat(game);
-                    }
                 }
-                else if (_inCombat)
+
+                if (_inCombat)
                 {
                     EndCombat(game);
                 }

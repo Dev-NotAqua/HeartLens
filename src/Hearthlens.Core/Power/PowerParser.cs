@@ -150,6 +150,7 @@ public sealed partial class PowerParser
         }
 
         var onScreen = line.AsSpan(at + OnScreenBoardState.Length).Trim() is "2";
+        Game.CombatReplaySeen = true;
         if (onScreen && !Game.CombatOnScreen)
         {
             Game.CombatOnScreenSince = Environment.TickCount64;
