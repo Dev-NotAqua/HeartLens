@@ -33,6 +33,7 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 - trinket results per MMR bracket
 - every comp, with its power level, difficulty, core and add-on cards, when to commit, the tip, and how each hero does with it
 - the games players choose to share are blended into the base numbers, weighted by sample size, so the stats improve as more people share
+- the comp list now shows the strongest playable comps for your lobby (up to seven) instead of stopping after two
 
 The data lives in 22 rows (about 1 MB) instead of a 90 MB download, and is refreshed by the pool, not by your PC.
 
