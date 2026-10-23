@@ -1,0 +1,303 @@
+## Download
+
+| System | File | How to install |
+|---|---|---|
+| **Windows 10/11** | `Hearthlens-Setup-<version>-win-x64.exe` | Run the setup wizard. It adds a desktop and Start menu shortcut, installs without administrator rights, and can be removed from **Settings → Apps**. |
+| Windows, portable | `Hearthlens-Portable-<version>-win-x64.zip` | Unzip anywhere and run `Hearthlens.exe`. Settings and history stay in the `data` folder next to it. It tells you about new versions but does not update itself. |
+| Windows (try the new cross-platform app) | `Hearthlens-Preview-<version>-win-x64.zip` | Unzip anywhere and run `Hearthlens.exe`. |
+| **macOS** (Apple silicon: M1/M2/M3/M4) | `Hearthlens-<version>-macOS-arm64.pkg` | Open the package and follow the wizard. Adds Hearthlens to Applications and a Desktop shortcut. |
+| **macOS** (Intel) | `Hearthlens-<version>-macOS-x64.pkg` | Same as above. |
+| macOS, portable | `Hearthlens-Portable-<version>-macOS-arm64.zip` (`x64` for Intel) | Unzip anywhere and open `Hearthlens.app`. Settings and history stay in the `Hearthlens Data` folder next to it. It tells you about new versions but does not update itself. |
+| macOS, other formats | `.dmg` (drag to Applications) or `.zip` (double-click **Install Hearthlens**) | |
+| **Ubuntu, Debian, Mint, Pop!_OS** | `hearthlens_<version>_amd64.deb` (`arm64` for ARM) | Double-click, or `sudo apt install ./hearthlens_<version>_amd64.deb` |
+| **Fedora, openSUSE, RHEL** | `hearthlens-<version>-1.x86_64.rpm` (`aarch64` for ARM) | `sudo dnf install ./hearthlens-<version>-1.x86_64.rpm` |
+| **Any Linux** | `Hearthlens-<version>-linux-x64.AppImage` | Make it executable and run it. |
+| Any Linux, portable | `Hearthlens-Portable-<version>-linux-x64.tar.gz` (`arm64` for ARM) | Unpack anywhere and run `./Hearthlens`. Settings and history stay in the `data` folder next to it. It tells you about new versions but does not update itself. |
+| Any Linux (installer script) | `Hearthlens-<version>-linux-x64.tar.gz` | Unpack, run `./install.sh`; remove with `hearthlens-uninstall`. |
+
+Every installer adds a desktop shortcut and can be uninstalled cleanly; your match history is kept unless you choose to delete it. (The AppImage and the Windows preview zip are portable: nothing to install or uninstall.)
+`SHA256SUMS.txt` lists the checksums of all files.
+
+**You only have to do this once.** Hearthlens 0.5.0 and newer keep themselves up to date: they check GitHub in the background and install the new version when you close the app. *Before that first update, install 0.5.0 by hand — 0.4.0 and older do not know how to update themselves.*
+
+**macOS note:** Hearthlens is not notarized by Apple. If macOS says it cannot be opened, right-click it, choose **Open**, then **Open** again (only the first time).
+
+**Phones and tablets:** there is no mobile version yet. iPhone and iPad do not allow apps to read Hearthstone's data or draw over it, so iOS is not possible. On Android 11 and later, reading Hearthstone's logs needs extra setup (Shizuku or root); an Android version is planned.
+
+## What's in this version
+
+**The overlay follows Night edition.** Turn on **Settings → Appearance → Night edition** and the in-game overlay switches to deep green paper with bone ink as well, straight away, in both the Windows app and the cross-platform app. Before, it stayed on light paper whatever you picked.
+
+## What was new in 0.12.0
+
+**A new look, inside and out.** Hearthlens drops the dark wood and gold for something calmer and easier to read: bone paper, a bottle-green sidebar, oxblood ink and one marigold mark for the pick that matters.
+
+- New type: Fraunces for headings and Manrope for everything else, both easier to read at small sizes.
+- The in-game overlay is a set of paper notes at the edges of the board. Best picks get a marigold "Best pick" tag, tier chips are square, and labels are in normal case ("Buy", "In plan", "Next") instead of shouting in capitals.
+- No more glowing bars, scalloped badges or gloss on the buttons.
+
+**Night edition.** Prefer a dark app? Turn on **Settings → Appearance → Night edition** for deep green paper with bone ink. It switches straight away, no restart. The overlay keeps its light paper notes either way, because they read best over any board.
+
+The seven colour themes and the custom colour sliders are gone: the app now has one look, in a day and a night edition. If you used a dark theme before, switch on Night edition once after updating.
+
+**Fixes**
+
+- Switching to Night edition in the cross-platform app now recolours tier badges, win and loss colours and the rating chart straight away, instead of keeping the old colours until the page was rebuilt.
+- In the cross-platform app, the overlay no longer picks up dark colours for its tier chips when the app is in Night edition.
+
+## What was new in 0.11
+
+**Full Battlegrounds stats again, from our own server.** The complete hero, card, trinket and comp data is now stored in the Hearthlens stats pool and served from there. The app never calls a third-party stats API: turn off the internet and it still loads the last copy from the pool's cache.
+
+- hero results for every MMR bracket, including tribe impact, top-4 and first-place rates
+- card results for every turn a card is played, so a tier-4 minion is compared with other tier-4 minions
+- trinket results per MMR bracket
+- every comp, with its power level, difficulty, core and add-on cards, when to commit, the tip, and how each hero does with it
+- the games players choose to share are blended into the base numbers, weighted by sample size and applied to every MMR bracket; the footer shows how many shared games went in
+- the comp list now shows the strongest playable comps for your lobby (up to seven) instead of stopping after two
+
+The data lives in 22 rows (about 1 MB) instead of a 90 MB download, and is refreshed by the pool, not by your PC.
+
+## What was new in 0.10.0
+
+**Picks and plays, only if you agree.** Hearthlens now remembers every pick you are offered in Battlegrounds (Discover, triple rewards, trinkets) and what you took, plus the minions and spells you play from your hand. The banner asks again with the full list of what is shared:
+
+- the heroes you were offered and the one you picked, your placement, solo or duos, and your rating rounded down to 500
+- the lobby's tribes and anomaly, your final board, your trinkets and how many triples you made
+- the turn you reached each tavern tier
+- each fight's result, the damage dealt and taken, and the odds Hearthlens predicted
+- every pick you were offered and what you took, and the cards you played
+
+**Your recent games count too.** Once you agree, your Battlegrounds games from the last 30 days are sent once, so the stats fill up faster.
+
+Never your name, BattleTag, account or anything about other players. If you said yes before, only the older, shorter list is shared until you answer again. **No thanks** stops sharing completely.
+
+**Lighter on the server.** The stats pool now stores each game as one row and works the totals out a few times a day instead of on every request, so it keeps running for free as more people join.
+
+## What was new in 0.9.0
+
+**More stats, only if you agree.** The stats pool can now build card, trinket and tribe lists too. The banner asks again with the full list of what is shared:
+
+- the heroes you were offered and the one you picked, your placement, solo or duos, and your rating rounded down to 500
+- the lobby's tribes and anomaly, your final board, your trinkets and how many triples you made
+- the turn you reached each tavern tier
+- each fight's result, the damage dealt and taken, and the odds Hearthlens predicted
+
+Never your name, BattleTag, account or anything about other players. If you said yes before, only the old, shorter list is shared until you answer again. **No thanks** stops sharing completely.
+
+**Cleaner look.** No more gradient titles, glows, shiny button rims or faded hero art behind the page titles. Section icons sit on simple tiles and the rating chart is a single clean line.
+
+**Smoother controls.** Switches slide and fill with your theme colour, buttons give a little when pressed, and tabs fade and underline smoothly.
+
+**Portable versions for macOS and Linux.** Like the Windows portable zip: unzip anywhere and run it. Settings and history stay next to the app.
+
+## What was new in 0.8.1
+
+**Stats pool is live.** Hearthlens now builds its own hero tier list from games that players choose to share.
+
+- A banner on the main window asks once whether to share your Battlegrounds results. Nothing is sent unless you click **Share results**. A switch in **Settings** changes your answer at any time.
+- A shared game holds only the hero you picked, the heroes you were offered, your placement, solo or duos, and your rating rounded down to 500. No name, BattleTag or account, and IP addresses are not stored.
+- The server code is in the repository under `server/pool`.
+- The Heroes tier list and the hero pick ratings in the overlay appear once a hero has 20 shared games.
+
+## What was new in 0.8.0
+
+**Portable Windows version.** New download: `Hearthlens-Portable-0.8.0-win-x64.zip`. Unzip it anywhere, even on a USB stick, and run `Hearthlens.exe`. Nothing is installed: settings and history stay in the `data` folder next to it. It tells you when a new version is out but does not update itself.
+
+**Stats pool, ready to switch on.** Hearthlens is getting its own hero tier list, built from games that players choose to share. Nothing is shared without asking:
+
+- When the pool goes live, a banner asks once whether to share your Battlegrounds results. A switch in **Settings** changes your answer at any time.
+- A shared game holds only the hero you picked, the heroes you were offered, your placement and your rating rounded to 500. No name, BattleTag or account.
+- The Heroes tier list and the hero pick ratings in the overlay come back once a hero has 20 shared games.
+
+The pool is not online yet, so this version sends nothing.
+
+## What was new in 0.7.9
+
+**Community stats removed.** Hearthlens no longer downloads Battlegrounds or Constructed stats from a third-party stats service. That data was used without asking for permission, and being public does not make it free to reuse. Copies cached by older versions are deleted the first time 0.7.9 starts.
+
+What stays:
+
+- Combat odds, from Hearthlens' own simulator.
+- The lobby panel: everyone's HP, last fight and the last board you saw from them.
+- Your own heroes, placements, rating chart and match history.
+- Your Constructed decks, win rates and matchups.
+- Card data and art from HearthstoneJSON and hsbg.cards.
+
+Gone for now: the hero, comp, trinket and card tier lists, the pick ratings in the overlay, the game plan comps and the Constructed meta tabs.
+
+## What was new in 0.7.8
+
+**Smoother and cleaner.**
+
+- The sidebar's selection now slides to the page you pick.
+- Pages and tabs fade in when you switch between them.
+- Buttons, tabs, sidebar items and list rows fade in and out on hover instead of snapping.
+- Page and sidebar animations follow Windows: turn off *Animation effects* in Windows settings and Hearthlens stops them too.
+
+**Small fixes**
+
+- Home shows your last Solo or Duos rating until Hearthstone reports a new one, instead of a dash.
+- Placement counts read "3 · 12%" instead of "3 12%".
+- The Constructed page and its sidebar item mention the meta stats.
+
+## What was new in 0.7.7
+
+**Meta stats for Constructed.** The Constructed page has two new tabs with community stats, refreshed every few hours. Choose the format (Standard or Wild), the rank, the time period and the class.
+
+- **Meta tier list:** every archetype with its win rate, how it does going first and on the coin, and how much it is played. Sort by best win rate or most played. Click an archetype for its **mulligan guide** (the win rate when a card stays in your opening hand, and how often players keep it) and its best decklists.
+- **Top decks:** the strongest lists with enough games, with their dust cost and a **Copy** button. In Hearthstone, start a new deck and it offers to paste the list.
+- **Your decks** now show the meta archetype they match and its win rate.
+
+**A game plan that follows you.** The suggested comps now follow the cards on your board, so they change as you buy. Tribe chips above the list let you pick a tribe to build around, and its comps come first. You see up to seven comps, with no more than two built on the same tribes unless you already own their cards.
+
+**More hero stats.** The Battlegrounds hero tier list shows how often each hero finishes in the top 4 and in first place.
+
+**Fixes**
+
+- Lists on the Constructed page no longer stop the page from scrolling with the mouse wheel.
+- Comps without a tribe no longer start with a stray dot.
+
+## What was new in 0.7.6
+
+**Combat odds are back.** The win, tie and loss chances now stay on screen for the whole fight. Hearthstone writes the entire fight to its log about a second after it starts and then plays it for another half a minute; Hearthlens took the end of the log entry as the end of the fight, so the odds disappeared before the fight was even shown.
+
+## What was new in 0.7.5
+
+**Pick your colours.** *Settings → Theme* has seven ready-made themes: Tavern (the gold you know), Frost, Fel, Arcane, Ember, Tide and Shadow. Click one and the app and the in-game overlay switch right away. **Make your own** sets the accent colour, the background colour and how strongly the background is tinted, with a live preview. Wins, losses, tiers and card rarities keep their usual colours in every theme.
+
+**Your last hero behind every page.** The art of the hero you played last fades in behind the page titles.
+
+**A cleaner window.**
+
+- Decorative rings and lines are gone; headings are just an icon and a title.
+- Stat labels read normally instead of in capitals.
+- One status chip instead of two: grey when Hearthstone is closed, gold when it runs, green when Hearthlens is connected.
+- Hero names in History were nearly black on the dark background; they are readable again.
+- The overlay's top bar keeps the lobby tribes on one row.
+
+## What was new in 0.7.4
+
+**A new look for the Windows app.** The whole app and the in-game overlay get a gilded tavern style:
+
+- Page titles and the logo are gold; panels look lit from above with a gold top edge.
+- Buttons and switches are polished gold metal; the selected menu item glows.
+- Filter bars and text boxes sit in a recessed groove; scrollbars are gold.
+- The rating chart is a smooth gold curve with a soft glow and a tag with your current rating. The curve never dips past a real value.
+- Pages slide up and fade in when you open them (off when Windows animations are off).
+- In game, the recommended hero, trinket and Discover option has a gold edge, a metal BEST PICK tag and a soft gold glow, drawn without heavy effects so the overlay stays fast.
+
+## What was new in 0.7.3
+
+**Tracking no longer stops around turn 8.** Hearthstone stops writing its game log once the file reaches 10 MB, and a Battlegrounds game passes 10 MB around turn 8. From then on the game writes nothing more until it restarts, so the overlay froze with no error anywhere. Other trackers turn this limit off; Hearthlens did not. It now sets `FileSizeLimit.Int=-1` in the `[Log]` section of `client.config` in the Hearthstone folder, keeps everything else in that file, and puts the setting back if it disappears.
+
+**Restart Hearthstone once after installing this version.** The game only reads `client.config` when it starts. Hearthlens shows a "Restart Hearthstone" note while the old limit is still active, and another one if a game hits the limit.
+
+**Detailed diagnostic log.** `%APPDATA%\Hearthlens\hearthlens.log` now records what every part of the app is doing, so a problem can be traced to the second it started:
+
+- every turn, game start and game end;
+- every 15 seconds: the size of Hearthstone's log and how far Hearthlens has read it, lines handled, the game and turn the tracker sees, the memory reader's state, how many updates the window showed and how long it waited for them, RAM use;
+- a note when Hearthstone's log stops growing, when it stopped at the 10 MB limit, when a log pass or an overlay update is slow, and when the window does not respond;
+- the Hearthstone folder, the log settings and the size limit found at startup.
+
+The previous log is kept as `hearthlens.old.log` when the log reaches 4 MB.
+
+## What was new in 0.7.1 and 0.7.2
+
+**The overlay no longer rebuilds itself ten times a second.** Every update of the game replaced every list on the overlay with a new copy, even when nothing in it had changed. The window then threw away and rebuilt every row and set its card picture again, up to ten times a second. A fast PC hides that; a slower one cannot keep up and the overlay freezes. A list that did not change is now left alone.
+
+**Other fixes from a full bug hunt:**
+
+- **The tracker keeps going after a log line it does not understand.** Before, one unexpected line in Hearthstone's log threw away the rest of that batch, and the overlay could then show a wrong board or turn.
+- **Reading the game's memory never slows the tracker down.** It runs on its own thread, every scan has a time limit, and a few rare cases where it could loop forever or crash the app are fixed.
+- **No more restart loops on a slow PC.** The automatic recovery waited too little and could restart the log reader again and again while it was still working.
+- **Card pictures:** a broken picture on disk is deleted and downloaded again instead of staying blank forever; error pages are never saved as pictures; the picture cache really stays small now (finished downloads kept their pictures in memory).
+- **Updates:** the downloaded setup is checked against GitHub's checksum before it runs; a Windows user name with accents (for example `C:\Users\Niccolò`) or a `%` in a path no longer stops the update from installing; old setup files are deleted.
+
+**The freeze on a slower PC was the card images.** When a card image was already on disk, Hearthlens decoded it **on the interface thread**: decoding one picture takes tens of milliseconds, and the comp panel alone asks for dozens of them at once. The window stopped repainting for seconds — the tracker was still running in the background, which is why the overlay looked stuck on an old turn while the log showed no error at all. Images are now decoded away from the interface thread, at most four at a time.
+
+That was the last piece of the freeze hunt: the other causes (the fight simulation on the log thread, the 85 MB statistics file, the unbounded image cache, the memory reader) are already fixed in 0.7.0.
+
+## What was new in 0.7.0
+
+**The overlay can no longer freeze mid-game on a slower PC.** Three things were blocking the tracker, and none of them show up on a fast machine:
+
+- The fight simulation ran on the same thread that reads Hearthstone's log. On a slow PC, simulating two big boards takes seconds — the log was not read during that time, so the overlay stopped updating in the middle of a fight. A quick estimate now appears right away and the accurate one is computed in the background.
+- The community statistics file (85 MB) was parsed into a JSON document, which costs several hundred megabytes of RAM. On a small PC that is a freeze, then swapping. The file is now streamed and only the fields that are used are read.
+- Card images were cached without a limit. A 256 px card is a quarter of a megabyte, so a long game filled the memory and the system started to swap. The cache now keeps 160 images and drops the oldest.
+
+**Log reading got lighter.** The log is read in 256 KB blocks through one reused buffer instead of allocating a fresh multi-megabyte array on every pass — that churn is exactly what makes a low-memory PC stutter.
+
+**The memory reader does far less work.** It walked the whole cache of server objects on every poll, and that map grows during a session. The address it needs is now remembered, and a scan that takes longer than a second backs off and writes it to the log.
+
+**A restarted watcher no longer feeds the tracker twice.** When the watchdog replaces a stuck reader, the old thread stops delivering lines before it wakes up.
+
+**More accurate advice**
+
+- **Freeze** only when the card really cannot be bought now. It names the card, why it is worth keeping (completes a triple, core card, pair, or simply too strong to reroll away) and how much more gold is needed. Nothing is claimed when the gold is unknown.
+- A **pair is bought** instead of being rolled away: a pair leads to a triple, and a triple discovers a higher tier.
+- Core cards, add-ons, golden cards and the last copy of a pair are **never sold** to make room. When the board is full of cards worth keeping, the advice is to hold instead of selling your own plan.
+- **Rolling** is never advised while a triple, core card or pair is on offer.
+- **"Hold this turn"** now says what to save for: the tier upgrade and its cost, a full board worth keeping, or the health that makes leveling too risky.
+- The **Dark Gift** hint stays quiet when the gold is unknown and says what it costs.
+- **Comps no longer suggest cards that are not in this patch.** Cards that are not in the current tavern pool (and Duos-only cards in a solo game) are hidden, and a comp with no playable card left is not offered at all.
+- The tavern curve is corrected: tier 2 by turn 3, tier 3 by turn 5, tier 4 by turn 7, tier 5 by turn 10, tier 6 after that.
+
+## What was new in 0.6.0
+
+**Nothing can leave the overlay frozen on an old turn any more.** If tracking stops following the game — the overlay keeps showing the board from an earlier round — press **Ctrl+Shift+R**, or choose **Hard refresh (re-read the current game)** from the tray menu. Hearthlens replays the current game from Hearthstone's log and rebuilds the board, turn, tavern tier, odds and game plan at the round you are actually on. It also re-shows the overlay if it had been hidden and puts it back on top of the game.
+
+**Hearthlens now notices a stall by itself.** A watchdog checks the log pipeline every two seconds: if the reader thread ever dies, it is restarted; if the game's log keeps growing while nothing is being read, the current game is replayed automatically. The freeze you had to fix by hand repairs itself.
+
+**Windows 10 overlay hardening**
+
+- The overlay re-asserts itself as the topmost window every few seconds, so another topmost window (a media overlay, a capture tool, the game itself) can no longer silently push it behind Hearthstone.
+- New tray option **Software overlay rendering**: some Windows 10 GPUs and drivers never draw the transparent overlay in hardware, so it is invisible while the app works. Turn this on and restart Hearthlens.
+- Pressing **Ctrl+Shift+H** (hide overlay) now shows a tray balloon telling you how to bring it back, so a hidden overlay is never a mystery.
+
+**Smaller and lighter:** attaching to a session that has been running for hours no longer loads the whole Power.log into memory. The last game is found by scanning backwards in blocks, which matters on a PC with little RAM.
+
+**Fixes**
+
+- Combat result: damage is no longer erased by a later heal or armor gain, so a fight you lost cannot become a tie in the history.
+- A fight whose boards could not be captured no longer inherits the previous fight's survivor counts and shows the wrong win/loss.
+- The dashboard's **ALL TIME** tile now counts every game (it stopped at 400 before).
+
+**If the overlay never appears on a Windows 10 PC:** in Hearthstone set *Options → Graphics → Display Mode* to **Windowed (Fullscreen)**, then turn on **Software overlay rendering** in the Hearthlens tray menu and restart the app. True fullscreen hands the screen to the game exclusively, which no overlay can draw over.
+
+## What was new in 0.5.0
+
+**Hearthlens updates itself now.** Downloading a new setup by hand is over: shortly after it starts, and every six hours after that, Hearthlens looks at GitHub for a newer release, fetches the file your system needs, and installs it **the next time you close Hearthlens**. Nothing pops up mid-game — the update waits until the app is closed, so a running overlay is never interrupted, and your match history, settings and overlay layout stay exactly as they are.
+
+- Windows: the new setup runs silently while Hearthlens is closed. A gold **Update ready — restart** chip appears in the top bar of the dashboard when you would rather install right away: one click closes the app, installs and comes back in the new version.
+- macOS and Linux: the matching package is downloaded for you and one click hands it to your system's installer (no hunting through the releases page).
+- Updates can be turned off: *Settings → **Install updates automatically***.
+- One-time step: if you are on 0.4.0 or older, install 0.5.0 by hand once — older versions do not know about updates yet. From here on, every release arrives on its own.
+
+## What was new in 0.4.0
+
+**Tavern spells.** Spells are now part of the advice: the game plan prices them at their real cost, the shop panel marks the best spell to buy (spells need no board space), and the best pick is marked for spells too.
+
+**Read any card you hover.** Hover a card in the overlay — a card in the tier browser, a minion on a board, or a comp card row — and it grows, with a full-size card tooltip, so a tier 6 effect is finally readable.
+
+**Fixes**
+- Fixed the overlay sometimes staying stuck "in combat" while you were back in the tavern. A stale combat state now clears itself after two minutes, and shop cards end combat reliably.
+- Community stats could load completely empty: the stats feed carries null fields (a stat row with no turn, for example) that the reader treated as an error and dropped the whole card list. Those rows are skipped now, so minion, hero and comp statistics load again.
+- Card art now falls back to a second card database (hsbg.cards) when the first source cannot be reached, instead of showing an empty tile.
+
+## What was new in 0.3.0
+
+**New look.** Hearthlens now wears Hearthstone's colours: dark wood browns, parchment text and gold. The selected page is a framed tile with a gold bar instead of a stretched oval, and buttons, chips and panels have a cleaner, framed shape.
+
+**You choose your picks.** Two new settings under *Settings → In-game overlay*:
+- *Pick suggestions*: **Mark the best** / **Stats only** / **Off**. *Stats only* (the default) shows the same numbers on every hero, trinket, tavern minion and Discover option and marks nothing as the best, so the choice is yours.
+- *Game plan comp*: **I choose** / **Automatic**. In *I choose* (the default) Hearthlens never picks a comp for you: click one in the game plan panel, and it is kept for your next games.
+
+**Much better combat odds.** The simulator now plays out minion effects: deathrattles (summons, buffs, damage, and effects that trigger them twice), Rally and other attack triggers, cleave and splash damage, avenge, "after a friendly minion dies", on-summon and damage triggers, and auras — 61 of the 65 Battlegrounds minions whose effects matter in combat. The "effects not simulated" note is now accurate and only counts cards whose effect is really missing. Reborn minions come back with the right stats and keywords.
+
+**Fixes**
+- Windows setup: on a PC that can't run Hearthlens (32-bit Windows, Windows older than 10, or an ARM PC without Windows 11) the setup now says so instead of installing an app that won't start.
+- Windows: long pages (Settings, Battlegrounds) no longer cut off their content above the bottom bar.
+- Linux: the ARM (aarch64) .rpm builds again, and .rpm packages no longer clash with other apps that bundle the same libraries.
+
+Card data and art: HearthstoneJSON and hsbg.cards. Not affiliated with Blizzard Entertainment.
