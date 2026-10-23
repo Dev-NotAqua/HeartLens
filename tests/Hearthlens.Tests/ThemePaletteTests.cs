@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Hearthlens.Core;
 using Xunit;
 
@@ -5,55 +6,45 @@ namespace Hearthlens.Tests;
 
 public sealed class ThemePaletteTests
 {
-    private static ThemeSpec Preset(string name) => ThemePalette.Resolve(name, 0, 0, 1);
-
     [Fact]
-    public void DefaultThemeKeepsEveryColour()
+    public void NightSwapsPaperAndInkAndKeepsAlpha()
     {
-        var tavern = Preset("Tavern");
-        Assert.True(ThemePalette.IsDefault(tavern));
-        Assert.Equal(0xFFE9B949u, ThemePalette.Map(0xFFE9B949u, tavern));
-        Assert.Equal(0xFF140D08u, ThemePalette.Map(0xFF140D08u, tavern));
+        Assert.Equal(0xFF101A16u, ThemePalette.Night(0xFFEFE6D4u));
+        Assert.Equal(0xFFEEE5D3u, ThemePalette.Night(0xFF1C1D17u));
+        Assert.Equal(0x66D67B66u, ThemePalette.Night(0x668A3B2Eu));
     }
 
     [Theory]
-    [InlineData(0xFF8CCF63u)] // positive green
-    [InlineData(0xFFEC6A52u)] // negative red
-    [InlineData(0xFF6FB8F2u)] // info blue
-    [InlineData(0x80000000u)] // shadow
-    [InlineData(0xFFFFFFFFu)]
-    public void MeaningfulAndNeutralColoursNeverChange(uint argb)
+    [InlineData(0xFF3D7BE0u)] // mana gem blue
+    [InlineData(0xFFF3EAD9u)] // nav text is bone in both editions
+    [InlineData(0x00000000u)]
+    public void UnlistedColoursStayAsTheyAre(uint argb)
     {
-        Assert.Equal(argb, ThemePalette.Map(argb, Preset("Frost")));
+        Assert.Equal(argb, ThemePalette.Night(argb));
     }
 
     [Fact]
-    public void FrostTurnsGoldBlueAndKeepsAlpha()
+    public void EveryThemeColourHasANightTwin()
     {
-        var mapped = ThemePalette.Map(0x99E9B949u, Preset("Frost"));
-        Assert.Equal(0x99u, mapped >> 24);
-        var r = (byte)(mapped >> 16);
-        var b = (byte)mapped;
-        Assert.True(b > r, $"expected a blue accent, got {mapped:X8}");
+        var theme = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Hearthlens.App", "Themes", "Theme.xaml"));
+        var unchanged = new HashSet<uint> { 0x3D7BE0, 0xF3EAD9, 0x000000, 0xFFFFFF };
+        var missing = Regex.Matches(theme, "#([0-9A-Fa-f]{8}|[0-9A-Fa-f]{6})\\b")
+            .Select(m => Convert.ToUInt32(m.Groups[1].Value, 16) & 0xFFFFFF)
+            .Distinct()
+            .Where(rgb => !unchanged.Contains(rgb) && !ThemePalette.DayColours.Contains(rgb))
+            .Select(rgb => rgb.ToString("X6"))
+            .ToList();
+        Assert.True(missing.Count == 0, "Day colours without a night twin: " + string.Join(", ", missing));
     }
 
-    [Fact]
-    public void ShadowDrainsTheWoodButKeepsTheGold()
+    private static string RepoRoot()
     {
-        var shadow = Preset("Shadow");
-        Assert.Equal(0xFFE9B949u, ThemePalette.Map(0xFFE9B949u, shadow));
-        var wood = ThemePalette.Map(0xFF3A2817u, shadow);
-        var spread = Math.Max((byte)(wood >> 16), (byte)wood) - Math.Min((byte)(wood >> 16), (byte)wood);
-        Assert.True(spread < 12, $"expected a near grey, got {wood:X8}");
-    }
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Hearthlens.slnx")))
+        {
+            dir = dir.Parent;
+        }
 
-    [Fact]
-    public void UnknownNameIsACustomTheme()
-    {
-        var custom = ThemePalette.Resolve("mine", 400, -20, 3);
-        Assert.Equal(ThemePalette.CustomName, custom.Name);
-        Assert.Equal(40, custom.AccentHue);
-        Assert.Equal(340, custom.BaseHue);
-        Assert.Equal(1.5, custom.BaseTint);
+        return dir?.FullName ?? throw new DirectoryNotFoundException("Repository root not found.");
     }
 }

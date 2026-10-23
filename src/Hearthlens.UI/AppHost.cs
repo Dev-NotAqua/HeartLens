@@ -300,6 +300,7 @@ public sealed class AppHost : IDisposable
     /// <summary>Call after any setting changed: saves (debounced), refreshes the overlay and applies autostart.</summary>
     public void OnSettingsChanged()
     {
+        ThemeManager.Apply(Settings.DarkTheme);
         _settingsDebounce.Stop();
         _settingsDebounce.Start();
         Session.SetCompMode(Settings.CompMode, Settings.ChosenCompId);

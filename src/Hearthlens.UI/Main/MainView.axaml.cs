@@ -32,6 +32,7 @@ public partial class MainView : UserControl
         }
 
         SizeChanged += (_, e) => ApplyWidth(e.NewSize.Width);
+        ActualThemeVariantChanged += (_, _) => RefreshStatusDots();
     }
 
     /// <summary>Raised after any setting changes from the UI.</summary>
@@ -61,6 +62,7 @@ public partial class MainView : UserControl
 
         _viewModel.PropertyChanged += OnViewModelChanged;
         SyncOverlaySwitch();
+        RefreshStatusDots();
         foreach (var box in this.GetLogicalDescendantsOfType<CheckBox>())
         {
             box.IsCheckedChanged += (_, _) => OnSettingChanged(box);
@@ -163,15 +165,23 @@ public partial class MainView : UserControl
         switch (e.PropertyName)
         {
             case nameof(MainViewModel.HearthstoneRunning):
-                HsDot.Fill = ThemeBrushes.Get(_viewModel.HearthstoneRunning ? "Positive" : "Faint");
-                break;
             case nameof(MainViewModel.MemoryAttached):
-                MemDot.Fill = ThemeBrushes.Get(_viewModel.MemoryAttached ? "Positive" : "Faint");
-                break;
             case nameof(MainViewModel.InGame):
-                LivePulse.Fill = ThemeBrushes.Get(_viewModel.InGame ? "AccentContainer" : "Surface4");
+                RefreshStatusDots();
                 break;
         }
+    }
+
+    private void RefreshStatusDots()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        HsDot.Fill = ThemeBrushes.Get(_viewModel.HearthstoneRunning ? "Positive" : "Faint");
+        MemDot.Fill = ThemeBrushes.Get(_viewModel.MemoryAttached ? "Positive" : "Faint");
+        LivePulse.Background = ThemeBrushes.Get(_viewModel.InGame ? "AccentContainer" : "Surface3");
     }
 
     private void UpdatePages()
@@ -205,6 +215,14 @@ public partial class MainView : UserControl
         if (box == OverlaySetting)
         {
             OverlaySwitch.IsChecked = _viewModel.Settings.OverlayEnabled;
+        }
+
+        // Apply the edition before the host hears about it, so the change is immediate even if the
+        // two-way binding writes its value back after this event.
+        if (box == ThemeSetting)
+        {
+            _viewModel.Settings.DarkTheme = box.IsChecked == true;
+            ThemeManager.Apply(_viewModel.Settings.DarkTheme);
         }
 
         SettingsChanged?.Invoke();

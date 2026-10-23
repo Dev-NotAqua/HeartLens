@@ -60,6 +60,6 @@ installer (macOS ones on a Mac runner) and publishes them as a GitHub Release.
 - Your data stays on your computer: `%APPDATA%\Hearthlens` (Windows), `~/Library/Application Support/Hearthlens` (macOS),
   `~/.local/share/Hearthlens` (Linux).
 - Community statistics: Firestone (zerotoheroes.com). Card data and art: HearthstoneJSON.
-- Fonts: Montserrat and Inter (SIL Open Font License 1.1), Material Design Icons (Pictogrammers, Apache 2.0).
+- Fonts: Fraunces and Manrope (SIL Open Font License 1.1), Material Design Icons (Pictogrammers, Apache 2.0).
 
 Hearthlens is not affiliated with or endorsed by Blizzard Entertainment.

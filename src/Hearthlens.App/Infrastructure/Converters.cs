@@ -31,6 +31,9 @@ public sealed class VisibleWhen : IValueConverter
 /// <summary>Maps keys (tier letters, rarities, results) to theme brushes.</summary>
 public sealed class KeyBrush : IValueConverter
 {
+    /// <summary>Colour from the day edition even when the app is in the night edition (the overlay).</summary>
+    public bool Day { get; set; }
+
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var key = value?.ToString() switch
@@ -49,7 +52,7 @@ public sealed class KeyBrush : IValueConverter
             "ADDON" => "Info",
             _ => "Muted",
         };
-        return Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
+        return (Day ? ThemeEngine.DayResource(key) : Application.Current.TryFindResource(key)) as Brush ?? Brushes.Gray;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
@@ -58,6 +61,9 @@ public sealed class KeyBrush : IValueConverter
 /// <summary>Placement (1-8) or signed number to positive/negative/muted brush. Parameter = top-N cutoff for placements.</summary>
 public sealed class SignBrush : IValueConverter
 {
+    /// <summary>Colour from the day edition even when the app is in the night edition (the overlay).</summary>
+    public bool Day { get; set; }
+
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var key = "Muted";
@@ -71,7 +77,7 @@ public sealed class SignBrush : IValueConverter
             key = d > 0 ? "Positive" : d < 0 ? "Negative" : "Muted";
         }
 
-        return Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
+        return (Day ? ThemeEngine.DayResource(key) : Application.Current.TryFindResource(key)) as Brush ?? Brushes.Gray;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();

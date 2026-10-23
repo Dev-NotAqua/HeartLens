@@ -52,6 +52,8 @@ public partial class OverlayWindow : Window
 
     public OverlayWindow(OverlayViewModel viewModel, AppSettings settings)
     {
+        // Paper slips read best over any board, so the overlay stays in the day edition.
+        Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Themes/Theme.xaml") });
         InitializeComponent();
         DataContext = viewModel;
         ViewModel = viewModel;

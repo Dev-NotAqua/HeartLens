@@ -15,7 +15,7 @@ public sealed class RatingChart : Control
 
     static RatingChart()
     {
-        AffectsRender<RatingChart>(PointsProperty);
+        AffectsRender<RatingChart>(PointsProperty, ThemeVariantScope.ActualThemeVariantProperty);
     }
 
     public IReadOnlyList<RatingPoint>? Points { get => GetValue(PointsProperty); set => SetValue(PointsProperty, value); }
@@ -29,9 +29,9 @@ public sealed class RatingChart : Control
             return;
         }
 
-        var accent = ThemeBrushes.Get("Accent");
-        var muted = ThemeBrushes.Get("Faint");
-        var grid = new Pen(ThemeBrushes.Get("Border"), 1, new DashStyle([3, 4], 0));
+        var accent = ThemeBrushes.Get("Accent", ActualThemeVariant);
+        var muted = ThemeBrushes.Get("Faint", ActualThemeVariant);
+        var grid = new Pen(ThemeBrushes.Get("Border", ActualThemeVariant), 1, new DashStyle([3, 4], 0));
         var typeface = new Typeface(this.TryFindResource("UiFont", ActualThemeVariant, out var font) && font is FontFamily family ? family : FontFamily.Default);
 
         context.FillRectangle(Brushes.Transparent, new Rect(0, 0, w, h));
@@ -105,6 +105,6 @@ public sealed class RatingChart : Control
         context.DrawGeometry(null, new Pen(accent, 2, lineJoin: PenLineJoin.Round), line);
 
         var last = new Point(X(points.Count - 1), Y(points[^1].Rating));
-        context.DrawEllipse(ThemeBrushes.Get("Bg"), new Pen(accent, 2), last, 4, 4);
+        context.DrawEllipse(ThemeBrushes.Get("Bg", ActualThemeVariant), new Pen(accent, 2), last, 4, 4);
     }
 }

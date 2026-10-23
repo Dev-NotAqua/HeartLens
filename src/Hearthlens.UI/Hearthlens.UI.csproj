@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Hearthlens.UI</RootNamespace>
-    <Version>0.11.4</Version>
+    <Version>0.12.0</Version>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Montserrat: SIL Open Font License 1.1. Material Design Icons: Pictogrammers (Apache 2.0). -->
+    <!-- Fraunces and Manrope: SIL Open Font License 1.1. Material Design Icons: Pictogrammers (Apache 2.0). -->
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 

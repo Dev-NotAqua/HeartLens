@@ -26,7 +26,7 @@ public sealed class Wave : Control
 
     static Wave()
     {
-        AffectsRender<Wave>(StrokeProperty, AmplitudeProperty, WavelengthProperty, ThicknessProperty);
+        AffectsRender<Wave>(StrokeProperty, AmplitudeProperty, WavelengthProperty, ThicknessProperty, ThemeVariantScope.ActualThemeVariantProperty);
         AffectsMeasure<Wave>(AmplitudeProperty, ThicknessProperty);
     }
 
@@ -48,7 +48,7 @@ public sealed class Wave : Control
 
     public override void Render(DrawingContext context)
     {
-        Draw(context, Stroke ?? ThemeBrushes.Get("GoldTrim"), ThemeBrushes.Get("Accent"), 0, Bounds.Width, Bounds.Height / 2);
+        Draw(context, Stroke ?? ThemeBrushes.Get("GoldTrim", ActualThemeVariant), ThemeBrushes.Get("Accent", ActualThemeVariant), 0, Bounds.Width, Bounds.Height / 2);
     }
 
     /// <summary>Draws the rule from <paramref name="from"/> to <paramref name="to"/> centred on <paramref name="y"/>.</summary>

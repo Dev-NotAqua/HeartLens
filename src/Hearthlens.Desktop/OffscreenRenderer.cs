@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Hearthlens.Core;
 using Hearthlens.Core.Memory;
@@ -53,11 +54,21 @@ internal static class OffscreenRenderer
     {
         Directory.CreateDirectory(folder);
         var settings = AppSettings.Load();
+        var forcedTheme = Environment.GetEnvironmentVariable("HEARTHLENS_THEME");
+        var dark = forcedTheme is { Length: > 0 }
+            ? forcedTheme.Equals("dark", StringComparison.OrdinalIgnoreCase)
+            : settings.DarkTheme;
+        settings.DarkTheme = dark;
+        ThemeManager.Apply(dark);
         var host = new AppHost(settings);
         await host.InitializeAsync(watchLogs: false);
         await host.LoadMetaAsync();
         await host.Main.RefreshAsync();
         host.Main.Busy = string.Empty;
+        if (Environment.GetEnvironmentVariable("HEARTHLENS_RENDER_UPDATE") == "1")
+        {
+            host.Main.SetUpdateReady("0.12.0");
+        }
 
         var view = new MainView { DataContext = host.Main };
         var main = new Window { Width = 1260, Height = 840, Content = view, Background = ThemeBrushes.Get("Bg") };
@@ -80,6 +91,7 @@ internal static class OffscreenRenderer
         {
             Width = 1920,
             Height = 1080,
+            RequestedThemeVariant = ThemeVariant.Light,
             Content = overlayView,
             // Stand-in for the game behind the transparent overlay.
             Background = new RadialGradientBrush

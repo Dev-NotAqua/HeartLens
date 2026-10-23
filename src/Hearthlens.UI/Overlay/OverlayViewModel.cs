@@ -68,7 +68,7 @@ public sealed class OverlayViewModel : Observable
     private bool _showCompList;
 
     /// <summary>
-    /// "Mark the best": BEST PICK / BUY badges, gold styling, Discover ranks and the comp the advisor picks are shown.
+    /// "Mark the best": Best pick / Buy badges, marigold styling, Discover ranks and the comp the advisor picks are shown.
     /// Otherwise every Recommended / Best flag on the badge items is false and <see cref="DiscoverBadge.Rank"/> is 0.
     /// </summary>
     public bool ShowBestBadges => _pickHints == PickHints.Highlight;
@@ -82,7 +82,7 @@ public sealed class OverlayViewModel : Observable
     /// <summary>Game plan comp is "I choose": the advisor never picks a comp; the player's choice is kept across games.</summary>
     public bool CompManual => _compMode == CompMode.Manual;
 
-    /// <summary>Caption above <see cref="Target"/>: "YOUR COMP" (I choose) or "AIM FOR" (Automatic).</summary>
+    /// <summary>Caption above <see cref="Target"/>: "Your comp" (I choose) or "Aim for" (Automatic).</summary>
     public string TargetLabel { get => _targetLabel; private set => Set(ref _targetLabel, value); }
 
     /// <summary>Text on the button of <see cref="Target"/>: "Chosen" (I choose, a click clears it), "Lock" / "Locked" (Automatic).</summary>
@@ -568,7 +568,7 @@ public sealed class OverlayViewModel : Observable
     private void UpdatePlanText(BattlegroundsView view)
     {
         var manual = CompManual;
-        TargetLabel = manual ? "YOUR COMP" : "AIM FOR";
+        TargetLabel = manual ? "Your comp" : "Aim for";
         PinText = manual ? "Chosen" : Target is { IsPinned: true } ? "Locked" : "Lock";
         PinTooltip = manual
             ? "Your choice, kept for the next games. Click to clear it: then no comp is targeted until you choose one."

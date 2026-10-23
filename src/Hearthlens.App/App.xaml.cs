@@ -147,7 +147,7 @@ public partial class App : Application
             _settingsDebounce.Start();
         };
 
-        _mainViewModel.ThemeChanged += OnThemeChanged;
+        _mainViewModel.ThemeChanged += () => Dispatcher.BeginInvoke(OnThemeChanged);
         _mainViewModel.PoolAvailable = PoolClient.Available(_settings);
         _mainViewModel.PoolConsentChanged += () =>
         {
@@ -606,18 +606,17 @@ public partial class App : Application
         return overlay;
     }
 
-    private ThemeSpec CurrentTheme()
-    {
-        // Off-screen renders can preview a theme without touching the saved settings.
-        var name = _renderDir is not null && Environment.GetEnvironmentVariable("HEARTHLENS_THEME") is { Length: > 0 } forced ? forced : _settings.Theme;
-        return ThemePalette.Resolve(name, _settings.ThemeAccentHue, _settings.ThemeBaseHue, _settings.ThemeBaseTint);
-    }
+    private bool NightEdition() =>
+        // Off-screen renders can preview an edition without touching the saved settings.
+        _renderDir is not null && Environment.GetEnvironmentVariable("HEARTHLENS_THEME") is { Length: > 0 } forced
+            ? forced.Equals("dark", StringComparison.OrdinalIgnoreCase) || forced.Equals("night", StringComparison.OrdinalIgnoreCase)
+            : _settings.DarkTheme;
 
     private bool ApplyTheme()
     {
         try
         {
-            ThemeEngine.Apply(this, CurrentTheme());
+            ThemeEngine.Apply(this, NightEdition());
             return true;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -713,7 +712,7 @@ public partial class App : Application
         menu.Items.Add("Quit", null, (_, _) => Quit());
         foreach (Forms.ToolStripItem item in menu.Items)
         {
-            item.ForeColor = System.Drawing.Color.FromArgb(0xF4, 0xE7, 0xC9);
+            item.ForeColor = System.Drawing.Color.FromArgb(0x1C, 0x1D, 0x17);
         }
 
         _tray = new Forms.NotifyIcon
@@ -950,12 +949,12 @@ public partial class App : Application
         return timer;
     }
 
-    /// <summary>Tray menu in the app's brown and gold palette (Surface, Surface3, Border and Accent).</summary>
+    /// <summary>Tray menu on the day edition's paper (Surface, Surface3, Border and Accent).</summary>
     private sealed class DarkMenuRenderer : Forms.ToolStripProfessionalRenderer
     {
-        private static readonly System.Drawing.Color Background = System.Drawing.Color.FromArgb(0x21, 0x16, 0x0E);
-        private static readonly System.Drawing.Color Hover = System.Drawing.Color.FromArgb(0x3A, 0x28, 0x17);
-        private static readonly System.Drawing.Color Line = System.Drawing.Color.FromArgb(0x3D, 0x2A, 0x19);
+        private static readonly System.Drawing.Color Background = System.Drawing.Color.FromArgb(0xF8, 0xF1, 0xE3);
+        private static readonly System.Drawing.Color Hover = System.Drawing.Color.FromArgb(0xE4, 0xD6, 0xBD);
+        private static readonly System.Drawing.Color Line = System.Drawing.Color.FromArgb(0xD8, 0xC8, 0xAE);
 
         protected override void OnRenderToolStripBackground(Forms.ToolStripRenderEventArgs e) => e.Graphics.Clear(Background);
 
@@ -980,7 +979,7 @@ public partial class App : Application
 
         protected override void OnRenderItemCheck(Forms.ToolStripItemImageRenderEventArgs e)
         {
-            using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0xE9, 0xB9, 0x49));
+            using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x8A, 0x3B, 0x2E));
             e.Graphics.FillEllipse(brush, e.ImageRectangle.X + 4, e.ImageRectangle.Y + 4, 8, 8);
         }
     }

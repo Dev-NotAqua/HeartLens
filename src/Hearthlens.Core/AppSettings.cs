@@ -167,16 +167,10 @@ public sealed class AppSettings
     /// </summary>
     public bool AutoUpdate { get; set; } = true;
 
+    /// <summary>Use the night edition of the app: deep green paper with bone ink. The in-game overlay keeps its day paper.</summary>
+    public bool DarkTheme { get; set; }
+
     public bool HistoryImported { get; set; }
-
-    /// <summary>Colour theme: a preset name, or "Custom" with the three values below.</summary>
-    public string Theme { get; set; } = "Tavern";
-
-    public double ThemeAccentHue { get; set; } = 42;
-
-    public double ThemeBaseHue { get; set; } = 28;
-
-    public double ThemeBaseTint { get; set; } = 1.0;
 
     public static AppSettings Load()
     {

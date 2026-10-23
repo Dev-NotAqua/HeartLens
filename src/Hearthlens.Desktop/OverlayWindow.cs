@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Hearthlens.Core;
 using Hearthlens.Desktop.Platform;
@@ -30,6 +31,8 @@ internal sealed class OverlayWindow : Window
         _host = host;
         _platform = platform;
         Title = "Hearthlens Overlay";
+        // The overlay is a paper note laid over the game: keep the printed edition even when the dashboard is dark.
+        RequestedThemeVariant = ThemeVariant.Light;
         WindowDecorations = WindowDecorations.None;
         Background = Brushes.Transparent;
         TransparencyLevelHint = [WindowTransparencyLevel.Transparent];

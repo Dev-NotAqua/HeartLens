@@ -3,16 +3,71 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 namespace Hearthlens.UI.Infrastructure;
 
 /// <summary>Looks up theme brushes by key from the running application.</summary>
 public static class ThemeBrushes
 {
-    public static IBrush Get(string key) =>
-        Application.Current is { } app && app.TryGetResource(key, app.ActualThemeVariant, out var value) && value is IBrush brush
-            ? brush
-            : Brushes.Gray;
+    // Converters and code-behind pick a brush once, so the app-theme brushes handed out are recoloured in place
+    // when the theme changes instead of keeping the old edition's colour until the row is rebuilt.
+    private static readonly Dictionary<string, SolidColorBrush> Live = new();
+    private static bool _watching;
+
+    /// <summary>The brush for the app's current theme. It follows later theme changes.</summary>
+    public static IBrush Get(string key)
+    {
+        if (Application.Current is not { } app)
+        {
+            return Brushes.Gray;
+        }
+
+        Watch(app);
+        if (Live.TryGetValue(key, out var live))
+        {
+            return live;
+        }
+
+        if (Lookup(app, key, app.ActualThemeVariant) is not ISolidColorBrush solid)
+        {
+            return Lookup(app, key, app.ActualThemeVariant);
+        }
+
+        live = new SolidColorBrush(solid.Color, solid.Opacity);
+        Live[key] = live;
+        return live;
+    }
+
+    /// <summary>The brush for a fixed theme, for surfaces that don't follow the app theme (the overlay is always light).</summary>
+    public static IBrush Get(string key, ThemeVariant? variant) =>
+        variant is null ? Get(key)
+        : Application.Current is { } app ? Lookup(app, key, variant)
+        : Brushes.Gray;
+
+    private static IBrush Lookup(Application app, string key, ThemeVariant variant) =>
+        app.TryGetResource(key, variant, out var value) && value is IBrush brush ? brush : Brushes.Gray;
+
+    private static void Watch(Application app)
+    {
+        if (_watching)
+        {
+            return;
+        }
+
+        _watching = true;
+        app.ActualThemeVariantChanged += (_, _) =>
+        {
+            foreach (var (key, brush) in Live)
+            {
+                if (Lookup(app, key, app.ActualThemeVariant) is ISolidColorBrush solid)
+                {
+                    brush.Color = solid.Color;
+                    brush.Opacity = solid.Opacity;
+                }
+            }
+        };
+    }
 }
 
 /// <summary>True when the value is truthy: true, non-zero, non-empty, non-null. Parameter "!" inverts.</summary>
@@ -38,6 +93,9 @@ public sealed class Truthy : IValueConverter
 /// <summary>Maps keys (tier letters, rarities, results) to theme brushes.</summary>
 public sealed class KeyBrush : IValueConverter
 {
+    /// <summary>Fixed theme to colour for; null follows the app theme.</summary>
+    public ThemeVariant? Variant { get; set; }
+
     public static string KeyFor(string? value) => value switch
     {
         "S" => "TierS",
@@ -56,7 +114,7 @@ public sealed class KeyBrush : IValueConverter
     };
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        ThemeBrushes.Get(KeyFor(value?.ToString()));
+        ThemeBrushes.Get(KeyFor(value?.ToString()), Variant);
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
@@ -67,6 +125,9 @@ public sealed class KeyBrush : IValueConverter
 /// </summary>
 public sealed class SignBrush : IValueConverter
 {
+    /// <summary>Fixed theme to colour for; null follows the app theme.</summary>
+    public ThemeVariant? Variant { get; set; }
+
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var zero = parameter as string == "text" ? "Text" : "Muted";
@@ -81,7 +142,7 @@ public sealed class SignBrush : IValueConverter
             key = d > 0 ? "Positive" : d < 0 ? "Negative" : zero;
         }
 
-        return ThemeBrushes.Get(key);
+        return ThemeBrushes.Get(key, Variant);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();

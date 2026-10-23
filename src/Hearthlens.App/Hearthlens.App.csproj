@@ -11,7 +11,7 @@
     <AssemblyName>Hearthlens</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\hearthlens.ico</ApplicationIcon>
-    <Version>0.11.4</Version>
+    <Version>0.12.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- PerMonitorV2 is declared in app.manifest for WPF; the WinForms analyzer only covers the tray icon. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
@@ -30,7 +30,7 @@
   <ItemGroup>
     <Resource Include="Assets\hearthlens.ico" />
     <Resource Include="Assets\hearthlens.png" />
-    <!-- Montserrat: SIL Open Font License 1.1. Material Design Icons: Pictogrammers (Apache 2.0). -->
+    <!-- Fraunces and Manrope: SIL Open Font License 1.1. Material Design Icons: Pictogrammers (Apache 2.0). -->
     <Resource Include="Assets\Fonts\*.ttf" />
     <!-- The theme source is also kept as text so other colour themes can be built from it at runtime. -->
     <EmbeddedResource Include="Themes\Theme.xaml" LogicalName="Hearthlens.Theme.xaml" />

@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using Hearthlens.Core;
 using Hearthlens.Desktop.Platform;
 using Hearthlens.UI;
+using Hearthlens.UI.Infrastructure;
 
 namespace Hearthlens.Desktop;
 
@@ -57,6 +58,7 @@ internal sealed class DesktopApp : HearthlensApp
         };
 
         var settings = AppSettings.Load();
+        ThemeManager.Apply(settings.DarkTheme);
         _host = new AppHost(settings) { ApplyAutostart = Autostart.Apply };
         _main = new MainWindow(_host);
         _host.Notification += (title, text) => _main.Notify(title, text);

@@ -274,10 +274,10 @@ public partial class OverlayView : UserControl
             {
                 Width = Settings.LeaderboardWidth * Surface.Height,
                 Height = Math.Max(4, height - 2),
-                Stroke = ThemeBrushes.Get("Accent"),
+                Stroke = ThemeBrushes.Get("Accent", ActualThemeVariant),
                 StrokeThickness = 1.5,
                 StrokeDashArray = [4, 3],
-                Fill = ThemeBrushes.Get("AccentSoft"),
+                Fill = ThemeBrushes.Get("AccentSoft", ActualThemeVariant),
             };
             Canvas.SetLeft(box, left);
             Canvas.SetTop(box, top + 1);

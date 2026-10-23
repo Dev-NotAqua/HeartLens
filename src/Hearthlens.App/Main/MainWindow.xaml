@@ -104,64 +104,6 @@
             </Border>
         </DataTemplate>
 
-        <!-- Theme picker: each theme is a tile in its own colours, a cookie of its wood with a gem of its accent -->
-        <DataTemplate x:Key="ThemeTile" DataType="{x:Type m:ThemeChoice}">
-            <Border x:Name="Tile" Width="92" Height="92" CornerRadius="16" Background="{Binding Background}" BorderBrush="{StaticResource Border}"
-                    BorderThickness="2" Padding="8,10,8,8">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Name}" Foreground="{Binding Text}" FontSize="12.5" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" Margin="0,6,0,0" />
-                    <Grid Width="50" Height="50" HorizontalAlignment="Center">
-                        <c:Scallop Fill="{Binding Surface}" Lobes="9" Depth="0.12" />
-                        <c:Scallop Width="24" Height="24" Fill="{Binding Accent}" Lobes="6" Depth="0.2" Angle="15" />
-                    </Grid>
-                </DockPanel>
-            </Border>
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Selected}" Value="True">
-                    <Setter TargetName="Tile" Property="BorderBrush" Value="{StaticResource Accent}" />
-                </DataTrigger>
-            </DataTemplate.Triggers>
-        </DataTemplate>
-        <Style x:Key="ThemeSwatch" TargetType="Button">
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Margin" Value="0,0,10,10" />
-            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingChip}" />
-            <Setter Property="ContentTemplate" Value="{StaticResource ThemeTile}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <ContentPresenter x:Name="Face" RenderTransformOrigin="0.5,0.5" />
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Face" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="1.04" ScaleY="1.04" />
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Face" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <!-- The colour wheel laid flat, under the hue sliders -->
-        <LinearGradientBrush x:Key="HueStrip" StartPoint="0,0" EndPoint="1,0">
-            <GradientStop Color="#FF4D4D" Offset="0" />
-            <GradientStop Color="#FFD24D" Offset="0.167" />
-            <GradientStop Color="#7DFF4D" Offset="0.333" />
-            <GradientStop Color="#4DFFE0" Offset="0.5" />
-            <GradientStop Color="#4D7DFF" Offset="0.667" />
-            <GradientStop Color="#D24DFF" Offset="0.833" />
-            <GradientStop Color="#FF4D4D" Offset="1" />
-        </LinearGradientBrush>
 
         <ItemsPanelTemplate x:Key="TilesPanel">
             <UniformGrid Rows="1" />
@@ -184,11 +126,7 @@
                     <Border.RenderTransform>
                         <TranslateTransform x:Name="NavPillShift" />
                     </Border.RenderTransform>
-                    <Border Width="3" CornerRadius="2" Margin="0,8" HorizontalAlignment="Left" Background="{StaticResource Accent}">
-                        <Border.Effect>
-                            <DropShadowEffect Color="{StaticResource AccentColor}" BlurRadius="12" ShadowDepth="0" Opacity="0.9" />
-                        </Border.Effect>
-                    </Border>
+                    <Border Width="3" CornerRadius="2" Margin="0,9" HorizontalAlignment="Left" Background="{StaticResource Marigold}" />
                 </Border>
             </Canvas>
             <DockPanel>
@@ -200,7 +138,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="24,22,0,18">
                         <Image Source="/Assets/hearthlens.png" Width="42" Height="42" RenderOptions.BitmapScalingMode="HighQuality" />
-                        <TextBlock Text="Hearthlens" Style="{StaticResource H2}" FontSize="21" FontWeight="ExtraBold" Foreground="{StaticResource GildedText}"
+                        <TextBlock Text="Hearthlens" Style="{StaticResource H2}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource NavText}"
                                    Margin="12,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
 
@@ -212,7 +150,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Modes" Style="{StaticResource Label}" />
+                        <TextBlock Text="Modes" Style="{StaticResource Label}" Foreground="{StaticResource NavMuted}" />
                     </Grid>
                     <RadioButton x:Name="NavBattlegrounds" Style="{StaticResource NavItem}" Content="Battlegrounds" Tag="&#xF0787;" GroupName="Nav" Checked="OnNavigate"
                                  ToolTip="Your Battlegrounds results, heroes and rating" />
@@ -224,7 +162,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Library" Style="{StaticResource Label}" />
+                        <TextBlock Text="Library" Style="{StaticResource Label}" Foreground="{StaticResource NavMuted}" />
                     </Grid>
                     <RadioButton x:Name="NavHistory" Style="{StaticResource NavItem}" Content="History" Tag="&#xF02DA;" GroupName="Nav" Checked="OnNavigate"
                                  ToolTip="Every game Hearthlens recorded" />
@@ -233,7 +171,7 @@
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,16">
                     <RadioButton x:Name="NavSettings" Style="{StaticResource NavItem}" Content="Settings" Tag="&#xF08BB;" GroupName="Nav" Checked="OnNavigate"
                                  ToolTip="Overlay panels, layout and app options" />
-                    <TextBlock Text="{Binding Version}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Faint}" Margin="28,8,0,0" />
+                    <TextBlock Text="{Binding Version}" Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource NavMuted}" Margin="28,8,0,0" />
                 </StackPanel>
                 <Border />
             </DockPanel>
@@ -1230,62 +1168,10 @@
 
                             <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                                 <StackPanel>
-                                    <c:Ornament Text="Theme" Icon="&#xF03D8;" Size="13" Margin="0,0,0,6" />
-                                    <TextBlock Text="Pick a look. The app and the overlay redraw in its colors right away." Style="{StaticResource Caption}" Margin="0,0,0,14" />
-                                    <ItemsControl ItemsSource="{Binding Themes}" Focusable="False">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type m:ThemeChoice}">
-                                                <Button Style="{StaticResource ThemeSwatch}" Content="{Binding}" ToolTip="{Binding Name}" CommandParameter="{Binding Name}"
-                                                        Command="{Binding DataContext.SelectTheme, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-
-                                    <TextBlock Text="Make your own" Style="{StaticResource Label}" Margin="0,10,0,10" />
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <ContentControl Content="{Binding CustomPreview}" ContentTemplate="{StaticResource ThemeTile}" VerticalAlignment="Top" Focusable="False" />
-                                        <StackPanel Grid.Column="1" Margin="20,0,0,0">
-                                            <Grid Margin="0,0,0,12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="150" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="Accent color" VerticalAlignment="Center" />
-                                                <Border Grid.Column="1" Height="4" CornerRadius="2" Margin="8,0,8,-14" VerticalAlignment="Center" Background="{StaticResource HueStrip}" />
-                                                <Slider Grid.Column="1" Minimum="0" Maximum="360" Value="{Binding AccentHue}" SmallChange="5" LargeChange="30"
-                                                        AutomationProperties.Name="Accent color" />
-                                            </Grid>
-                                            <Grid Margin="0,0,0,12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="150" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="Background color" VerticalAlignment="Center" />
-                                                <Border Grid.Column="1" Height="4" CornerRadius="2" Margin="8,0,8,-14" VerticalAlignment="Center" Background="{StaticResource HueStrip}" />
-                                                <Slider Grid.Column="1" Minimum="0" Maximum="360" Value="{Binding BaseHue}" SmallChange="5" LargeChange="30"
-                                                        AutomationProperties.Name="Background color" />
-                                            </Grid>
-                                            <Grid Margin="0,0,0,14">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="150" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="Background tint" VerticalAlignment="Center" />
-                                                <Slider Grid.Column="1" Minimum="0" Maximum="1.5" Value="{Binding BaseTint}" SmallChange="0.05" LargeChange="0.25"
-                                                        AutomationProperties.Name="Background tint" ToolTip="Left is grey, right is strongly colored" />
-                                            </Grid>
-                                            <Button Style="{StaticResource PrimaryButton}" Content="Use my theme" Command="{Binding ApplyCustomTheme}" HorizontalAlignment="Left" />
-                                        </StackPanel>
-                                    </Grid>
+                                    <c:Ornament Text="Appearance" Icon="&#xF03D8;" Size="13" Margin="0,0,0,14" />
+                                    <CheckBox Style="{StaticResource Switch}" Content="Night edition" IsChecked="{Binding NightEdition}" Margin="0,0,0,8"
+                                              ToolTip="Deep green paper with bone ink for the app. The in-game overlay keeps its day paper." />
+                                    <TextBlock Text="The day edition is bone paper and bottle green. The night edition is the same book after dark." Style="{StaticResource Caption}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
 
@@ -1481,7 +1367,7 @@
                                         It never shows hidden information such as your opponent's hand or deck.
                                     </TextBlock>
                                     <TextBlock Text="{Binding Attribution}" Style="{StaticResource Caption}" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap" />
-                                    <TextBlock Text="Fonts: Montserrat (SIL Open Font License) · Material Design Icons (Pictogrammers, Apache 2.0)." Style="{StaticResource Caption}"
+                                    <TextBlock Text="Fonts: Fraunces and Manrope (SIL Open Font License) · Material Design Icons (Pictogrammers, Apache 2.0)." Style="{StaticResource Caption}"
                                                FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
                                     <TextBlock Text="Not affiliated with Blizzard Entertainment." Style="{StaticResource Caption}" FontSize="11" Foreground="{StaticResource Faint}" Margin="0,4,0,0" />
                                 </StackPanel>
@@ -1494,7 +1380,7 @@
                             BorderBrush="{StaticResource Outline}" BorderThickness="1" Padding="12,12,16,12"
                             Visibility="{Binding AskPoolConsent, Converter={StaticResource Vis}}">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.35" Color="Black" />
+                            <DropShadowEffect BlurRadius="18" ShadowDepth="3" Direction="270" Opacity="0.12" Color="Black" />
                         </Border.Effect>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -1503,7 +1389,7 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Grid Width="46" Height="46">
-                                <c:Scallop Fill="{StaticResource Surface4}" Lobes="9" Depth="0.1" />
+                                <Rectangle Fill="{StaticResource Surface4}" RadiusX="10" RadiusY="10" />
                                 <TextBlock Text="&#xF0849;" Style="{StaticResource Icon}" FontSize="22" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" />
                             </Grid>
                             <StackPanel Grid.Column="1" Margin="14,0,20,0" VerticalAlignment="Center">
@@ -1524,7 +1410,7 @@
                     <Border Grid.Row="1" VerticalAlignment="Bottom" Margin="24,0,24,18" CornerRadius="12" Background="{StaticResource Surface3}"
                             BorderBrush="{StaticResource Outline}" BorderThickness="1" Padding="9,9,15,9">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.35" Color="Black" />
+                            <DropShadowEffect BlurRadius="18" ShadowDepth="3" Direction="270" Opacity="0.12" Color="Black" />
                         </Border.Effect>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -1534,7 +1420,7 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Grid Width="46" Height="46">
-                                <c:Scallop x:Name="LivePulse" Fill="{StaticResource Surface4}" Lobes="9" Depth="0.1" />
+                                <Rectangle x:Name="LivePulse" Fill="{StaticResource Surface4}" RadiusX="10" RadiusY="10" />
                                 <TextBlock Text="&#xF0EB7;" Style="{StaticResource Icon}" FontSize="22" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" />
                             </Grid>
                             <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center">

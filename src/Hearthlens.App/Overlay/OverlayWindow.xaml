@@ -11,8 +11,8 @@
         UseLayoutRounding="True" Style="{StaticResource AppWindow}" TextOptions.TextFormattingMode="Display">
     <Window.Resources>
         <i:VisibleWhen x:Key="Vis" />
-        <i:KeyBrush x:Key="KeyBrush" />
-        <i:SignBrush x:Key="SignBrush" />
+        <i:KeyBrush x:Key="KeyBrush" Day="True" />
+        <i:SignBrush x:Key="SignBrush" Day="True" />
         <i:FractionWidth x:Key="Fraction" />
 
         <SolidColorBrush x:Key="Ink" Color="{StaticResource BgColor}" />
@@ -179,7 +179,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid Width="38" Height="38" VerticalAlignment="Center">
-                            <c:Scallop Fill="{Binding Tier, Converter={StaticResource KeyBrush}}" Lobes="9" Depth="0.1" />
+                            <Rectangle Fill="{Binding Tier, Converter={StaticResource KeyBrush}}" RadiusX="4" RadiusY="4" />
                             <TextBlock Text="{Binding Tier}" FontFamily="{StaticResource DisplayFont}" FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
@@ -198,11 +198,11 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource PrimaryFill}" CornerRadius="5"
+                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Marigold}" CornerRadius="5"
                         Padding="8,1" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
-                        <TextBlock Text="BEST PICK" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
+                        <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnMarigold}" Margin="0,0,4,0" />
+                        <TextBlock Text="Best pick" FontSize="10" FontWeight="Bold" Foreground="{StaticResource OnMarigold}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -237,7 +237,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid Width="34" Height="34" VerticalAlignment="Center">
-                            <c:Scallop Fill="{Binding Tier, Converter={StaticResource KeyBrush}}" Lobes="9" Depth="0.1" />
+                            <Rectangle Fill="{Binding Tier, Converter={StaticResource KeyBrush}}" RadiusX="4" RadiusY="4" />
                             <TextBlock Text="{Binding Tier}" FontFamily="{StaticResource DisplayFont}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource Ink}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
@@ -250,11 +250,11 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource PrimaryFill}" CornerRadius="5"
+                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Marigold}" CornerRadius="5"
                         Padding="8,1" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
-                        <TextBlock Text="BEST PICK" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
+                        <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnMarigold}" Margin="0,0,4,0" />
+                        <TextBlock Text="Best pick" FontSize="10" FontWeight="Bold" Foreground="{StaticResource OnMarigold}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -283,7 +283,7 @@
                     BorderBrush="{StaticResource OverlayBorder}" BorderThickness="1" VerticalAlignment="Bottom">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock x:Name="Buy" Text="BUY" FontSize="11" FontWeight="Bold" Margin="0,0,5,0" Visibility="Collapsed" />
+                        <TextBlock x:Name="Buy" Text="Buy" FontSize="11" FontWeight="Bold" Margin="0,0,5,0" Visibility="Collapsed" />
                         <TextBlock x:Name="Lbl" Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Text}"
                                    TextTrimming="CharacterEllipsis" MaxWidth="100" Visibility="{Binding Label, Converter={StaticResource Vis}}" />
                     </StackPanel>
@@ -324,7 +324,7 @@
                         </Grid.ColumnDefinitions>
                         <!-- Rank among the options: "Mark the best" only -->
                         <Grid x:Name="RankCookie" Width="32" Height="32" VerticalAlignment="Center" Visibility="Collapsed">
-                            <c:Scallop x:Name="Cookie" Fill="{StaticResource Surface4}" Lobes="8" Depth="0.1" />
+                            <Rectangle x:Name="Cookie" Fill="{StaticResource Surface4}" RadiusX="4" RadiusY="4" />
                             <TextBlock x:Name="RankText" FontFamily="{StaticResource DisplayFont}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Text}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <Run Text="#" FontSize="10" /><Run Text="{Binding Rank, Mode=OneWay}" />
@@ -348,11 +348,11 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource PrimaryFill}" CornerRadius="5"
+                <Border x:Name="Best" HorizontalAlignment="Center" VerticalAlignment="Top" Background="{StaticResource Marigold}" CornerRadius="5"
                         Padding="8,1" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnAccent}" Margin="0,0,4,0" />
-                        <TextBlock Text="BEST PICK" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
+                        <TextBlock Text="&#xF0AE2;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource OnMarigold}" Margin="0,0,4,0" />
+                        <TextBlock Text="Best pick" FontSize="10" FontWeight="Bold" Foreground="{StaticResource OnMarigold}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -388,8 +388,8 @@
                     <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource BestEdge}" />
                     <Setter TargetName="Card" Property="BorderThickness" Value="1.5" />
                     <Setter TargetName="Card" Property="Opacity" Value="1" />
-                    <Setter TargetName="Cookie" Property="Fill" Value="{StaticResource Accent}" />
-                    <Setter TargetName="RankText" Property="Foreground" Value="{StaticResource OnAccent}" />
+                    <Setter TargetName="Cookie" Property="Fill" Value="{StaticResource Marigold}" />
+                    <Setter TargetName="RankText" Property="Foreground" Value="{StaticResource OnMarigold}" />
                     <Setter TargetName="Best" Property="Visibility" Value="Visible" />
                 </MultiDataTrigger>
             </DataTemplate.Triggers>
@@ -502,7 +502,7 @@
                        Style="{StaticResource ZoomImage}" RenderTransformOrigin="1,0.5" />
                 <Border x:Name="Tag" VerticalAlignment="Bottom" HorizontalAlignment="Center" Background="{StaticResource Accent}" CornerRadius="5"
                         Padding="6,0" Margin="0,0,0,2" Visibility="Collapsed">
-                    <TextBlock Text="IN PLAN" FontSize="9" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
+                    <TextBlock Text="In plan" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
                 </Border>
             </Grid>
             <DataTemplate.Triggers>
@@ -957,7 +957,7 @@
                                     </ToolTip>
                                 </StackPanel.ToolTip>
                                 <Grid Width="22" Height="22" VerticalAlignment="Center">
-                                    <c:Scallop Fill="{Binding Target.Power, Converter={StaticResource KeyBrush}}" Lobes="8" Depth="0.1" />
+                                    <Rectangle Fill="{Binding Target.Power, Converter={StaticResource KeyBrush}}" RadiusX="4" RadiusY="4" />
                                     <TextBlock Text="{Binding Target.Power}" FontFamily="{StaticResource DisplayFont}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Ink}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Grid>
@@ -1106,7 +1106,7 @@
                             </StackPanel>
                             <Border Grid.Column="2" Background="{StaticResource Accent}" CornerRadius="5" Padding="8,1" VerticalAlignment="Top"
                                     Visibility="{Binding NextOpponent, Converter={StaticResource Vis}}">
-                                <TextBlock Text="NEXT" FontSize="10" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
+                                <TextBlock Text="Next" FontSize="10" FontWeight="Bold" Foreground="{StaticResource OnAccent}" />
                             </Border>
                         </Grid>
                         <TextBlock FontSize="11" Foreground="{StaticResource Muted}" Margin="0,8,0,6">
