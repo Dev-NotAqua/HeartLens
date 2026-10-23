@@ -391,8 +391,7 @@ public partial class App : Application
             return;
         }
 
-        var meta = await PoolClient.LoadMetaAsync(_http, PoolClient.Endpoint(_settings))
-            ?? await PoolClient.LoadStatsAsync(_http, PoolClient.Endpoint(_settings));
+        var meta = await PoolClient.LoadMetaAsync(_http, PoolClient.Endpoint(_settings));
         if (meta is not null)
         {
             _meta = meta;
