@@ -26,6 +26,22 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Picks and plays, only if you agree.** Hearthlens now remembers every pick you are offered in Battlegrounds (Discover, triple rewards, trinkets) and what you took, plus the minions and spells you play from your hand. The banner asks again with the full list of what is shared:
+
+- the heroes you were offered and the one you picked, your placement, solo or duos, and your rating rounded down to 500
+- the lobby's tribes and anomaly, your final board, your trinkets and how many triples you made
+- the turn you reached each tavern tier
+- each fight's result, the damage dealt and taken, and the odds Hearthlens predicted
+- every pick you were offered and what you took, and the cards you played
+
+**Your recent games count too.** Once you agree, your Battlegrounds games from the last 30 days are sent once, so the stats fill up faster.
+
+Never your name, BattleTag, account or anything about other players. If you said yes before, only the older, shorter list is shared until you answer again. **No thanks** stops sharing completely.
+
+**Lighter on the server.** The stats pool now stores each game as one row and works the totals out a few times a day instead of on every request, so it keeps running for free as more people join.
+
+## What was new in 0.9.0
+
 **More stats, only if you agree.** The stats pool can now build card, trinket and tribe lists too. The banner asks again with the full list of what is shared:
 
 - the heroes you were offered and the one you picked, your placement, solo or duos, and your rating rounded down to 500
