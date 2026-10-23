@@ -247,7 +247,7 @@ public sealed class AppHost : IDisposable
     }
 
     /// <summary>
-    /// The full Battlegrounds meta from the Hearthlens stats pool (/v1/meta, imported once from Firestone).
+    /// The full Battlegrounds meta from the Hearthlens stats pool (/v1/meta, imported once into the pool).
     /// Deletes the copies older versions cached under the old downloader.
     /// </summary>
     public async Task LoadMetaAsync()

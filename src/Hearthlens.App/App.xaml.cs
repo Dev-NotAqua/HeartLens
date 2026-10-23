@@ -368,7 +368,7 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// The full Battlegrounds meta, served from the Hearthlens stats pool (/v1/meta, imported once from Firestone).
+    /// The full Battlegrounds meta, served from the Hearthlens stats pool (/v1/meta, imported once into the pool).
     /// Falls back to the pool's own game totals when the meta has not been imported yet.
     /// </summary>
     private async Task LoadMetaAsync()
