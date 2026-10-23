@@ -66,61 +66,61 @@
 
     <!-- Selection and primary action: a raised leather plate with a gold edge, and a polished gold button -->
     <LinearGradientBrush x:Key="SelectedFill" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#5C4120" Offset="0" />
-        <GradientStop Color="#3C2A18" Offset="1" />
+        <GradientStop Color="#4A3420" Offset="0" />
+        <GradientStop Color="#4A3420" Offset="1" />
     </LinearGradientBrush>
     <SolidColorBrush x:Key="SelectedEdge" Color="#A27839" />
     <LinearGradientBrush x:Key="PrimaryFill" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FFE79E" Offset="0" />
-        <GradientStop Color="#EFC253" Offset="0.45" />
-        <GradientStop Color="#C88F2E" Offset="1" />
+        <GradientStop Color="#E9B949" Offset="0" />
+        <GradientStop Color="#E9B949" Offset="0.45" />
+        <GradientStop Color="#E9B949" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="PrimaryFillHover" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FFF0C2" Offset="0" />
-        <GradientStop Color="#F6CD66" Offset="0.45" />
-        <GradientStop Color="#D69C3C" Offset="1" />
+        <GradientStop Color="#F0C764" Offset="0" />
+        <GradientStop Color="#F0C764" Offset="0.45" />
+        <GradientStop Color="#F0C764" Offset="1" />
     </LinearGradientBrush>
     <SolidColorBrush x:Key="PanelEdge" Color="{StaticResource BorderColor}" />
 
     <!-- ===== Gilded Tavern: light falls from above, so every plate is lit on top and trimmed in gold ===== -->
     <LinearGradientBrush x:Key="GildedText" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FFF6D8" Offset="0" />
-        <GradientStop Color="#F3CF72" Offset="0.55" />
-        <GradientStop Color="#D29A35" Offset="1" />
+        <GradientStop Color="#F4E7C9" Offset="0" />
+        <GradientStop Color="#F4E7C9" Offset="0.55" />
+        <GradientStop Color="#F4E7C9" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="StatText" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FFFAEE" Offset="0" />
-        <GradientStop Color="#EDD6A4" Offset="1" />
+        <GradientStop Color="#F4E7C9" Offset="0" />
+        <GradientStop Color="#F4E7C9" Offset="1" />
     </LinearGradientBrush>
     <RadialGradientBrush x:Key="WindowFill" GradientOrigin="0.1,0" Center="0.1,0" RadiusX="0.9" RadiusY="1.1">
-        <GradientStop Color="#22160C" Offset="0" />
-        <GradientStop Color="#110B07" Offset="1" />
+        <GradientStop Color="#140D08" Offset="0" />
+        <GradientStop Color="#140D08" Offset="1" />
     </RadialGradientBrush>
     <RadialGradientBrush x:Key="ContentFill" GradientOrigin="0.25,0" Center="0.25,0" RadiusX="1" RadiusY="0.9">
-        <GradientStop Color="#2D1E12" Offset="0" />
-        <GradientStop Color="#1D140C" Offset="1" />
+        <GradientStop Color="#1E150D" Offset="0" />
+        <GradientStop Color="#1E150D" Offset="1" />
     </RadialGradientBrush>
     <LinearGradientBrush x:Key="ContentEdge" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#5C4226" Offset="0" />
-        <GradientStop Color="#33241A" Offset="0.4" />
-        <GradientStop Color="#2A1C12" Offset="1" />
+        <GradientStop Color="#3D2A19" Offset="0" />
+        <GradientStop Color="#3D2A19" Offset="0.4" />
+        <GradientStop Color="#3D2A19" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="CardFill" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#352516" Offset="0" />
-        <GradientStop Color="#25190F" Offset="1" />
+        <GradientStop Color="#271B11" Offset="0" />
+        <GradientStop Color="#271B11" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="CardEdge" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#70502B" Offset="0" />
-        <GradientStop Color="#45301B" Offset="0.3" />
-        <GradientStop Color="#2E1F13" Offset="1" />
+        <GradientStop Color="#3D2A19" Offset="0" />
+        <GradientStop Color="#3D2A19" Offset="0.3" />
+        <GradientStop Color="#3D2A19" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="GhostFill" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#47321C" Offset="0" />
-        <GradientStop Color="#34241A" Offset="1" />
+        <GradientStop Color="#352518" Offset="0" />
+        <GradientStop Color="#352518" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="GhostEdge" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#86603A" Offset="0" />
-        <GradientStop Color="#4E3720" Offset="1" />
+        <GradientStop Color="#5A4027" Offset="0" />
+        <GradientStop Color="#5A4027" Offset="1" />
     </LinearGradientBrush>
     <SolidColorBrush x:Key="PrimaryEdge" Color="#8A5E22" />
     <LinearGradientBrush x:Key="BestEdge" StartPoint="0,0" EndPoint="0,1">
@@ -130,21 +130,21 @@
     </LinearGradientBrush>
     <!-- A soft gold light behind the recommended option; a gradient, not a bitmap effect, so the overlay stays cheap -->
     <RadialGradientBrush x:Key="BestHalo">
-        <GradientStop Color="#4DE9B949" Offset="0.6" />
+        <GradientStop Color="#00E9B949" Offset="0.6" />
         <GradientStop Color="#00E9B949" Offset="1" />
     </RadialGradientBrush>
     <SolidColorBrush x:Key="Sheen" Color="#80FFF4D6" />
     <SolidColorBrush x:Key="GrooveFill" Color="#1A110B" />
     <SolidColorBrush x:Key="GrooveEdge" Color="#36261A" />
     <LinearGradientBrush x:Key="NavSelectedFill" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#42E9B949" Offset="0" />
-        <GradientStop Color="#14E9B949" Offset="0.55" />
-        <GradientStop Color="#06E9B949" Offset="1" />
+        <GradientStop Color="#24E9B949" Offset="0" />
+        <GradientStop Color="#24E9B949" Offset="0.55" />
+        <GradientStop Color="#24E9B949" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="NavSelectedEdge" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#AAE9B949" Offset="0" />
-        <GradientStop Color="#40E9B949" Offset="0.5" />
-        <GradientStop Color="#14E9B949" Offset="1" />
+        <GradientStop Color="#55E9B949" Offset="0" />
+        <GradientStop Color="#55E9B949" Offset="0.5" />
+        <GradientStop Color="#55E9B949" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="OverlayCardFill" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#F22E2015" Offset="0" />
@@ -330,7 +330,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid>
+                    <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform />
+                        </Grid.RenderTransform>
                         <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" SnapsToDevicePixels="True" />
                         <Border x:Name="State" Background="{StaticResource Hover}" Opacity="0" CornerRadius="8" />
@@ -355,6 +358,22 @@
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentLine}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.96" Duration="0:0:0.080"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.96" Duration="0:0:0.080"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="State" Property="Background" Value="{StaticResource Pressed}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
@@ -373,19 +392,50 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid>
+                    <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform />
+                        </Grid.RenderTransform>
                         <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" SnapsToDevicePixels="True" />
-                        <!-- Polished metal: a bright rim along the top edge -->
-                        <Border CornerRadius="7" Margin="1" BorderBrush="{StaticResource Sheen}" BorderThickness="0,1,0,0" SnapsToDevicePixels="True" />
+                        <Border x:Name="Lift" Background="{StaticResource PrimaryFillHover}" CornerRadius="8" Opacity="0" />
                         <Border x:Name="State" Background="Transparent" CornerRadius="8" />
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimaryFillHover}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.96" Duration="0:0:0.080"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.96" Duration="0:0:0.080"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="State" Property="Background" Value="{StaticResource Pressed}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
@@ -409,7 +459,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid>
+                    <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform />
+                        </Grid.RenderTransform>
                         <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="999" />
                         <Border x:Name="State" Background="Transparent" CornerRadius="999" />
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -422,6 +475,22 @@
                             <Setter Property="Foreground" Value="{StaticResource Text}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.9" Duration="0:0:0.080"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.9" Duration="0:0:0.080"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="State" Property="Background" Value="{StaticResource Pressed}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -520,6 +589,8 @@
                 <ControlTemplate TargetType="RadioButton">
                     <Grid>
                         <Border x:Name="HoverLayer" CornerRadius="6" Background="{StaticResource Hover}" Opacity="0" SnapsToDevicePixels="True" />
+                        <Border x:Name="Sel" CornerRadius="6" Background="{StaticResource SelectedFill}" BorderBrush="{StaticResource SelectedEdge}" BorderThickness="1"
+                                Opacity="0" SnapsToDevicePixels="True" />
                         <Border x:Name="Bd" CornerRadius="6" Padding="12,5" Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
                                 SnapsToDevicePixels="True">
                             <StackPanel Orientation="Horizontal">
@@ -551,8 +622,20 @@
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource Pressed}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SelectedFill}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource SelectedEdge}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Sel" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Sel" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="Check" Property="Visibility" Value="Visible" />
                             <Setter Property="Foreground" Value="{StaticResource Accent}" />
                         </Trigger>
@@ -568,6 +651,8 @@
                 <ControlTemplate TargetType="RadioButton">
                     <Grid>
                         <Border x:Name="HoverLayer" CornerRadius="6" Background="{StaticResource Hover}" Opacity="0" SnapsToDevicePixels="True" />
+                        <Border x:Name="Sel" CornerRadius="6" Background="{StaticResource SelectedFill}" BorderBrush="{StaticResource SelectedEdge}" BorderThickness="1"
+                                Opacity="0" SnapsToDevicePixels="True" />
                         <Border x:Name="Bd" CornerRadius="6" Padding="12,5" Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
                                 SnapsToDevicePixels="True">
                             <StackPanel Orientation="Horizontal">
@@ -577,7 +662,11 @@
                             </StackPanel>
                         </Border>
                         <Border x:Name="Underline" Height="2" CornerRadius="1" Margin="6,0" VerticalAlignment="Bottom" Background="{StaticResource Accent}"
-                                SnapsToDevicePixels="True" Visibility="Collapsed" />
+                                SnapsToDevicePixels="True" RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="0" />
+                            </Border.RenderTransform>
+                        </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -601,10 +690,23 @@
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource Pressed}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SelectedFill}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource SelectedEdge}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Sel" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Underline" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Sel" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Underline" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="Check" Property="Visibility" Value="Visible" />
-                            <Setter TargetName="Underline" Property="Visibility" Value="Visible" />
                             <Setter Property="Foreground" Value="{StaticResource Accent}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -636,37 +738,75 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ContentPresenter VerticalAlignment="Center" Margin="0,0,16,0" />
-                        <Border x:Name="Track" Grid.Column="1" Width="48" Height="28" CornerRadius="14"
-                                Background="{StaticResource Surface4}" BorderBrush="{StaticResource Muted}" BorderThickness="2">
-                            <Grid x:Name="Thumb" Width="14" Height="14" HorizontalAlignment="Left" Margin="5,0">
-                                <Ellipse x:Name="Knob" Fill="{StaticResource Muted}" />
-                                <TextBlock x:Name="Tick" Text="&#xF012C;" Style="{StaticResource Icon}" FontSize="14" Foreground="{StaticResource Accent}"
-                                           HorizontalAlignment="Center" Visibility="Collapsed" />
+                        <Grid Grid.Column="1" Width="48" Height="28">
+                            <Border x:Name="Track" CornerRadius="14" Background="{StaticResource Surface4}" BorderBrush="{StaticResource Muted}" BorderThickness="2" />
+                            <Border x:Name="OnFill" CornerRadius="14" Background="{StaticResource Accent}" Opacity="0" />
+                            <Grid x:Name="Thumb" Width="24" Height="24" HorizontalAlignment="Left" Margin="2,0,0,0" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="0.67" ScaleY="0.67" />
+                                        <TranslateTransform X="0" />
+                                    </TransformGroup>
+                                </Grid.RenderTransform>
+                                <Ellipse x:Name="Halo" Margin="-9" Fill="{StaticResource Hover}" Opacity="0" />
+                                <Ellipse x:Name="KnobOff" Fill="{StaticResource Muted}" />
+                                <Ellipse x:Name="KnobOn" Fill="{StaticResource OnAccent}" Opacity="0" />
+                                <TextBlock x:Name="Tick" Text="&#xF012C;" Style="{StaticResource Icon}" FontSize="17" Foreground="{StaticResource Accent}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" />
                             </Grid>
-                        </Border>
+                        </Grid>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Halo" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Halo" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource Text}" />
-                            <Setter TargetName="Knob" Property="Fill" Value="{StaticResource Text}" />
+                            <Setter TargetName="KnobOff" Property="Fill" Value="{StaticResource Text}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Halo" Property="Fill" Value="{StaticResource Pressed}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Track" Property="Background" Value="{StaticResource PrimaryFill}" />
-                            <Setter TargetName="Track" Property="BorderThickness" Value="0" />
-                            <Setter TargetName="Knob" Property="Fill" Value="{StaticResource OnAccent}" />
-                            <Setter TargetName="Thumb" Property="Width" Value="20" />
-                            <Setter TargetName="Thumb" Property="Height" Value="20" />
-                            <Setter TargetName="Thumb" Property="Margin" Value="4,0" />
-                            <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
-                            <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)" To="20" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="0.83" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="0.83" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="OnFill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="KnobOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Tick" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.160" BeginTime="0:0:0.060"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)" To="0" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="0.67" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="0.67" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="OnFill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="KnobOn" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Tick" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.100"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="True" />
-                                <Condition Property="IsMouseOver" Value="True" />
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Track" Property="Opacity" Value="0.9" />
-                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

@@ -96,12 +96,8 @@ public sealed class Ornament : FrameworkElement
         if (Icon.Length > 0)
         {
             var d = IconSize;
-            var cookie = Scallop.Build(d, d, 9, 0.09, 0);
-            dc.PushTransform(new TranslateTransform(0, mid - (d / 2)));
-            var edge = new Pen(trim, 1);
-            edge.Freeze();
-            dc.DrawGeometry(TryFindResource("Surface3") as Brush ?? Brushes.DimGray, edge, cookie);
-            dc.Pop();
+            // A plain rounded tile behind the icon.
+            dc.DrawRoundedRectangle(TryFindResource("Surface3") as Brush ?? Brushes.DimGray, null, new Rect(0, mid - (d / 2), d, d), d * 0.28, d * 0.28);
             var glyph = new FormattedText(Icon, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
                 new Typeface((TryFindResource("IconFont") as FontFamily) ?? FallbackFont, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
                 d * 0.5, gold, VisualTreeHelper.GetDpi(this).PixelsPerDip);

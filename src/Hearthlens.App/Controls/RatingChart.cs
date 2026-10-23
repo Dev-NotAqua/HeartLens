@@ -91,18 +91,11 @@ public sealed class RatingChart : FrameworkElement
         area.Freeze();
         var gold = accent is SolidColorBrush solid ? solid.Color : Color.FromRgb(0xE9, 0xB9, 0x49);
         Color Gold(byte alpha) => Color.FromArgb(alpha, gold.R, gold.G, gold.B);
-        dc.DrawGeometry(new LinearGradientBrush(Gold(0x4A), Gold(0x00), 90), null, area);
-
-        // A wide faint stroke under the line reads as a glow without a bitmap effect.
-        dc.DrawGeometry(null, new Pen(new SolidColorBrush(Gold(0x2E)), 7) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, line);
-        var deep = TryFindResource("AccentDeep") is SolidColorBrush d ? d.Color : Color.FromRgb(0xC4, 0x8E, 0x2C);
-        var light = Color.FromRgb((byte)(((gold.R * 2) + 255) / 3), (byte)(((gold.G * 2) + 255) / 3), (byte)(((gold.B * 2) + 255) / 3));
-        var stroke = new LinearGradientBrush(deep, light, 0);
-        dc.DrawGeometry(null, new Pen(stroke, 2.4) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, line);
+        dc.DrawGeometry(new LinearGradientBrush(Gold(0x26), Gold(0x00), 90), null, area);
+        dc.DrawGeometry(null, new Pen(accent, 2) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, line);
 
         var last = at[^1];
-        dc.DrawEllipse(new SolidColorBrush(Gold(0x30)), null, last, 10, 10);
-        dc.DrawEllipse((Brush)FindResource("Bg"), new Pen(accent, 2.4), last, 4.5, 4.5);
+        dc.DrawEllipse((Brush)FindResource("Bg"), new Pen(accent, 2), last, 4, 4);
 
         // The latest rating sits in a small gold tag above its point.
         var tag = new FormattedText(points[^1].Rating.ToString("N0", CultureInfo.CurrentCulture), CultureInfo.CurrentCulture,
