@@ -55,6 +55,27 @@ for ARCH in "${ARCHS[@]}"; do
   fi
   echo "wrote $ZIP"
 
+  # ---- Portable .zip: run Hearthlens.app from anywhere; data goes to "Hearthlens Data" next to it ----
+  echo "== Building portable .zip"
+  PORT="$WORK/portable"
+  rm -rf "$PORT"
+  mkdir -p "$PORT/Hearthlens"
+  cp -R "$APP" "$PORT/Hearthlens/"
+  echo "Portable copy: settings and history are kept in the 'Hearthlens Data' folder next to Hearthlens.app." \
+    > "$PORT/Hearthlens/Hearthlens.app/Contents/MacOS/portable.txt"
+  if [ "$ON_MAC" -eq 1 ]; then
+    # The added file changes the bundle, so it is signed again.
+    codesign --force --deep --sign - "$PORT/Hearthlens/Hearthlens.app"
+  fi
+  PZIP="$DIST/Hearthlens-Portable-$VERSION-macOS-$ARCH.zip"
+  rm -f "$PZIP"
+  if [ "$ON_MAC" -eq 1 ]; then
+    (cd "$PORT" && ditto -c -k --sequesterRsrc --keepParent Hearthlens "$PZIP")
+  else
+    (cd "$PORT" && zip -qry -9 "$PZIP" Hearthlens)
+  fi
+  echo "wrote $PZIP"
+
   if [ "$ON_MAC" -eq 0 ]; then
     continue
   fi

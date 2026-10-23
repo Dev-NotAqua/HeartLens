@@ -7,10 +7,12 @@
 | Windows (try the new cross-platform app) | `Hearthlens-Preview-<version>-win-x64.zip` | Unzip anywhere and run `Hearthlens.exe`. |
 | **macOS** (Apple silicon: M1/M2/M3/M4) | `Hearthlens-<version>-macOS-arm64.pkg` | Open the package and follow the wizard. Adds Hearthlens to Applications and a Desktop shortcut. |
 | **macOS** (Intel) | `Hearthlens-<version>-macOS-x64.pkg` | Same as above. |
+| macOS, portable | `Hearthlens-Portable-<version>-macOS-arm64.zip` (`x64` for Intel) | Unzip anywhere and open `Hearthlens.app`. Settings and history stay in the `Hearthlens Data` folder next to it. It tells you about new versions but does not update itself. |
 | macOS, other formats | `.dmg` (drag to Applications) or `.zip` (double-click **Install Hearthlens**) | |
 | **Ubuntu, Debian, Mint, Pop!_OS** | `hearthlens_<version>_amd64.deb` (`arm64` for ARM) | Double-click, or `sudo apt install ./hearthlens_<version>_amd64.deb` |
 | **Fedora, openSUSE, RHEL** | `hearthlens-<version>-1.x86_64.rpm` (`aarch64` for ARM) | `sudo dnf install ./hearthlens-<version>-1.x86_64.rpm` |
 | **Any Linux** | `Hearthlens-<version>-linux-x64.AppImage` | Make it executable and run it. |
+| Any Linux, portable | `Hearthlens-Portable-<version>-linux-x64.tar.gz` (`arm64` for ARM) | Unpack anywhere and run `./Hearthlens`. Settings and history stay in the `data` folder next to it. It tells you about new versions but does not update itself. |
 | Any Linux (installer script) | `Hearthlens-<version>-linux-x64.tar.gz` | Unpack, run `./install.sh`; remove with `hearthlens-uninstall`. |
 
 Every installer adds a desktop shortcut and can be uninstalled cleanly; your match history is kept unless you choose to delete it. (The AppImage and the Windows preview zip are portable: nothing to install or uninstall.)
