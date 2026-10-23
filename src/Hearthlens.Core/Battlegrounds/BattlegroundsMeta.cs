@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using Hearthlens.Core.Pool;
 
 namespace Hearthlens.Core.Battlegrounds;
 
@@ -48,9 +49,8 @@ public sealed record MetaComp(
     IReadOnlyDictionary<string, (int DataPoints, double Placement)> HeroPlacement);
 
 /// <summary>
-/// Community Battlegrounds statistics (hero placement per MMR bracket and tribe, comp archetypes) from the
-/// public data files published by Firestone (zerotoheroes.com). Cached on disk; a section that fails to parse
-/// is skipped rather than discarding the rest of the data.
+/// Community Battlegrounds statistics: heroes, cards, trinkets and tribes, built by the Hearthlens stats pool
+/// from games players chose to share (see <see cref="PoolClient"/>).
 /// </summary>
 public sealed class BattlegroundsMeta
 {
@@ -152,6 +152,9 @@ public sealed class BattlegroundsMeta
     public IReadOnlyList<MetaComp> Comps { get; }
 
     public DateTime Updated { get; }
+
+    /// <summary>Main tribe of final boards, from the stats pool.</summary>
+    public IReadOnlyList<PoolTribe> Tribes { get; init; } = [];
 
     /// <summary>Tightest MMR bracket (top X%) whose floor the rating reaches.</summary>
     public int BracketFor(int? rating)
