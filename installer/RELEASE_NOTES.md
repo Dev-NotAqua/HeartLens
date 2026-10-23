@@ -26,6 +26,17 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**Full Battlegrounds stats again, from our own server.** The complete hero, card, trinket and comp data is now stored in the Hearthlens stats pool and served from there. The app never calls a third-party stats API: turn off the internet and it still loads the last copy from the pool's cache.
+
+- hero results for every MMR bracket, including tribe impact, top-4 and first-place rates
+- card results for every turn a card is played, so a tier-4 minion is compared with other tier-4 minions
+- trinket results per MMR bracket
+- every comp, with its power level, difficulty, core and add-on cards, when to commit, the tip, and how each hero does with it
+
+The data lives in 22 rows (about 1 MB) instead of a 90 MB download, and is refreshed by the pool, not by your PC.
+
+## What was new in 0.10.0
+
 **Picks and plays, only if you agree.** Hearthlens now remembers every pick you are offered in Battlegrounds (Discover, triple rewards, trinkets) and what you took, plus the minions and spells you play from your hand. The banner asks again with the full list of what is shared:
 
 - the heroes you were offered and the one you picked, your placement, solo or duos, and your rating rounded down to 500

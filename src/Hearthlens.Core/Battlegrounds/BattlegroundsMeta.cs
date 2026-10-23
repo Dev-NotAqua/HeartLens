@@ -54,7 +54,7 @@ public sealed record MetaComp(
 /// </summary>
 public sealed class BattlegroundsMeta
 {
-    public const string Attribution = "Community stats: Hearthlens players who share their games";
+    public const string Attribution = "Battlegrounds stats: Hearthlens stats pool";
 
     private static readonly int[] Brackets = [100, 50, 25, 10, 1];
     private static readonly TimeSpan MaxAge = TimeSpan.FromHours(6);
@@ -698,7 +698,7 @@ public sealed class BattlegroundsMeta
     private static double GetDouble(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : 0;
 
-    private static string Prettify(string archetype) =>
+    internal static string Prettify(string archetype) =>
         string.Join(' ', archetype.Split('_', StringSplitOptions.RemoveEmptyEntries)
             .Select(w => w == "apm" ? "APM" : char.ToUpperInvariant(w[0]) + w[1..]));
 

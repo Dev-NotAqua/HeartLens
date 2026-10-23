@@ -8,6 +8,7 @@ using Hearthlens.Core.Hearthstone;
 using Hearthlens.Core.Logs;
 using Hearthlens.Core.Memory;
 using Hearthlens.Core.Power;
+using Hearthlens.Core.Pool;
 using Hearthlens.Core.Tracking;
 using Hearthlens.Core.Updates;
 using Hearthlens.UI.Infrastructure;
@@ -246,10 +247,10 @@ public sealed class AppHost : IDisposable
     }
 
     /// <summary>
-    /// Community stats are no longer downloaded (they came from Firestone's servers without permission).
-    /// Deletes the copies older versions cached.
+    /// The full Battlegrounds meta from the Hearthlens stats pool (/v1/meta, imported once from Firestone).
+    /// Deletes the copies older versions cached under the old downloader.
     /// </summary>
-    public Task LoadMetaAsync()
+    public async Task LoadMetaAsync()
     {
         try
         {
@@ -264,7 +265,17 @@ public sealed class AppHost : IDisposable
             Diag.Error("Old community stats cache not removed", ex);
         }
 
-        return Task.CompletedTask;
+        if (!PoolClient.Available(Settings))
+        {
+            return;
+        }
+
+        var meta = await PoolClient.LoadMetaAsync(Http, PoolClient.Endpoint(Settings));
+        if (meta is not null)
+        {
+            Meta = meta;
+            Session.SetMeta(meta);
+        }
     }
 
     public async Task ImportLogsAsync(bool force)

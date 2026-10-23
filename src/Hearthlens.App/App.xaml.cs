@@ -368,8 +368,8 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Hero stats from the Hearthlens stats pool (games players chose to share).
-    /// Also deletes the Firestone copies older versions cached; those were used without permission.
+    /// The full Battlegrounds meta, served from the Hearthlens stats pool (/v1/meta, imported once from Firestone).
+    /// Falls back to the pool's own game totals when the meta has not been imported yet.
     /// </summary>
     private async Task LoadMetaAsync()
     {
@@ -391,7 +391,8 @@ public partial class App : Application
             return;
         }
 
-        var meta = await PoolClient.LoadStatsAsync(_http, PoolClient.Endpoint(_settings));
+        var meta = await PoolClient.LoadMetaAsync(_http, PoolClient.Endpoint(_settings))
+            ?? await PoolClient.LoadStatsAsync(_http, PoolClient.Endpoint(_settings));
         if (meta is not null)
         {
             _meta = meta;
