@@ -26,6 +26,23 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
+**More stats, only if you agree.** The stats pool can now build card, trinket and tribe lists too. The banner asks again with the full list of what is shared:
+
+- the heroes you were offered and the one you picked, your placement, solo or duos, and your rating rounded down to 500
+- the lobby's tribes and anomaly, your final board, your trinkets and how many triples you made
+- the turn you reached each tavern tier
+- each fight's result, the damage dealt and taken, and the odds Hearthlens predicted
+
+Never your name, BattleTag, account or anything about other players. If you said yes before, only the old, shorter list is shared until you answer again. **No thanks** stops sharing completely.
+
+**Cleaner look.** No more gradient titles, glows, shiny button rims or faded hero art behind the page titles. Section icons sit on simple tiles and the rating chart is a single clean line.
+
+**Smoother controls.** Switches slide and fill with your theme colour, buttons give a little when pressed, and tabs fade and underline smoothly.
+
+**Portable versions for macOS and Linux.** Like the Windows portable zip: unzip anywhere and run it. Settings and history stay next to the app.
+
+## What was new in 0.8.1
+
 **Stats pool is live.** Hearthlens now builds its own hero tier list from games that players choose to share.
 
 - A banner on the main window asks once whether to share your Battlegrounds results. Nothing is sent unless you click **Share results**. A switch in **Settings** changes your answer at any time.
