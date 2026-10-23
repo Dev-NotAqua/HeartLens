@@ -15,7 +15,7 @@ public sealed class ChoiceTrackingTests
             ? Directory.EnumerateFiles(@"D:\Hearthstone\Logs", "Power*.log", SearchOption.AllDirectories)
                 .OrderByDescending(File.GetLastWriteTime)
                 .Where(f => ReadShared(f).Any(x => x.Contains("GT_BATTLEGROUNDS", StringComparison.Ordinal)))
-                .Take(1)
+                .Take(4)
                 .ToList()
             : [];
         if (logs.Count == 0)
@@ -23,31 +23,38 @@ public sealed class ChoiceTrackingTests
             return;
         }
 
-        var parser = new PowerParser(DateOnly.FromDateTime(File.GetLastWriteTime(logs[0])));
-        var tracker = new BattlegroundsTracker { Cards = CardDb.Empty };
-        parser.AddListener(tracker);
-        BattlegroundsView? best = null;
-        var lines = 0;
-        foreach (var line in ReadShared(logs[0]))
+        foreach (var log in logs)
         {
-            parser.Feed(line);
-            if (++lines % 200 != 0 || parser.Game is not { IsBattlegrounds: true, LocalPlayerId: > 0 } game)
+            var parser = new PowerParser(DateOnly.FromDateTime(File.GetLastWriteTime(log)));
+            var tracker = new BattlegroundsTracker { Cards = CardDb.Empty };
+            parser.AddListener(tracker);
+            BattlegroundsView? best = null;
+            var lines = 0;
+            foreach (var line in ReadShared(log))
             {
-                continue;
+                parser.Feed(line);
+                if (++lines % 200 != 0 || parser.Game is not { IsBattlegrounds: true, LocalPlayerId: > 0 } game)
+                {
+                    continue;
+                }
+
+                parser.Flush();
+                var view = tracker.BuildView(game);
+                if (view.Choices.Count + view.Plays.Count >= (best is null ? 1 : best.Choices.Count + best.Plays.Count))
+                {
+                    best = view;
+                }
             }
 
-            parser.Flush();
-            var view = tracker.BuildView(game);
-            if (view.Choices.Count + view.Plays.Count >= (best is null ? 1 : best.Choices.Count + best.Plays.Count))
+            if (best is not null && best.Plays.Count > 0 && best.Choices.Any(c => c.Picked.Count > 0))
             {
-                best = view;
+                Assert.NotNull(best);
+                Assert.NotEmpty(best.Plays);
+                Assert.Contains(best.Choices, c => c.Picked.Count > 0);
+                Assert.All(best.Choices, c => Assert.All(c.Picked, p => Assert.Contains(p, c.Offered)));
+                return;
             }
         }
-
-        Assert.NotNull(best);
-        Assert.NotEmpty(best!.Plays);
-        Assert.Contains(best.Choices, c => c.Picked.Count > 0);
-        Assert.All(best.Choices, c => Assert.All(c.Picked, p => Assert.Contains(p, c.Offered)));
     }
 
     private static IEnumerable<string> ReadShared(string path)

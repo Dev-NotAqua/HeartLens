@@ -886,6 +886,16 @@ public sealed class OverlayViewModel : Observable
             return value.ToString("P0", CultureInfo.CurrentCulture);
         }
 
+        if (value <= 0.0)
+        {
+            return "0%";
+        }
+
+        if (value >= 1.0)
+        {
+            return "100%";
+        }
+
         if (value < 0.0005)
         {
             return "<0.1%";
