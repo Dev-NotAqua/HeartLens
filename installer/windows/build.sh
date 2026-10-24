@@ -37,8 +37,12 @@ print(f"uninstall list: {len(files)} files, {len(dirs)} folders")
 PY
 
 echo "== Building the setup wizard"
+MAKENSIS_CMD="makensis"
+if ! command -v makensis &> /dev/null && [ -f "$ROOT/tools/nsis/makensis.exe" ]; then
+  MAKENSIS_CMD="$ROOT/tools/nsis/makensis.exe"
+fi
 SETUP="$DIST/Hearthlens-Setup-$VERSION-win-x64.exe"
-makensis -V2 -DVERSION="$VERSION" -DSOURCE_DIR="$WORK/app" -DOUT_FILE="$SETUP" \
+"$MAKENSIS_CMD" -V2 -DVERSION="$VERSION" -DSOURCE_DIR="$WORK/app" -DOUT_FILE="$SETUP" \
   -DUNINSTALL_LIST="$WORK/uninstall-files.nsh" "$ROOT/installer/windows/hearthlens.nsi"
 echo "wrote $SETUP"
 

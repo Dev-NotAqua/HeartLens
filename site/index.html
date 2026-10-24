@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hearthlens: a second opinion for Hearthstone Battlegrounds</title>
+  <meta name="description" content="Hearthlens sits at the edge of your Battlegrounds screen and suggests heroes, comps, shop buys and Discover picks, with combat odds for every fight. Free, no account, never plays for you.">
+  <meta name="theme-color" content="#efe6d4">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="assets/hearthlens-64.png" sizes="64x64">
+  <script>
+    (() => {
+      try {
+        const stored = localStorage.getItem("hearthlens-theme");
+        const dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,0..100,0..1&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <a class="brand" href="#top" aria-label="Hearthlens home">
+        <img src="assets/hearthlens-64.png" width="38" height="38" alt="">
+        <span class="brand-type">Hearthlens<small>Battlegrounds companion</small></span>
+      </a>
+
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        <a href="#overlay">Overlay</a>
+        <a href="#odds">Combat odds</a>
+        <a href="#app">App</a>
+        <a href="#pool">Stats</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/Dev-NotAqua/HeartLens">GitHub</a>
+      </nav>
+
+      <div class="header-tools">
+        <button class="theme-toggle" type="button" aria-pressed="false">
+          <span class="theme-icon" aria-hidden="true"></span>
+          <span class="sr-only">Switch to dark theme</span>
+        </button>
+
+        <a class="head-cta" href="#download">
+          Download
+          <span>v0.12.1</span>
+        </a>
+
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+          <span class="sr-only">Menu</span>
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <h1>Make the call<br>before the timer does.</h1>
+          <p class="hero-sub">Hearthlens sits at the edge of your Battlegrounds screen and tells you what it thinks: which hero suits this lobby, what's worth buying, which comp you're closest to, and how the next fight will probably go. You still make every click.</p>
+
+          <div class="actions">
+            <a class="button primary" href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-Setup-0.12.1-win-x64.exe">Download for Windows</a>
+            <a class="button ghost" href="#overlay">See it in a real game</a>
+          </div>
+
+          <dl class="hero-meta">
+            <div><dt>Runs on</dt><dd>Windows, macOS, Linux</dd></div>
+            <div><dt>Costs</dt><dd>Nothing. No account.</dd></div>
+            <div><dt>Your games</dt><dd>Stay on your PC</dd></div>
+          </dl>
+        </div>
+
+        <div class="specimen">
+          <figure class="plate">
+            <div class="plate-mat">
+              <div class="shot">
+                <img src="assets/shots/overlay-game.png" width="1920" height="1080" alt="The Hearthlens overlay during a Battlegrounds match: shop scores above the tavern, a game plan on the right and the lobby list below it.">
+              </div>
+            </div>
+            <figcaption>
+              <span>Turn 6, mid-shop</span>
+              <span>Rendered from a real game log</span>
+            </figcaption>
+          </figure>
+          <p class="plate-note">The notes stay at the edges, off the board. You never have to click them.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="overlay">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>The right note<br>at the right moment.</h2>
+          <p>Each panel shows up when its question does: heroes at the start, scores while you shop, rankings when a Discover opens. Then it gets out of the way.</p>
+        </div>
+
+        <div class="feature-grid">
+          <figure class="plate plate-stage">
+            <div class="plate-mat">
+              <div class="stage-images">
+                <img class="stage-img is-active" data-feature="comps" src="assets/shots/overlay-trinket.png" width="1920" height="1080" alt="The game plan panel listing comps that fit the lobby, with the core cards you already own.">
+                <img class="stage-img" data-feature="hero" src="assets/shots/overlay-pick.png" width="1920" height="1080" alt="Hero selection with each hero's average place and pick rate for this lobby." loading="lazy">
+                <img class="stage-img" data-feature="shop" src="assets/shots/overlay-game.png" width="1920" height="1080" alt="Shop scores shown above each minion in the tavern." loading="lazy">
+                <img class="stage-img" data-feature="discover" src="assets/shots/overlay-discover.png" width="1920" height="1080" alt="Three Dark Gift options, ranked." loading="lazy">
+              </div>
+            </div>
+            <figcaption><span id="stage-caption">Game plan, with the core cards you own</span></figcaption>
+          </figure>
+
+          <div class="feature-copy">
+            <div class="tabs" role="tablist" aria-label="Overlay features">
+              <button type="button" role="tab" id="tab-comps" aria-controls="panel-comps" aria-selected="true" data-target="comps">Game plan</button>
+              <button type="button" role="tab" id="tab-hero" aria-controls="panel-hero" aria-selected="false" tabindex="-1" data-target="hero">Hero pick</button>
+              <button type="button" role="tab" id="tab-shop" aria-controls="panel-shop" aria-selected="false" tabindex="-1" data-target="shop">Shop</button>
+              <button type="button" role="tab" id="tab-discover" aria-controls="panel-discover" aria-selected="false" tabindex="-1" data-target="discover">Discover</button>
+            </div>
+
+            <div class="panels">
+              <div class="feature-panel" role="tabpanel" id="panel-comps" aria-labelledby="tab-comps">
+                <h3>A comp you can actually finish.</h3>
+                <p>Up to seven comps that work in this lobby, sorted by how they place and how many core cards you already have. Each one tells you when to commit. Click one to lock it in, or let Hearthlens follow your board.</p>
+              </div>
+              <div class="feature-panel" role="tabpanel" id="panel-hero" aria-labelledby="tab-hero" hidden>
+                <h3>A hero for this lobby, not an average one.</h3>
+                <p>The tribes are known before your first buy, so every hero's numbers are adjusted for the lobby you're actually in. Want a nudge? Turn on <em>Mark the best</em>. Rather decide yourself? <em>Stats only</em> is the default and marks nothing.</p>
+              </div>
+              <div class="feature-panel" role="tabpanel" id="panel-shop" aria-labelledby="tab-shop" hidden>
+                <h3>Is it worth 3 gold?</h3>
+                <p>Every minion and tavern spell in the shop gets a score based on your board, your comp and the gold in your pocket. Triples, core cards and freezes worth making are called out before you spend.</p>
+              </div>
+              <div class="feature-panel" role="tabpanel" id="panel-discover" aria-labelledby="tab-discover" hidden>
+                <h3>Close calls stay close.</h3>
+                <p>Discovers, Dark Gifts and trinkets are ranked. When two options are within noise of each other, Hearthlens says so instead of pretending one is clearly better.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="match">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>One game,<br>start to finish.</h2>
+          <p>There's nothing to set up between rounds. Hearthlens reads the game as it goes and keeps its advice pointing the same way.</p>
+        </div>
+
+        <ol class="columns">
+          <li>
+            <h3>Before the first buy</h3>
+            <p>The lobby's tribes are known, and the hero scores shift to match them.</p>
+          </li>
+          <li>
+            <h3>The early turns</h3>
+            <p>Comps you could build appear with their core cards. The list moves as your board does.</p>
+          </li>
+          <li>
+            <h3>Every shop</h3>
+            <p>Minions, spells, triples and freezes are scored against the same plan, so turn 5 doesn't argue with turn 9.</p>
+          </li>
+          <li>
+            <h3>Every fight</h3>
+            <p>The simulator plays out the next combat and keeps everyone's last board in view.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" id="odds">
+      <div class="wrap odds-grid">
+        <div class="odds-copy">
+          <h2>Odds that play<br>the minions out.</h2>
+          <p>Win, tie and loss chances come from simulating the real fight, effects included. They stay on screen for the whole combat.</p>
+          <p>If a minion's effect isn't simulated yet, the overlay tells you. It won't quietly get it wrong.</p>
+        </div>
+
+        <dl class="effects">
+          <div><dt>Deathrattles</dt><dd>Summons, buffs and damage, including minions that trigger them twice.</dd></div>
+          <div><dt>Avenge</dt><dd>Counted down as friendly minions die.</dd></div>
+          <div><dt>Rally and attack triggers</dt><dd>Fired when the minion attacks.</dd></div>
+          <div><dt>Cleave and splash</dt><dd>Damage to the neighbours lands where it should.</dd></div>
+          <div><dt>Auras</dt><dd>Applied while the minion is on the board.</dd></div>
+          <div><dt>Reborn</dt><dd>Back with the right stats and keywords.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section" id="details">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Little things<br>that add up.</h2>
+          <p>The parts you only notice after a few evenings with it on.</p>
+        </div>
+
+        <div class="details-grid">
+          <article>
+            <h3>Hover to read</h3>
+            <p>Tier 6 text is tiny in game. Hover a card in the overlay and it grows to full size.</p>
+          </article>
+          <article>
+            <h3>Panels where you want them</h3>
+            <p>Drag every panel into place, scroll over one to resize it, right-click to reset. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> on Windows.</p>
+          </article>
+          <article>
+            <h3>Gone in one shortcut</h3>
+            <p>Need a clean screen for a clip or a stream? <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> hides everything Hearthlens draws.</p>
+          </article>
+          <article>
+            <h3>Your call by default</h3>
+            <p>Out of the box it shows the numbers and marks nothing as the best pick. Turn on <em>Mark the best</em> if you'd like a nudge.</p>
+          </article>
+          <article>
+            <h3>Updates between games</h3>
+            <p>It checks for a new version every six hours and installs it when you close the app, never mid-game. You can switch this off in Settings.</p>
+          </article>
+          <article>
+            <h3>Solo, Duos and every bracket</h3>
+            <p>Stats are split by Solo and Duos, and by rating bracket, from everyone down to the top 1%.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-surfaces" id="app">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>One look,<br>three places.</h2>
+          <p>The site, the app and the overlay share the same paper and ink. The app keeps your history, tier lists and settings. It also tracks Constructed, with win rates and matchups for every deck you play.</p>
+        </div>
+
+        <div class="surfaces">
+          <figure class="surface-figure surface-app">
+            <div class="app-shot">
+              <img class="for-light" src="assets/shots/main-overview.png" width="1260" height="840" alt="The Hearthlens desktop app on its overview page, in the day edition." loading="lazy">
+              <img class="for-dark" src="assets/shots/main-overview-dark.png" width="1260" height="840" alt="The Hearthlens desktop app on its overview page, in the night edition." loading="lazy">
+            </div>
+            <figcaption>The desktop app. Bone paper by day, deep green after dark: the switch is in Settings.</figcaption>
+          </figure>
+
+          <figure class="surface-figure surface-overlay">
+            <div class="game-mock" aria-label="Sketch of the overlay over a match">
+              <div class="game-table" aria-hidden="true">
+                <span class="game-line"></span>
+                <i class="game-minion m1"></i><i class="game-minion m2"></i><i class="game-minion m3"></i><i class="game-minion m4"></i>
+              </div>
+              <div class="overlay-slip slip-top">
+                <span>Turn <strong>6</strong></span><span class="slip-tier">Tier 3</span><span>Beast · Demon · Dragon</span>
+              </div>
+              <div class="overlay-slip slip-plan">
+                <div class="slip-head"><span>Game plan</span><span>All ranks</span></div>
+                <strong>Beast Beetle</strong>
+                <p>Beast · 0/4 core owned</p>
+                <div class="slip-rule"></div>
+                <span class="slip-tier">S</span><span class="slip-stat">3.79 average place</span>
+              </div>
+              <div class="overlay-slip slip-buy">
+                <span class="slip-stamp">Buy</span>
+                <strong>3.74</strong>
+                <span>average place</span>
+              </div>
+            </div>
+            <figcaption>The overlay, sketched: paper notes laid over the game.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="history">
+      <div class="wrap record-grid">
+        <div class="record-copy">
+          <h2>The game ends.<br>Your record doesn't.</h2>
+          <p>Every game you play is saved to a small SQLite file on your own computer. There's no account to make and nothing to sync, and your history still opens when you're offline.</p>
+          <ul class="record-list">
+            <li>Your rating over time, on one graph</li>
+            <li>Average place, top-four rate and firsts</li>
+            <li>Tier lists for heroes, comps, trinkets and cards</li>
+            <li>Every game, filterable by mode and result</li>
+          </ul>
+        </div>
+
+        <figure class="plate plate-record">
+          <div class="plate-mat">
+            <div class="shot shot-app">
+              <img class="for-light" src="assets/shots/main-battlegrounds.png" width="1260" height="840" alt="The Hearthlens Battlegrounds page with the rating graph and tier lists, in the day edition." loading="lazy">
+              <img class="for-dark" src="assets/shots/main-battlegrounds-dark.png" width="1260" height="840" alt="The Hearthlens Battlegrounds page with the rating graph and tier lists, in the night edition." loading="lazy">
+            </div>
+          </div>
+          <figcaption><span>Battlegrounds page</span><span>Your own games</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section" id="pool">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Where the<br>numbers come from.</h2>
+          <p>Hearthlens starts from a baseline snapshot, so the advice is useful from your very first game. Players who opt in share their games, and every six hours those are blended in, weighted by sample size. Nothing is thrown away; the mix shifts as more people play.</p>
+        </div>
+
+        <dl class="figures">
+          <div><dt>Heroes</dt><dd data-stat="heroes">116</dd></div>
+          <div><dt>Comps</dt><dd data-stat="comps">34</dd></div>
+          <div><dt>Trinkets</dt><dd data-stat="trinkets">242</dd></div>
+          <div><dt>Hero games in the baseline</dt><dd data-stat="games">1,570,491</dd></div>
+        </dl>
+
+        <div class="pool-note">
+          <p><span class="live-dot" aria-hidden="true"></span><span data-stat="updated">Pool updated 23 Oct, 09:10 UTC</span> · <span data-stat="shared">shared games in this window: 0</span></p>
+          <p>Card data and art: HearthstoneJSON. Shared games carry no player identity.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="privacy">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>What it<br>won't do.</h2>
+          <p>Hearthlens reads the game. It doesn't play it. Here's exactly where the line is.</p>
+        </div>
+
+        <div class="columns">
+          <article>
+            <h3>Play for you</h3>
+            <p>No clicks, no buys, no moves. It reads the logs and draws notes on top. Every decision is yours.</p>
+          </article>
+          <article>
+            <h3>Touch the game</h3>
+            <p>Nothing is written to Hearthstone. On Windows it reads a few values from memory, like your rating, and only reads them.</p>
+          </article>
+          <article>
+            <h3>Show hidden information</h3>
+            <p>You see what the game already shows you, organised. Nothing about other players' hands or future shops.</p>
+          </article>
+          <article>
+            <h3>Share without asking</h3>
+            <p>Sharing stays off until you say yes. Shared games carry no name, BattleTag or account.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="start">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Three steps,<br>then forget about it.</h2>
+          <p>Setup takes one restart. After that, Hearthlens starts when it's needed and stays quiet when it isn't.</p>
+        </div>
+
+        <ol class="columns columns-3">
+          <li>
+            <h3>Install it</h3>
+            <p>Grab the build for your system below. No sign-up, no account, no key.</p>
+          </li>
+          <li>
+            <h3>Restart Hearthstone once</h3>
+            <p>Hearthlens turns on the game's logging the first time it runs, and Hearthstone only reads that setting when it starts.</p>
+          </li>
+          <li>
+            <h3>Queue up</h3>
+            <p>Start a Battlegrounds game. The overlay attaches by itself when the match begins.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="download" id="download">
+      <div class="wrap download-grid">
+        <div class="download-copy">
+          <h2>Take it<br>to the tavern.</h2>
+          <p>Free for Windows, macOS and Linux. Install it, restart Hearthstone once, and your next lobby gets a second opinion.</p>
+          <a class="button inverted" href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-Setup-0.12.1-win-x64.exe">Download for Windows</a>
+          <p class="fine">Version 0.12.1. <a href="https://github.com/Dev-NotAqua/HeartLens/releases/tag/v0.12.1">Release notes</a> and <a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/SHA256SUMS.txt">checksums</a>.</p>
+
+          <div class="release-note">
+            <h3>New in 0.12.1</h3>
+            <ul>
+              <li>A new look for the app and the overlay: bone paper, a green sidebar and one marigold mark for the best pick.</li>
+              <li>Night edition: deep green paper for the app and the overlay, one switch in Settings, no restart.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="download-ledger">
+          <p class="download-note">Pick your system.</p>
+          <dl>
+            <div><dt>Windows</dt><dd><a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-Setup-0.12.1-win-x64.exe">Installer</a> · <a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-Portable-0.12.1-win-x64.zip">Portable</a> · <a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-Preview-0.12.1-win-x64.zip">Preview build</a></dd></div>
+            <div><dt>macOS</dt><dd><a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-0.12.1-macOS-arm64.pkg">Apple silicon</a> · <a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-0.12.1-macOS-x64.pkg">Intel</a></dd></div>
+            <div><dt>Linux</dt><dd><a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/hearthlens_0.12.1_amd64.deb">deb</a> · <a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/hearthlens-0.12.1-1.x86_64.rpm">rpm</a> · <a href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.12.1/Hearthlens-0.12.1-linux-x64.AppImage">AppImage</a></dd></div>
+            <div><dt>Everything else</dt><dd><a href="https://github.com/Dev-NotAqua/HeartLens/releases/tag/v0.12.1">All builds and source</a></dd></div>
+          </dl>
+
+          <ul class="download-tips">
+            <li><strong>On a Mac?</strong> The app isn't notarized by Apple yet. The first time, right-click it, choose Open, then Open again.</li>
+            <li><strong>Overlay not showing on Windows?</strong> In Hearthstone, set Options, Graphics, Display Mode to Windowed (Fullscreen). True fullscreen won't let any overlay draw on top.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="faq">
+      <div class="wrap faq-grid">
+        <div class="faq-head">
+          <h2>Questions<br>from the table.</h2>
+          <p>Something missing? <a href="https://github.com/Dev-NotAqua/HeartLens/issues">Ask on GitHub</a>.</p>
+        </div>
+
+        <div class="faq-list">
+          <details>
+            <summary>Does Hearthlens play the game for me?</summary>
+            <p>No. It reads the logs, scores your options and draws notes over the game. It never clicks, buys or changes anything.</p>
+          </details>
+          <details>
+            <summary>Is it allowed?</summary>
+            <p>Hearthlens doesn't modify Hearthstone or automate play. It reads the log files the game already writes. Any third-party tool carries some risk, and Hearthlens is built to stay firmly on the read-only side.</p>
+          </details>
+          <details>
+            <summary>The overlay isn't showing up. What now?</summary>
+            <p>First, make sure you restarted Hearthstone once after installing. On Windows, set the game to Windowed (Fullscreen) in Options, Graphics, since true fullscreen blocks every overlay. If you hid it, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> brings it back.</p>
+          </details>
+          <details>
+            <summary>Does it work in Duos?</summary>
+            <p>Yes. Stats are kept separately for Solo and Duos, and you can switch between them in the app.</p>
+          </details>
+          <details>
+            <summary>Does it update itself?</summary>
+            <p>Yes. It checks for a new version every six hours and installs it the next time you close the app, so a game in progress is never interrupted. Your history, settings and overlay layout stay as they are. The portable builds tell you about updates but don't install them.</p>
+          </details>
+          <details>
+            <summary>Does it work on macOS and Linux?</summary>
+            <p>Yes. There are native builds for Windows, for macOS on both Apple silicon and Intel, and for Linux as deb, rpm, AppImage and tar.gz.</p>
+          </details>
+          <details>
+            <summary>What does it share, exactly?</summary>
+            <p>Nothing, unless you opt in. If you do: anonymous game rows such as your hero, placement, the lobby's tribes, your final board, trinkets, tier-ups, fights, picks and plays. Never your name, BattleTag, account or anything about other players.</p>
+          </details>
+          <details>
+            <summary>Where are my games stored?</summary>
+            <p>On your computer: <code>%APPDATA%\Hearthlens</code> on Windows, <code>~/Library/Application Support/Hearthlens</code> on macOS and <code>~/.local/share/Hearthlens</code> on Linux. Portable builds keep everything in a folder next to the app.</p>
+          </details>
+          <details>
+            <summary>Why do I have to restart Hearthstone once?</summary>
+            <p>Hearthlens switches on the game's logging the first time it runs, and Hearthstone only reads that setting when it starts.</p>
+          </details>
+          <details>
+            <summary>Is there a mobile version?</summary>
+            <p>Not yet. iOS doesn't let another app read Hearthstone or draw over it. On Android 11 and later, reading the game's logs needs extra setup.</p>
+          </details>
+          <details>
+            <summary>What are the stats based on?</summary>
+            <p>A baseline snapshot, blended with games that players choose to share and weighted by sample size. The app shows how many shared games went into the current numbers.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top" aria-label="Hearthlens home">
+          <img src="assets/hearthlens-64.png" width="28" height="28" alt="">
+          <span class="brand-type">Hearthlens<small>Battlegrounds companion</small></span>
+        </a>
+        <p>Made for players who like a second opinion and still want the last word.</p>
+      </div>
+      <div class="foot-links">
+        <a href="https://github.com/Dev-NotAqua/HeartLens">GitHub</a>
+        <a href="https://github.com/Dev-NotAqua/HeartLens/releases">Releases</a>
+        <a href="https://github.com/Dev-NotAqua/HeartLens/issues">Report a bug</a>
+      </div>
+      <div class="foot-fine">
+        <p>Card data and art: HearthstoneJSON.</p>
+        <p>Not affiliated with or endorsed by Blizzard Entertainment. Hearthstone is a trademark of Blizzard Entertainment.</p>
+        <p>© <span id="year">2026</span> Hearthlens</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

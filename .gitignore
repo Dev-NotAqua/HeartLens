@@ -5,3 +5,5 @@ obj/
 TestResults/
 .token-optimizer/
 dist/
+tools/nsis/
+src/Hearthlens.Installer/payload/

@@ -4,6 +4,7 @@
     <Project Path="src/Hearthlens.UI/Hearthlens.UI.csproj" />
     <Project Path="src/Hearthlens.Desktop/Hearthlens.Desktop.csproj" />
     <Project Path="src/Hearthlens.App/Hearthlens.App.csproj" />
+    <Project Path="src/Hearthlens.Installer/Hearthlens.Installer.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Hearthlens.Tests/Hearthlens.Tests.csproj" />

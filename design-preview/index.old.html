@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hearthlens — The Lobby Almanac (design study)</title>
+  <meta name="description" content="A design study for Hearthlens: a Battlegrounds field almanac printed in bone, bottle-green and oxblood.">
+  <meta name="theme-color" content="#efe6d4">
+  <link rel="icon" href="assets/hearthlens-64.png" sizes="64x64">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,0..100,0..1&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="margin-rail" aria-hidden="true">
+    <span class="rail-mark">HL</span>
+    <span class="rail-rule"></span>
+    <span class="rail-text">Hearthlens field almanac · MMXXVI</span>
+    <span class="rail-rule"></span>
+    <span class="rail-folio">01</span>
+  </div>
+
+  <header class="masthead" id="top">
+    <div class="masthead-inner">
+      <a class="brand" href="#top" aria-label="Hearthlens home">
+        <img src="assets/hearthlens-64.png" width="38" height="38" alt="">
+        <span class="brand-type">Hearthlens<small>Battlegrounds field almanac</small></span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+        <span class="sr-only">Menu</span>
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        <a href="#overlay">The overlay</a>
+        <a href="#surfaces">The app</a>
+        <a href="#pool">The pool</a>
+        <a href="#download">Download</a>
+        <a href="https://github.com/Dev-NotAqua/HeartLens">GitHub</a>
+      </nav>
+
+      <a class="head-cta" href="#download">
+        Take the field guide
+        <span>v0.11.4</span>
+      </a>
+    </div>
+    <div class="masthead-rule">
+      <span>Vol. I</span>
+      <span>Read the lobby before it reads you</span>
+      <span>Last reading 09:10 UTC</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="folio"><span>No. 01</span> The lobby reading</p>
+          <h1 id="hero-title">Every lobby<br>has a shape.</h1>
+          <p class="command">Read it.</p>
+          <p class="hero-sub">Hearthlens watches the match you are already playing and turns it into a quiet second opinion: hero picks, comp plans, shop scores, trinkets and fight odds. No account. No game changes.</p>
+
+          <div class="actions">
+            <a class="button primary" href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.11.4/Hearthlens-Setup-0.11.4-win-x64.exe">Download for Windows</a>
+            <a class="button ghost" href="#overlay">Examine the overlay</a>
+          </div>
+
+          <dl class="hero-meta">
+            <div><dt>Platforms</dt><dd>Windows · macOS · Linux</dd></div>
+            <div><dt>Price</dt><dd>Free, no account</dd></div>
+            <div><dt>Reads</dt><dd>Logs only</dd></div>
+          </dl>
+        </div>
+
+        <div class="specimen" aria-label="Annotated overlay specimen">
+          <div class="plate-wrap">
+            <figure class="plate">
+              <div class="plate-mat">
+                <div class="shot">
+                  <img src="assets/overlay-game.png" width="1920" height="1080" alt="Hearthlens overlay over a Battlegrounds match, with the turn bar at the top, shop scores over the tavern, a game plan at the right and the lobby list below it.">
+                  <span class="hotspot" data-region="lobby"></span>
+                  <span class="hotspot" data-region="shop"></span>
+                  <span class="hotspot" data-region="plan"></span>
+                  <span class="hotspot" data-region="board"></span>
+                </div>
+              </div>
+              <figcaption>
+                <span>Plate I</span>
+                <span>Recorded match · solo · turn 6</span>
+              </figcaption>
+            </figure>
+
+            <button class="callout callout-a" type="button" data-target="lobby" aria-pressed="false">
+              <span class="callout-no">01</span>
+              <span><strong>Read the lobby</strong>Tribes and tiers before the first buy.</span>
+            </button>
+            <button class="callout callout-b" type="button" data-target="shop" aria-pressed="false">
+              <span class="callout-no">02</span>
+              <span><strong>Score the shop</strong>Buy, hold or freeze, with a reason.</span>
+            </button>
+            <button class="callout callout-c" type="button" data-target="plan" aria-pressed="false">
+              <span class="callout-no">03</span>
+              <span><strong>Commit to a plan</strong>Seven comps, owned cores, commit turn.</span>
+            </button>
+            <button class="callout callout-d" type="button" data-target="board" aria-pressed="false">
+              <span class="callout-no">04</span>
+              <span><strong>Know the next fight</strong>Their last board, your odds.</span>
+            </button>
+          </div>
+
+          <ol class="mobile-notes" aria-label="What the overlay shows">
+            <li><span>01</span>Read the lobby: tribes and tiers before the first buy.</li>
+            <li><span>02</span>Score the shop: buy, hold or freeze, with a reason.</li>
+            <li><span>03</span>Commit to a plan: owned cores and a commit turn.</li>
+            <li><span>04</span>Know the next fight: their board and your odds.</li>
+          </ol>
+
+          <div class="tribe-strip" aria-label="Ten tribes">
+            <span class="tribe-strip-label">Ten tribes</span>
+            <span>Beast</span><span>Demon</span><span>Dragon</span><span>Elemental</span><span>Mech</span><span>Murloc</span><span>Naga</span><span>Pirate</span><span>Quilboar</span><span>Undead</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ticker">
+      <div class="wrap ticker-inner">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span>Live pool</span>
+        <span class="ticker-rule"></span>
+        <span><strong data-count="heroes">116</strong> heroes</span>
+        <span><strong data-count="comps">34</strong> comps</span>
+        <span><strong data-count="trinkets">242</strong> trinkets</span>
+        <span><strong data-count="games">1,570,491</strong> hero games</span>
+        <span class="ticker-end" data-stat="updated-short">Updated 09:10 UTC</span>
+      </div>
+    </div>
+
+    <section class="section" id="overlay">
+      <div class="wrap">
+        <div class="chapter">
+          <span class="chapter-no">I</span>
+          <p class="chapter-label">The quiet panel</p>
+          <h2>Four decisions,<br>one printed page.</h2>
+          <p class="chapter-intro">The overlay stays at the edge of the screen and answers the next question. Nothing opens, nothing covers the board, nothing plays for you.</p>
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature-stage">
+            <figure class="plate plate-stage">
+              <div class="plate-mat">
+                <div class="stage-images">
+                  <img class="stage-img is-active" data-feature="comps" src="assets/overlay-trinket.png" width="1920" height="1080" alt="Comp plan overlay showing seven lobby-ready comps with owned core cards, a lobby list and placement scores.">
+                  <img class="stage-img" data-feature="hero" src="assets/overlay-pick.png" width="1920" height="1080" alt="Hero selection overlay ranking three heroes by average placement and pick rate." loading="lazy">
+                  <img class="stage-img" data-feature="shop" src="assets/overlay-game.png" width="1920" height="1080" alt="Shop advice overlay scoring minions in the tavern." loading="lazy">
+                  <img class="stage-img" data-feature="discover" src="assets/overlay-discover.png" width="1920" height="1080" alt="Discover overlay ranking three Dark Gift options." loading="lazy">
+                </div>
+              </div>
+              <figcaption>
+                <span>Plate II</span>
+                <span id="stage-caption">Comps, with owned core cards</span>
+              </figcaption>
+            </figure>
+            <span class="registration registration-a" aria-hidden="true"></span>
+            <span class="registration registration-b" aria-hidden="true"></span>
+          </div>
+
+          <div class="feature-copy">
+            <div class="tabs" role="tablist" aria-label="Overlay features">
+              <button type="button" role="tab" id="tab-comps" aria-controls="panel-comps" aria-selected="true" data-target="comps"><span>01</span>Comps</button>
+              <button type="button" role="tab" id="tab-hero" aria-controls="panel-hero" aria-selected="false" tabindex="-1" data-target="hero"><span>02</span>Hero pick</button>
+              <button type="button" role="tab" id="tab-shop" aria-controls="panel-shop" aria-selected="false" tabindex="-1" data-target="shop"><span>03</span>Shop</button>
+              <button type="button" role="tab" id="tab-discover" aria-controls="panel-discover" aria-selected="false" tabindex="-1" data-target="discover"><span>04</span>Discover</button>
+            </div>
+
+            <div class="panels">
+              <div class="feature-panel" role="tabpanel" id="panel-comps" aria-labelledby="tab-comps">
+                <h3>A plan you can commit to.</h3>
+                <p>Seven comps that fit the lobby, ordered by placement and what you already own. Each row shows its core cards, owned pieces and the turn to commit.</p>
+                <p class="note">Up to seven comps · owned core · commit turn</p>
+              </div>
+              <div class="feature-panel" role="tabpanel" id="panel-hero" aria-labelledby="tab-hero" hidden>
+                <h3>Pick for the lobby you got.</h3>
+                <p>Hearthlens reads the tribes in play before the first buy and adjusts each hero's average place. The best pick gets a marigold mark; the rest stay visible so you can disagree.</p>
+                <p class="note">Lobby-adjusted placement · pick rate · sample size</p>
+              </div>
+              <div class="feature-panel" role="tabpanel" id="panel-shop" aria-labelledby="tab-shop" hidden>
+                <h3>Buy the board you have.</h3>
+                <p>Every minion is scored against your board, your comp's core cards and the gold in hand. Triples, core cards and freezes are called out before you spend.</p>
+                <p class="note">Score · reason · freeze advice</p>
+              </div>
+              <div class="feature-panel" role="tabpanel" id="panel-discover" aria-labelledby="tab-discover" hidden>
+                <h3>Close calls stay close.</h3>
+                <p>Discover, Dark Gift and trinket options are ranked. When the numbers are within noise, Hearthlens says so instead of inventing a winner.</p>
+                <p class="note">Best pick · close call · no fake certainty</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-surfaces" id="surfaces">
+      <div class="wrap">
+        <div class="chapter chapter-split">
+          <span class="chapter-no">II</span>
+          <p class="chapter-label">One language, three surfaces</p>
+          <h2>The page, the desk,<br>the match.</h2>
+          <p class="chapter-intro">The same ink, paper and letterpress marks follow you from the almanac into the dashboard and onto the board. The overlay is a note laid on the game, not another game window.</p>
+        </div>
+
+        <div class="surfaces">
+          <figure class="surface-figure surface-app">
+            <div class="app-mock" aria-label="Dashboard concept">
+              <aside class="app-rail">
+                <div class="app-brand"><img src="assets/hearthlens-64.png" width="26" height="26" alt=""><span>Hearthlens</span></div>
+                <nav aria-hidden="true">
+                  <span class="is-on">Home</span>
+                  <span>Battlegrounds</span>
+                  <span>Constructed</span>
+                  <span>History</span>
+                </nav>
+                <div class="app-rail-foot"><span>Settings</span><span>v0.11.4</span></div>
+              </aside>
+              <div class="app-sheet">
+                <div class="app-top"><span>Home</span><span class="app-chip">Overlay ready</span></div>
+                <div class="app-body">
+                  <p class="app-folio">Almanac / Home</p>
+                  <h3>Good evening.</h3>
+                  <div class="app-stats">
+                    <div><span>Solo rating</span><strong>2,320</strong><small>Battlegrounds</small></div>
+                    <div><span>Average place</span><strong>3.74</strong><small>28 games</small></div>
+                    <div><span>Top four</span><strong>67%</strong><small>+8 this week</small></div>
+                  </div>
+                  <div class="app-chart">
+                    <div class="app-chart-head"><span>Rating</span><span>Last 28 games</span></div>
+                    <div class="chart-bars">
+                      <i style="--h:38%"></i><i style="--h:52%"></i><i style="--h:47%"></i><i style="--h:63%"></i><i style="--h:58%"></i><i style="--h:71%"></i><i style="--h:66%"></i><i style="--h:82%"></i><i style="--h:76%"></i><i style="--h:91%"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <figcaption><span>Fig. 2</span> The desk: bottle-green spine, bone paper, tabular numbers.</figcaption>
+          </figure>
+
+          <figure class="surface-figure surface-overlay">
+            <div class="game-mock" aria-label="Overlay concept over a match">
+              <div class="game-table" aria-hidden="true">
+                <span class="game-line"></span>
+                <i class="game-minion m1"></i><i class="game-minion m2"></i><i class="game-minion m3"></i><i class="game-minion m4"></i>
+              </div>
+              <div class="overlay-slip slip-top">
+                <span>TURN <strong>6</strong></span><span class="slip-tier">Tier 3</span><span>Beast · Demon · Dragon</span>
+              </div>
+              <div class="overlay-slip slip-plan">
+                <div class="slip-head"><span>Game plan</span><span>All ranks</span></div>
+                <strong>Beast Beetle</strong>
+                <p>Beast · 0/4 core owned</p>
+                <div class="slip-rule"></div>
+                <span class="slip-tier">S</span><span class="slip-stat">3.79 avg place</span>
+              </div>
+              <div class="overlay-slip slip-buy">
+                <span class="slip-stamp">Buy</span>
+                <strong>3.74</strong>
+                <span>avg place</span>
+              </div>
+            </div>
+            <figcaption><span>Fig. 3</span> The match: paper slips, ink type, one marigold mark.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pool">
+      <div class="wrap">
+        <div class="chapter chapter-split">
+          <span class="chapter-no">III</span>
+          <p class="chapter-label">The pool</p>
+          <h2>One pool,<br>two sources.</h2>
+          <p class="chapter-intro">A seeded baseline gives the advisor something useful on day one. Games players choose to share are merged by sample size. Nothing is replaced: the mix shifts as the pool grows.</p>
+        </div>
+
+        <dl class="figures">
+          <div><dt>Heroes</dt><dd data-stat="heroes">116</dd><span class="figure-bar" style="--w:78%"></span></div>
+          <div><dt>Comps</dt><dd data-stat="comps">34</dd><span class="figure-bar" style="--w:44%"></span></div>
+          <div><dt>Trinkets</dt><dd data-stat="trinkets">242</dd><span class="figure-bar" style="--w:92%"></span></div>
+          <div><dt>Hero games in the baseline</dt><dd data-stat="games">1,570,491</dd><span class="figure-bar" style="--w:100%"></span></div>
+        </dl>
+
+        <div class="pool-note">
+          <p><span class="live-dot" aria-hidden="true"></span><span data-stat="updated">Pool updated 23 Oct, 09:10 UTC</span> · <span data-stat="shared">shared games in this window: 0</span></p>
+          <p>Card data and art: HearthstoneJSON.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="download" id="download">
+      <div class="wrap download-grid">
+        <div class="download-copy">
+          <p class="folio folio-light"><span>No. 04</span> The pocket edition</p>
+          <h2>Take it<br>to the tavern.</h2>
+          <p>Install, restart Hearthstone once so logging turns on, and the overlay attaches when a Battlegrounds match starts.</p>
+          <a class="button paper" href="https://github.com/Dev-NotAqua/HeartLens/releases/download/v0.11.4/Hearthlens-Setup-0.11.4-win-x64.exe">Download for Windows</a>
+          <p class="fine">Version 0.11.4 · <a href="https://github.com/Dev-NotAqua/HeartLens/releases/tag/v0.11.4">Release notes</a> · checksums</p>
+        </div>
+
+        <div class="download-ledger">
+          <div class="stamp" aria-hidden="true"><span>FREE</span><small>no account<br>no bot</small></div>
+          <dl>
+            <div><dt>Windows</dt><dd>Installer · Portable · Preview</dd></div>
+            <div><dt>macOS</dt><dd>Apple silicon · Intel</dd></div>
+            <div><dt>Linux</dt><dd>deb · rpm · AppImage</dd></div>
+            <div><dt>Source</dt><dd>GitHub releases</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top" aria-label="Hearthlens home">
+          <img src="assets/hearthlens-64.png" width="28" height="28" alt="">
+          <span class="brand-type">Hearthlens<small>Battlegrounds field almanac</small></span>
+        </a>
+        <p>A Battlegrounds companion that reads logs, not the future.</p>
+      </div>
+      <div class="foot-links">
+        <a href="https://github.com/Dev-NotAqua/HeartLens">GitHub</a>
+        <a href="https://github.com/Dev-NotAqua/HeartLens/releases">Releases</a>
+        <a href="https://github.com/Dev-NotAqua/HeartLens/issues">Issues</a>
+      </div>
+      <div class="foot-fine">
+        <p>Card data and art: HearthstoneJSON.</p>
+        <p>Not affiliated with or endorsed by Blizzard Entertainment.</p>
+        <p>© <span id="year">2026</span> Hearthlens · Design study no. 01</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="study-tag" aria-hidden="true">Design study · The Lobby Almanac</div>
+</body>
+</html>

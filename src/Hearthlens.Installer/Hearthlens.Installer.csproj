@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Hearthlens.Installer</RootNamespace>
+    <AssemblyName>Hearthlens-Setup-0.12.1</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\hearthlens.ico</ApplicationIcon>
+    <Version>0.12.1</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\hearthlens.ico" />
+    <Resource Include="Assets\hearthlens.png" />
+    <Resource Include="Assets\Fonts\*.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="payload\app.zip" Condition="Exists('payload\app.zip')" LogicalName="Hearthlens.Payload.app.zip" />
+  </ItemGroup>
+
+</Project>
