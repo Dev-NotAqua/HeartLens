@@ -28,22 +28,5 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 **The overlay follows Night edition.** Turn on **Settings → Appearance → Night edition** and the in-game overlay switches to deep green paper with bone ink as well, straight away, in both the Windows app and the cross-platform app. Before, it stayed on light paper whatever you picked.
 
-## What was new in 0.12.0
-
-**A new look, inside and out.** Hearthlens drops the dark wood and gold for something calmer and easier to read: bone paper, a bottle-green sidebar, oxblood ink and one marigold mark for the pick that matters.
-
-- New type: Fraunces for headings and Manrope for everything else, both easier to read at small sizes.
-- The in-game overlay is a set of paper notes at the edges of the board. Best picks get a marigold "Best pick" tag, tier chips are square, and labels are in normal case ("Buy", "In plan", "Next") instead of shouting in capitals.
-- No more glowing bars, scalloped badges or gloss on the buttons.
-
-**Night edition.** Prefer a dark app? Turn on **Settings → Appearance → Night edition** for deep green paper with bone ink. It switches straight away, no restart. The overlay keeps its light paper notes either way, because they read best over any board.
-
-The seven colour themes and the custom colour sliders are gone: the app now has one look, in a day and a night edition. If you used a dark theme before, switch on Night edition once after updating.
-
-**Fixes**
-
-- Switching to Night edition in the cross-platform app now recolours tier badges, win and loss colours and the rating chart straight away, instead of keeping the old colours until the page was rebuilt.
-- In the cross-platform app, the overlay no longer picks up dark colours for its tier chips when the app is in Night edition.
-
 Card data and art: HearthstoneJSON and hsbg.cards. Not affiliated with Blizzard Entertainment.
 
