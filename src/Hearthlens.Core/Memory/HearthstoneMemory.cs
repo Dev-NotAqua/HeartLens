@@ -53,6 +53,10 @@ public sealed class HearthstoneMemory : IDisposable
     private bool _attaching;
     private int _attachFailures;
 
+    // MONO_TYPE_I4 / MONO_TYPE_U4: the element types of the int fields ratings are stored in.
+    private const byte MonoInt32 = 0x08;
+    private const byte MonoUInt32 = 0x09;
+
     // One scan reads a few thousand values; attaching walks the whole class table once.
     private const int ScanReadBudget = 50_000;
     private static readonly TimeSpan ScanTimeBudget = TimeSpan.FromSeconds(1.5);
@@ -61,6 +65,11 @@ public sealed class HearthstoneMemory : IDisposable
     private DateTime _nextBudgetNote = DateTime.MinValue;
     private readonly Dictionary<string, ulong> _netCacheObjects = new(StringComparer.Ordinal);
     private DateTime _netCacheRefreshAt = DateTime.MinValue;
+
+    // What this client build calls each field the reads below need, keyed by class address and role, plus the class
+    // addresses themselves. A game update that renames or moves one costs a single lookup, not one per scan.
+    private readonly Dictionary<(ulong Class, string Role), string?> _fieldNames = new();
+    private readonly Dictionary<string, ulong> _classes = new(StringComparer.Ordinal);
 
     public bool IsAttached
     {
@@ -187,18 +196,141 @@ public sealed class HearthstoneMemory : IDisposable
         }
     }
 
+    // The NetCache object and fields the client used when this was written. A game update that renames them is
+    // picked up by DiscoverRating, so a new patch does not need a new release just for the rating.
+    private static readonly RatingLayout KnownRatingLayout =
+        new("NetCacheBaconRatingInfo", "<Rating>k__BackingField", "<DuosRating>k__BackingField");
+
+    private RatingLayout _ratingLayout = KnownRatingLayout;
+    private DateTime _nextRatingDiscovery = DateTime.MinValue;
+    private DateTime _nextRatingMissNote = DateTime.MinValue;
+
+    /// <summary>A NetCache class plus the int fields holding the solo and, when the client reports one, the Duos rating.</summary>
+    private sealed record RatingLayout(string ClassName, string SoloField, string? DuosField);
+
     public BattlegroundsRating? GetBattlegroundsRating() => Safe(rt =>
     {
-        var info = CachedNetCacheObject(rt, "NetCacheBaconRatingInfo");
+        var layout = _ratingLayout;
+        if (ReadRating(CachedNetCacheObject(rt, layout.ClassName), layout) is { } known)
+        {
+            return known;
+        }
+
+        // The layout that worked before no longer gives a rating: the client was updated, or the cached object is
+        // not the one the game uses now. Look for it again, at most every 30 seconds.
+        if (DateTime.UtcNow < _nextRatingDiscovery)
+        {
+            return null;
+        }
+
+        _nextRatingDiscovery = DateTime.UtcNow.AddSeconds(30);
+        return DiscoverRating(rt);
+    });
+
+    private static BattlegroundsRating? ReadRating(MonoObject info, RatingLayout layout)
+    {
         if (info.IsNull)
         {
             return null;
         }
 
-        var solo = info.Int("<Rating>k__BackingField", -1);
-        var duos = info.Int("<DuosRating>k__BackingField", -1);
+        var solo = info.Int(layout.SoloField, -1);
+        var duos = layout.DuosField is null ? -1 : info.Int(layout.DuosField, -1);
         return solo <= 0 && duos <= 0 ? null : new BattlegroundsRating(solo, duos);
-    });
+    }
+
+    /// <summary>
+    /// Finds the rating without trusting this release's object or field names: every NetCache object that looks like a
+    /// Battlegrounds rating cache is inspected and its int fields called "…Rating…" are read. The layout that is found
+    /// is remembered (and logged), so a game update that renames things is handled without a code change.
+    /// </summary>
+    private BattlegroundsRating? DiscoverRating(MonoRuntime rt)
+    {
+        var netCache = FindService(rt, "NetCache")["m_netCache"];
+        if (netCache.IsNull)
+        {
+            return null;
+        }
+
+        var candidates = netCache.MapValues().Where(o => o.ClassName is { } name && LooksLikeRatingCache(name)).ToList();
+        if (candidates.Count == 0)
+        {
+            // No Battlegrounds cache at all (the client has not sent the rating yet, or the name changed further).
+            if (DateTime.UtcNow >= _nextRatingMissNote)
+            {
+                _nextRatingMissNote = DateTime.UtcNow.AddMinutes(1);
+                Diag.Info("Battlegrounds rating: the client's NetCache holds no Battlegrounds rating object yet");
+            }
+
+            return null;
+        }
+
+        BattlegroundsRating? best = null;
+        var bestLayout = _ratingLayout;
+        var bestObject = default(MonoObject);
+        var bestSolo = 0;
+        foreach (var candidate in candidates)
+        {
+            if (candidate.ClassName is not { } className || candidate.Class is not { } cls)
+            {
+                continue;
+            }
+
+            var fields = cls.AllFields()
+                .Where(f => !f.IsStatic && f.TypeCode is MonoInt32 or MonoUInt32 && f.Name.Contains("Rating", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var solo = fields
+                .Where(f => !f.Name.Contains("Duo", StringComparison.OrdinalIgnoreCase))
+                .Select(f => (Field: f.Name, Value: candidate.Int(f.Name, -1)))
+                .Where(x => IsPlausibleRating(x.Value))
+                .OrderByDescending(x => x.Value)
+                .FirstOrDefault();
+            if (solo.Field is null || solo.Value <= bestSolo)
+            {
+                continue;
+            }
+
+            // A Duos field is kept even while it reads 0: the client only fills it once that ladder is played.
+            var duos = fields
+                .Where(f => f.Name.Contains("Duo", StringComparison.OrdinalIgnoreCase))
+                .Select(f => (Field: f.Name, Value: candidate.Int(f.Name, -1)))
+                .FirstOrDefault(x => x.Value is >= 0 and < 100_000);
+            bestSolo = solo.Value;
+            bestLayout = new RatingLayout(className, solo.Field, duos.Field);
+            bestObject = candidate;
+            best = new BattlegroundsRating(solo.Value, duos.Field is null ? 0 : duos.Value);
+        }
+
+        if (best is null)
+        {
+            return null;
+        }
+
+        // Hold on to the object that actually carried the rating: the address the cache had before was the reason
+        // the read stopped giving a value, so every later scan would otherwise rediscover it again.
+        lock (_netCacheObjects)
+        {
+            _netCacheObjects[bestLayout.ClassName] = bestObject.Address;
+        }
+
+        if (bestLayout != _ratingLayout)
+        {
+            _ratingLayout = bestLayout;
+            Diag.Info($"Battlegrounds rating read from {bestLayout.ClassName}.{bestLayout.SoloField}"
+                      + (bestLayout.DuosField is null ? string.Empty : $" and {bestLayout.DuosField}"));
+        }
+
+        return best;
+    }
+
+    /// <summary>Only the Battlegrounds cache: the constructed ladder keeps its own, differently shaped rating caches.</summary>
+    private static bool LooksLikeRatingCache(string className) =>
+        className.Contains("Rating", StringComparison.OrdinalIgnoreCase)
+        && (className.Contains("Bacon", StringComparison.OrdinalIgnoreCase)
+            || className.Contains("Battlegrounds", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Battlegrounds ratings run from a few hundred to well over 10,000; 0 means "not reported".</summary>
+    private static bool IsPlausibleRating(int value) => value is > 0 and < 100_000;
 
     /// <summary>
     /// The NetCache map holds every object the server sent. Walking it costs thousands of small reads and the map
@@ -247,14 +379,51 @@ public sealed class HearthstoneMemory : IDisposable
     {
         var gameEntity = GameStateInstance(rt)["m_gameEntity"];
         var change = gameEntity["<RatingChangeData>k__BackingField"];
+        if (change.IsNull && gameEntity.Class is { } cls)
+        {
+            // The field was renamed: take whichever field on the game entity holds the rating change.
+            var field = cls.AllFields().FirstOrDefault(f => !f.IsStatic
+                && f.Name.Contains("RatingChange", StringComparison.OrdinalIgnoreCase));
+            change = field is null ? default : gameEntity.Object(field.Name);
+        }
+
+        if (change.IsNull)
+        {
+            return null;
+        }
+
         var value = change.Int("_NewRating", -1);
-        return value > 0 ? value : null;
+        return IsPlausibleRating(value) ? value : DiscoverRatingValue(change);
     });
+
+    /// <summary>
+    /// A rating stored in a field whose name this release does not know: the object holds one int that looks like a
+    /// rating, preferring a field called "…New…" (the rating after the game) over any other.
+    /// </summary>
+    private static int? DiscoverRatingValue(MonoObject obj)
+    {
+        if (obj.Class is not { } cls)
+        {
+            return null;
+        }
+
+        return cls.AllFields()
+            .Where(f => !f.IsStatic && f.TypeCode is MonoInt32 or MonoUInt32)
+            .Select(f => (f.Name, Value: obj.Int(f.Name, -1)))
+            .Where(x => IsPlausibleRating(x.Value))
+            .OrderByDescending(x => x.Name.Contains("New", StringComparison.OrdinalIgnoreCase) ? 1 : 0)
+            .ThenByDescending(x => x.Value)
+            .Select(x => (int?)x.Value)
+            .FirstOrDefault();
+    }
 
     /// <summary>TAG_RACE values of the tribes in the current Battlegrounds lobby.</summary>
     public IReadOnlyList<int>? GetBattlegroundsRaces() => Safe(rt =>
     {
-        var list = GameStateInstance(rt)["m_availableRacesInBattlegroundsExcludingAmalgam"];
+        var state = GameStateInstance(rt);
+        var field = Field(state.Class, "races", ["m_availableRacesInBattlegroundsExcludingAmalgam"],
+            ["availableRaces", "RacesInBattlegrounds", "Races"]);
+        var list = field is null ? default : state.Object(field);
         if (list.IsNull)
         {
             return null;
@@ -270,35 +439,47 @@ public sealed class HearthstoneMemory : IDisposable
     /// </summary>
     public BattlegroundsButtonCosts? GetBattlegroundsButtonCosts() => Safe<BattlegroundsButtonCosts?>(rt =>
     {
-        var zoneMgr = rt.FindClass("ZoneMgr")?.GetStatic("s_instance") ?? default;
-        if (zoneMgr.IsNull)
+        var zoneMgr = Instance(rt, "ZoneMgr", "ZoneMgr");
+        var zonesField = Field(zoneMgr.Class, "zones", ["m_zones"], ["zones"]);
+        if (zoneMgr.IsNull || zonesField is null)
         {
             return null;
         }
 
         int? freeze = null, roll = null, upgrade = null, darkGift = null;
-        foreach (var zone in zoneMgr["m_zones"].ListItems())
+        foreach (var zone in zoneMgr.Object(zonesField).ListItems())
         {
-            if (zone.ClassName != "ZoneGameModeButton" || zone.Int("m_Side") != 1)
+            var zoneClass = zone.Class;
+            if (zoneClass is null || !zoneClass.Name.Contains("GameModeButton", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            var slot = zone.Int("m_ButtonSlot");
+            var sideField = Field(zoneClass, "side", ["m_Side"], ["Side"], integer: true);
+            var slotField = Field(zoneClass, "slot", ["m_ButtonSlot"], ["ButtonSlot", "Slot"], integer: true);
+            var cardsField = Field(zoneClass, "cards", ["m_cards"], ["cards"]);
+            if (sideField is null || slotField is null || cardsField is null || zone.Int(sideField) != 1)
+            {
+                continue;
+            }
+
+            var slot = zone.Int(slotField);
             if (slot is not (1 or 2 or 3 or 5))
             {
                 continue;
             }
 
-            foreach (var card in zone["m_cards"].ListItems())
+            foreach (var card in zone.Object(cardsField).ListItems())
             {
-                var entity = card["m_entity"];
+                var entityField = Field(card.Class, "entity", ["m_entity"], ["entity"]);
+                var entity = entityField is null ? default : card.Object(entityField);
                 if (entity.IsNull)
                 {
                     continue;
                 }
 
-                var cardId = entity.String("m_cardIdInternal");
+                var cardIdField = Field(entity.Class, "cardId", ["m_cardIdInternal"], ["cardId"]);
+                var cardId = cardIdField is null ? null : entity.String(cardIdField);
                 if (cardId is null)
                 {
                     continue;
@@ -311,7 +492,8 @@ public sealed class HearthstoneMemory : IDisposable
                     continue;
                 }
 
-                var cost = entity.Int("m_realTimeCost");
+                var costField = Field(entity.Class, "cost", ["m_realTimeCost"], ["realTimeCost", "Cost"], integer: true);
+                var cost = costField is null ? 0 : entity.Int(costField);
                 switch (slot)
                 {
                     case 1: freeze = cost; break;
@@ -336,31 +518,33 @@ public sealed class HearthstoneMemory : IDisposable
     /// </summary>
     public string? GetHoveredLeaderboardHero() => Safe(rt =>
     {
-        var manager = rt.FindClass("PlayerLeaderboardManager")?.GetStatic("s_instance") ?? default;
-        if (manager.IsNull || !manager.Bool("m_isMousedOver"))
+        var manager = Instance(rt, "PlayerLeaderboardManager", "PlayerLeaderboardManager");
+        var hovered = Field(manager.Class, "leaderboardHovered", ["m_isMousedOver"], ["isMousedOver", "MousedOver"]);
+        if (manager.IsNull || hovered is null || !manager.Bool(hovered))
         {
             return null;
         }
 
-        var tile = manager["m_currentlyMousedOverTile"];
+        var tileField = Field(manager.Class, "hoveredTile", ["m_currentlyMousedOverTile"], ["MousedOverTile", "Tile"]);
+        var tile = tileField is null ? default : manager.Object(tileField);
         if (tile.IsNull)
         {
             return null;
         }
 
-        var hero = tile["m_playerHeroEntity"];
-        if (hero.IsNull)
-        {
-            hero = tile["m_entity"];
-        }
-
-        return hero.IsNull ? null : hero.String("m_cardIdInternal");
+        var heroField = Field(tile.Class, "heroEntity", ["m_playerHeroEntity"], ["playerHeroEntity"])
+                        ?? Field(tile.Class, "entity", ["m_entity"], ["entity"]);
+        var hero = heroField is null ? default : tile.Object(heroField);
+        var cardIdField = Field(hero.Class, "cardId", ["m_cardIdInternal"], ["cardId"]);
+        return hero.IsNull || cardIdField is null ? null : hero.String(cardIdField);
     });
 
     /// <summary>Ranked medals for both players of the current game (only valid in-game).</summary>
     public (MatchPlayerInfo? Local, MatchPlayerInfo? Opponent)? GetMatchPlayers() => Safe<(MatchPlayerInfo?, MatchPlayerInfo?)?>(rt =>
     {
-        var playerMap = GameStateInstance(rt)["m_playerMap"];
+        var state = GameStateInstance(rt);
+        var mapField = Field(state.Class, "playerMap", ["m_playerMap"], ["playerMap"]);
+        var playerMap = mapField is null ? default : state.Object(mapField);
         if (playerMap.IsNull)
         {
             return null;
@@ -369,33 +553,46 @@ public sealed class HearthstoneMemory : IDisposable
         MatchPlayerInfo? local = null, opponent = null;
         foreach (var player in playerMap.MapValues())
         {
-            if (player.ClassName != "Player")
+            var playerClass = player.Class;
+            if (playerClass is null || !playerClass.Name.Contains("Player", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            var side = player.Int("m_side");
+            var sideField = Field(playerClass, "side", ["m_side"], ["side"], integer: true);
             var info = ReadPlayer(player);
-            if (side == 1) local = info;
-            else if (side == 2) opponent = info;
+            switch (sideField is null ? -1 : player.Int(sideField))
+            {
+                case 1: local = info; break;
+                case 2: opponent = info; break;
+            }
         }
 
         return local is null && opponent is null ? null : (local, opponent);
     });
 
-    private static MatchPlayerInfo ReadPlayer(MonoObject player)
+    private MatchPlayerInfo ReadPlayer(MonoObject player)
     {
         RankInfo? standard = null, wild = null, classic = null, twist = null;
-        var medals = player["m_medalInfo"]["m_currMedalInfo"];
+        var medalInfoField = Field(player.Class, "medalInfo", ["m_medalInfo"], ["MedalInfo"]);
+        var medalInfo = medalInfoField is null ? default : player.Object(medalInfoField);
+        var medalsField = Field(medalInfo.Class, "currentMedals", ["m_currMedalInfo"], ["currMedal", "Medal"]);
+        var medals = medalsField is null ? default : medalInfo.Object(medalsField);
         foreach (var medal in medals.MapValues())
         {
-            var format = medal.Int("format");
+            var medalClass = medal.Class;
+            var formatField = Field(medalClass, "format", ["format"], ["format"], integer: true);
+            var leagueField = Field(medalClass, "league", ["leagueId"], ["league"], integer: true);
+            var starField = Field(medalClass, "stars", ["starLevel"], ["star"], integer: true);
+            var legendField = Field(medalClass, "legend", ["legendIndex"], ["legend"], integer: true);
+            var seasonField = Field(medalClass, "season", ["seasonId"], ["season"], integer: true);
+            var format = formatField is null ? 0 : medal.Int(formatField);
             var rank = new RankInfo(
                 FormatName(format),
-                medal.Int("leagueId"),
-                medal.Int("starLevel"),
-                medal.Int("legendIndex"),
-                medal.Int("seasonId"));
+                leagueField is null ? 0 : medal.Int(leagueField),
+                starField is null ? 0 : medal.Int(starField),
+                legendField is null ? 0 : medal.Int(legendField),
+                seasonField is null ? 0 : medal.Int(seasonField));
             switch (format)
             {
                 case 1: wild = rank; break;
@@ -405,7 +602,8 @@ public sealed class HearthstoneMemory : IDisposable
             }
         }
 
-        return new MatchPlayerInfo(player.String("m_name"), standard, wild, classic, twist);
+        var nameField = Field(player.Class, "name", ["m_name"], ["name"]);
+        return new MatchPlayerInfo(nameField is null ? null : player.String(nameField), standard, wild, classic, twist);
     }
 
     private static string FormatName(int format) => format switch
@@ -417,7 +615,90 @@ public sealed class HearthstoneMemory : IDisposable
         _ => "Unknown",
     };
 
-    private static MonoObject GameStateInstance(MonoRuntime rt) => rt.FindClass("GameState")?.GetStatic("s_instance") ?? default;
+    private MonoObject GameStateInstance(MonoRuntime rt) => Instance(rt, "GameState", "GameState");
+
+    /// <summary>
+    /// The client's singleton for a class (GameState.s_instance, ZoneMgr.s_instance, …). Both the class and the static
+    /// field that holds the instance are looked up by name, so a renamed field or a class that gained a namespace is
+    /// found without a code change.
+    /// </summary>
+    private MonoObject Instance(MonoRuntime rt, string role, params string[] classNames)
+    {
+        var cls = Class(rt, role, classNames);
+        var field = Field(cls, role + ".instance", ["s_instance"], ["instance"]);
+        return cls is null || field is null ? default : cls.GetStatic(field);
+    }
+
+    /// <summary>A class by name, else by the tail of its full name (a namespace added in a game update).</summary>
+    private MonoClass? Class(MonoRuntime rt, string role, string[] names)
+    {
+        if (_classes.TryGetValue(role, out var address) && address != 0 && rt.ClassAt(address) is { } cached)
+        {
+            return cached;
+        }
+
+        var found = names.Select(rt.FindClass).FirstOrDefault(c => c is not null);
+        found ??= rt.ClassNames
+            .Where(n => names.Any(name => n.EndsWith("." + name, StringComparison.Ordinal)
+                                          || n.EndsWith("+" + name, StringComparison.Ordinal)))
+            .Select(rt.FindClass)
+            .FirstOrDefault(c => c is not null);
+        if (found is not null)
+        {
+            _classes[role] = found.Address;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// The name this client build uses for a field: the known names first, then the first field whose name contains
+    /// one of the hints (in order). The answer is remembered per class and dropped when the game exits, so the field
+    /// hunt runs once per game update instead of once per scan.
+    /// </summary>
+    private string? Field(MonoClass? cls, string role, string[] known, string[] hints, bool integer = false)
+    {
+        if (cls is null)
+        {
+            return null;
+        }
+
+        var key = (cls.Address, role);
+        lock (_fieldNames)
+        {
+            if (_fieldNames.TryGetValue(key, out var remembered))
+            {
+                return remembered;
+            }
+        }
+
+        var found = known.FirstOrDefault(name => cls.FindField(name) is not null);
+        if (found is null)
+        {
+            foreach (var hint in hints)
+            {
+                found = cls.AllFields()
+                    .FirstOrDefault(f => !f.IsStatic
+                        && (!integer || f.TypeCode is MonoInt32 or MonoUInt32)
+                        && f.Name.Contains(hint, StringComparison.OrdinalIgnoreCase))?.Name;
+                if (found is not null)
+                {
+                    break;
+                }
+            }
+        }
+
+        // A field list cut short by the read budget must not hide the field for good.
+        if (!ProcessMemory.BudgetExhausted)
+        {
+            lock (_fieldNames)
+            {
+                _fieldNames[key] = found;
+            }
+        }
+
+        return found;
+    }
 
     /// <summary>Resolves a service registered in Hearthstone's service locator by type name.</summary>
     public static MonoObject FindService(MonoRuntime rt, string serviceName)
@@ -504,6 +785,15 @@ public sealed class HearthstoneMemory : IDisposable
         _memory?.Dispose();
         _memory = null;
         _netCacheRefreshAt = DateTime.MinValue;
+        // A new game process may be a new client build: find the rating layout again instead of reusing the old one.
+        _ratingLayout = KnownRatingLayout;
+        _nextRatingDiscovery = DateTime.MinValue;
+        lock (_fieldNames)
+        {
+            _fieldNames.Clear();
+        }
+
+        _classes.Clear();
     }
 
     public void Dispose()

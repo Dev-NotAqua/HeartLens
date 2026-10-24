@@ -13,7 +13,7 @@ namespace Hearthlens.Installer;
 /// </summary>
 internal static class InstallEngine
 {
-    public const string Version = "0.12.2";
+    public const string Version = "0.12.3";
 
     private const string AppExeName = "Hearthlens.exe";
     private const string UninstallerName = "Uninstall Hearthlens.exe";

@@ -26,13 +26,12 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
-**Hearthlens has its own setup wizard now.** The Windows installer is part of the app instead of a stock wizard: bone paper on a bottle-green spine, Fraunces and Manrope, the same colours as Hearthlens itself.
+**The app now finds the game's data by itself.** Battlegrounds rating, ranked medals, lobby tribes, shop button costs and the opponent boards behind the leaderboard are located at runtime, instead of relying on the names one game build happened to use.
 
-- It installs for your user only, with no administrator prompt, into `%LOCALAPPDATA%\Programs\Hearthlens`.
-- Choose the folder, and whether you want a desktop shortcut, a Start menu entry and Hearthlens at sign-in.
-- It closes a running Hearthlens before it writes, so the files it replaces are never locked.
-- Your settings and match history are left alone, and **Settings → Apps** removes the app if you ever want it gone.
-- Updates still install themselves: the new setup runs silently when you close the app.
+- When a Hearthstone update renames the object or a field the app reads, it looks again and carries on. The numbers come back without waiting for a Hearthlens release.
+- When a read stops giving a value (the rating stuck on `—`), the app re-reads what is there instead of keeping the stale answer for the rest of the session.
+- A discovery writes one line to `%APPDATA%\Hearthlens\hearthlens.log`, so a future break is visible instead of silent.
+- Everything stays read-only: Hearthlens opens the game for reading only and never writes to it, injects code or sends input.
 
 Card data and art: HearthstoneJSON and hsbg.cards. Not affiliated with Blizzard Entertainment.
 
