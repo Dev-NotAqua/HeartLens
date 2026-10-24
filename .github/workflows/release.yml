@@ -10,7 +10,7 @@ on:
       version:
         description: Version to build and publish (for example 0.2.0)
         required: true
-        default: "0.12.1"
+        default: "0.12.2"
 
 permissions:
   contents: write
@@ -69,17 +69,50 @@ jobs:
                    "Hearthlens-$V-linux-x64.AppImage"; do
             test -s "dist/$f" || { echo "::error::dist/$f was not built"; exit 1; }
           done
+      # The setup wizard built here is the NSIS fallback; the released one comes from the windows-setup job.
       - uses: actions/upload-artifact@v4
         with:
           name: windows-linux
           if-no-files-found: error
           path: |
-            dist/*.exe
             dist/*.zip
             dist/*.deb
             dist/*.rpm
             dist/*.tar.gz
             dist/*.AppImage
+
+  windows-setup:
+    name: Windows setup wizard
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Version
+        id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then v="$GITHUB_REF_NAME"; else v="$INPUT_VERSION"; fi
+          v="${v#v}"
+          [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::The version must look like 0.2.0 (got '$v')"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      # The setup wizard is a WPF app, so it is published here rather than in the Linux job.
+      - name: Hearthlens setup wizard
+        shell: pwsh
+        run: ./installer/windows/build.ps1 -Version "${{ steps.v.outputs.version }}"
+      - name: Check the setup wizard was built
+        shell: bash
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: test -s "dist/Hearthlens-Setup-$V-win-x64.exe" || { echo "::error::dist/Hearthlens-Setup-$V-win-x64.exe was not built"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          if-no-files-found: error
+          path: dist/Hearthlens-Setup-*-win-x64.exe
 
   macos:
     name: macOS installers
@@ -122,7 +155,7 @@ jobs:
 
   release:
     name: Publish the release
-    needs: [windows-linux, macos]
+    needs: [windows-linux, windows-setup, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -139,6 +172,22 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: Check every installer arrived
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          for f in "Hearthlens-Setup-$V-win-x64.exe" "Hearthlens-Portable-$V-win-x64.zip" "Hearthlens-Preview-$V-win-x64.zip" \
+                   "hearthlens_${V}_amd64.deb" "hearthlens_${V}_arm64.deb" \
+                   "hearthlens-$V-1.x86_64.rpm" "hearthlens-$V-1.aarch64.rpm" \
+                   "Hearthlens-$V-linux-x64.tar.gz" "Hearthlens-$V-linux-arm64.tar.gz" \
+                   "Hearthlens-Portable-$V-linux-x64.tar.gz" "Hearthlens-Portable-$V-linux-arm64.tar.gz" \
+                   "Hearthlens-$V-linux-x64.AppImage" \
+                   "Hearthlens-$V-macOS-arm64.pkg" "Hearthlens-$V-macOS-x64.pkg" \
+                   "Hearthlens-$V-macOS-arm64.dmg" "Hearthlens-$V-macOS-x64.dmg" \
+                   "Hearthlens-$V-macOS-arm64.zip" "Hearthlens-$V-macOS-x64.zip" \
+                   "Hearthlens-Portable-$V-macOS-arm64.zip" "Hearthlens-Portable-$V-macOS-x64.zip"; do
+            test -s "dist/$f" || { echo "::error::dist/$f is missing from the release"; exit 1; }
+          done
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2

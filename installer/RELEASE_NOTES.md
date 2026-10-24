@@ -26,7 +26,13 @@ Every installer adds a desktop shortcut and can be uninstalled cleanly; your mat
 
 ## What's in this version
 
-**The overlay follows Night edition.** Turn on **Settings → Appearance → Night edition** and the in-game overlay switches to deep green paper with bone ink as well, straight away, in both the Windows app and the cross-platform app. Before, it stayed on light paper whatever you picked.
+**Hearthlens has its own setup wizard now.** The Windows installer is part of the app instead of a stock wizard: bone paper on a bottle-green spine, Fraunces and Manrope, the same colours as Hearthlens itself.
+
+- It installs for your user only, with no administrator prompt, into `%LOCALAPPDATA%\Programs\Hearthlens`.
+- Choose the folder, and whether you want a desktop shortcut, a Start menu entry and Hearthlens at sign-in.
+- It closes a running Hearthlens before it writes, so the files it replaces are never locked.
+- Your settings and match history are left alone, and **Settings → Apps** removes the app if you ever want it gone.
+- Updates still install themselves: the new setup runs silently when you close the app.
 
 Card data and art: HearthstoneJSON and hsbg.cards. Not affiliated with Blizzard Entertainment.
 

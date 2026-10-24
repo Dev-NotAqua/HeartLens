@@ -7,10 +7,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <RootNamespace>Hearthlens.Installer</RootNamespace>
-    <AssemblyName>Hearthlens-Setup-0.12.1</AssemblyName>
+    <AssemblyName>Hearthlens-Setup-0.12.2</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\hearthlens.ico</ApplicationIcon>
-    <Version>0.12.1</Version>
+    <Version>0.12.2</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 

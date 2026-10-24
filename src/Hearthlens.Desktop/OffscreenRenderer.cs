@@ -66,7 +66,7 @@ internal static class OffscreenRenderer
         host.Main.Busy = string.Empty;
         if (Environment.GetEnvironmentVariable("HEARTHLENS_RENDER_UPDATE") == "1")
         {
-            host.Main.SetUpdateReady("0.12.1");
+            host.Main.SetUpdateReady("0.12.2");
         }
 
         var view = new MainView { DataContext = host.Main };

@@ -128,7 +128,7 @@
 
                         <Border Background="#26C8891F" CornerRadius="10" Padding="8,2" Margin="0,6,0,0"
                                 HorizontalAlignment="Center" BorderThickness="1" BorderBrush="#80C8891F">
-                            <TextBlock Text="v0.12.1"
+                            <TextBlock Text="v0.12.2"
                                        FontFamily="{StaticResource UiFont}"
                                        FontSize="11" FontWeight="SemiBold"
                                        Foreground="{StaticResource Marigold}" />
@@ -348,7 +348,7 @@
 
                         <!-- Actions -->
                         <Grid Grid.Row="3" Margin="0,16,0,0">
-                            <TextBlock Text="Release: v0.12.1" VerticalAlignment="Center"
+                            <TextBlock Text="Release: v0.12.2" VerticalAlignment="Center"
                                        FontSize="11" Foreground="{StaticResource InkFaint}" />
                             <Button Content="Continue Setup →" Style="{StaticResource PrimaryBtn}"
                                     HorizontalAlignment="Right" Click="BtnToPreferences_Click" />
@@ -423,7 +423,7 @@
                         <Grid Grid.Row="3" Margin="0,16,0,0">
                             <Button Content="← Back" Style="{StaticResource SecondaryBtn}"
                                     HorizontalAlignment="Left" Click="BtnBackToWelcome_Click" />
-                            <Button Content="Install Hearthlens v0.12.1" Style="{StaticResource PrimaryBtn}"
+                            <Button Content="Install Hearthlens v0.12.2" Style="{StaticResource PrimaryBtn}"
                                     HorizontalAlignment="Right" Click="BtnStartInstall_Click" />
                         </Grid>
                     </Grid>
@@ -498,7 +498,7 @@
                         </StackPanel>
 
                         <TextBlock Grid.Row="1"
-                                   Text="Hearthlens 0.12.1 has been installed successfully."
+                                   Text="Hearthlens 0.12.2 has been installed successfully."
                                    FontSize="13" Foreground="{StaticResource InkMuted}" Margin="0,0,0,20" />
 
                         <StackPanel Grid.Row="2">
@@ -548,7 +548,7 @@
                                    Foreground="{StaticResource InkText}" Margin="0,0,0,4" />
 
                         <TextBlock Grid.Row="1"
-                                   Text="Remove Hearthlens 0.12.1 and its shortcuts from this PC."
+                                   Text="Remove Hearthlens 0.12.2 and its shortcuts from this PC."
                                    FontSize="13" Foreground="{StaticResource InkMuted}" Margin="0,0,0,20" />
 
                         <StackPanel Grid.Row="2">
